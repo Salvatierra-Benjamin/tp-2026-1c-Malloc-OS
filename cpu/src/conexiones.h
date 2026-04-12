@@ -26,4 +26,4 @@ int conectar_a_kernel_memory(void)
 }
 int conectar_a_kernel_scheduler(void);
 int conectar_a_memory_stick(void);
-int conectar_a_servidor(char *ip, char *puerto) ;
+
