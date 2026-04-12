@@ -10,12 +10,14 @@ bool cpu_cargar_config(char* path)
     }
 
     cpu.puerto_escucha = strdup(config_get_string_value(configuracion,"PUERTO_ESCUCHA"));
-    cpu.algoritmo      = strdup(config_get_string_value(configuracion,"ALGORITMO_PLANIFICACION")); // FIFO | PRIORIDADES
+    cpu.algoritmo      = strdup(config_get_string_value(configuracion,"ALGORITMO_PLANIFICACION")); 
     cpu.tiempo_aging_ms= config_get_int_value(configuracion,"TIEMPO_AGING");
+
     const char* log_level_s = config_get_string_value(configuracion, "LOG_LEVEL");
     t_log_level lvl = log_level_from_string((char*)log_level_s);
-    g_logger = log_create("master.log","MASTER",1, lvl);
-    
+    char* nombre_archivo_log = string_from_format("cpu_%s.log", id_cpu); 
+    g_logger = log_create(nombre_archivo_log, "CPU", 1, lvl); [cite: 162]
+    free(nombre_archivo_log); 
     config_destroy(configuracion);
     return g_logger != NULL;
 }
@@ -36,7 +38,21 @@ void cpu_liberar_config(void)
     return;
 }
 
-int main(int argc, char* argv[]) {
-    saludar("cpu");
+int main(int argc, char* argv[]) 
+{
+    if(!cpu_cargar_config("master.config")) {
+        fprintf(stderr, "Error al cargar la configuración\n");
+        return EXIT_FAILURE;
+    }
+    if (conectar_a_kernel_memory() < 0) return EXIT_FAILURE; [cite: 163]
+    if (conectar_a_kernel_scheduler() < 0) return EXIT_FAILURE; [cite: 163]
+    if (conectar_a_memory_stick() < 0) return EXIT_FAILURE; [cite: 163]
+    
+    conectar_a_kernel_memory();
+
+    conectar_a_kernel_scheduler();
+
+    conectar_a_memory_stick();
+
     return 0;
 }
