@@ -33,28 +33,5 @@ void cpu_liberar_config(void)
     return;
 }
 
-uint32_t cpu_obtener_ip_kernel_memory(cpu_config config)
-{
-    return config.IP_KERNEL_MEMORY;
-}
-uint32_t cpu_obtener_ip_kernel_scheduler(cpu_config config)
-{
-    return config.IP_KERNEL_SCHEDULER;
-}
-uint32_t cpu_obtener_ip_memory_stick(cpu_config config)
-{
-    return config.IP_MEMORY_STICK;
-}
 
-int cpu_obtener_puerto_kernel_memory(cpu_config config)
-{
-    return config.PUERTO_KERNER_MEMORY;
-}
-int cpu_obtener_puerto_kernel_scheduler(cpu_config config)
-{
-    return config.PUERTO_KERNEL_SCHEDULER;
-}
-int cpu_obtener_puerto_memory_stick(cpu_config config)
-{
-    return config.PUERTO_MEMORY_STICK;
-}
+

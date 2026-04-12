@@ -16,14 +16,10 @@
 #include <string.h>
 #include <pthread.h>
 
-int conectar_a_kernel_memory(void)
-{
-     char *ipMemoria = cpu_config_get_ip_kernel_memory(cpuConfig);
-     char *puertoMemoria = cpu_config_get_puerto_kernel_memory(cpuConfig);
+int conectar_a_kernel_memory(void);
 
-
-    return socketKernelMemory;
-}
 int conectar_a_kernel_scheduler(void);
+
 int conectar_a_memory_stick(void);
 
+void conectar_a_nuevo_memory_stick(char* ip, char* puerto);

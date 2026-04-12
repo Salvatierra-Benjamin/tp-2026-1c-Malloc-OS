@@ -42,6 +42,9 @@ int conectar_a_kernel_scheduler(void)
 
     return socketKernelScheduler;
 }
+
+t_list* lista_sticks;
+
 int conectar_a_memory_stick(void)
 {
     char *ipMemoryStick = cpuConfig.IP_MEMORY_STICK;
@@ -61,4 +64,14 @@ int conectar_a_memory_stick(void)
     recibir_operacion(socketMemoryStick);
 
     return socketKernelScheduler;
+}
+void conectar_a_nuevo_memory_stick(char* ip, char* puerto) {
+    int nuevo_socket = crear_conexion(ip, puerto);
+    if (nuevo_socket != -1) {
+     
+        enviar_operacion(nuevo_socket, 1001); 
+        
+        list_add(lista_sticks, (void*)(intptr_t)nuevo_socket);
+        log_info(g_logger, "Nuevo Memory Stick conectado en socket %d", nuevo_socket);
+    }
 }
