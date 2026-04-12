@@ -1,17 +1,16 @@
-#include <stdint.h>
-#include <stdbool.h>
-#include <commons/log.h>
-#include <commons/config.h>
-#include <commons/collections/list.h>
-#include <commons/collections/queue.h>
-#include <arpa/inet.h>
-#include <commons/collections/dictionary.h>
-#include <../../utils/src/utils/conexiones.h>
-#include <../../utils/src/utils/protocolos.h>
-#include <pthread.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <signal.h>
-#include <unistd.h>
-#include <string.h>
-#include <pthread.h>
+#ifndef CPU_INSTRUCCION_H
+#define CPU_INSTRUCCION_H
+struct instruccion 
+{
+    uint32_t PC;
+    uint8_t AX;
+    uint8_t BX;
+    uint8_t CX; 
+    uint8_t DX;
+    uint32_t EAX;
+    uint32_t EBX;
+    uint32_t ECX;
+    uint32_t EDX;
+    uint32_t SI;
+    uint32_t DI;
+}

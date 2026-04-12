@@ -31,6 +31,7 @@ typedef enum {
     // Respuesta
     KM_OK_CONEXION     = 1100, // KM responde a KS
     KS_OK_CONEXION     = 1101, // KS responde a KM
+    MS_OK_CONEXION     = 1102, // KS responde a KM
 
     // ---------------- IO -> SCHEDULER ----------------
     IO_ENVIA_IO        = 2000,

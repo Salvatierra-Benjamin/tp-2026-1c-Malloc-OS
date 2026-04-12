@@ -1,3 +1,5 @@
+#ifndef CPU_CONEXIONES_H;   
+#define CPU_CONEXIONES_H;
 #include <stdint.h>
 #include <stdbool.h>
 #include <commons/log.h>
@@ -15,6 +17,9 @@
 #include <unistd.h>
 #include <string.h>
 #include <pthread.h>
+#include<main.h>
+
+void realizar_handshake(int socket, int cod_op, char* nombre_modulo);
 
 int conectar_a_kernel_memory(void);
 
