@@ -120,13 +120,6 @@ int main(int argc, char* argv[])
     pthread_create(&hilo_cpu, NULL, cpu_conexion_memoryStick, NULL);
     pthread_detach(hilo_cpu);
 
-    conectar_a_kernel_memory();
-
-    conectar_a_kernel_scheduler();
-
-    conectar_a_memory_stick();
-    
-
     cpu_liberar_config()
 
     return 0;
