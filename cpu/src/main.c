@@ -117,7 +117,7 @@ int main(int argc, char* argv[])
     }
     
     pthread_t hilo_cpu;
-    pthread_create(&hilo_cpu, NULL, cpu_conexion_ms, NULL);
+    pthread_create(&hilo_cpu, NULL, cpu_conexion_memoryStick, NULL);
     pthread_detach(hilo_cpu);
 
     conectar_a_kernel_memory();
