@@ -1,5 +1,6 @@
 #include <km_main.h>
 
+/*
 void *seleccion_dispositivo(void *socket_cliente)
 {
     int socket = *((int *) socket_cliente);
@@ -36,34 +37,33 @@ void *seleccion_dispositivo(void *socket_cliente)
         }
     }
 }
+*/
 
 int main(int argc, char* argv[]) {
 
-    t_config *config = config_create("/home/utnso/tp-2026-1c-Malloc-OS/kernel_memory/km.config");
+    if (argc < 2)
+    {
+        fprintf(stderr, "argumentos insuficientes\n");
+        fprintf(stderr, "./bin/kernel_memory <config_name>\n");
+        return EXIT_FAILURE;
+    }
+    char* config_name = argv[1];
 
-    km_config *struct_config = iniciar_config(config);
+    config = config_create(config_name);
+    km_config *parametros = iniciar_config(config);
+    logger = log_create("km.log", "LOGGER - KM", 1, parametros->log_level);
 
-    t_log_level log_level = log_level_from_string(struct_config->log_level);
+    log_info(logger, "Inicio Kernel Memory");
 
-    logger = log_create("km.log", "LOGGER - KM", 1, log_level);
-
-    int socket_servidor = iniciar_servidor(struct_config->puerto_escucha);
-
+    int socket_servidor = iniciar_servidor(parametros->puerto_escucha);
+    
     if (socket_servidor == -1)
     {
-        log_info(logger, "No se pudo iniciar servidor");
+        log_error(logger, "No se pudo iniciar servidor");
+        exit(0);
     }
 
-    while(1)
-    {
-        int socket_cliente = esperar_cliente(socket_servidor);
-        int *socket_ptr = malloc(sizeof(int));
-        *socket_ptr = socket_cliente;
-
-        pthread_t hilo_cliente;
-        pthread_create(&hilo_cliente, NULL, seleccion_dispositivo, (void *)socket_ptr);
-        pthread_detach(hilo_cliente);
-    }
+    entrada_dispositivos(socket_servidor);
 
     return 0;
 }

@@ -8,7 +8,7 @@ int main(int argc, char *argv[])
     t_log *swap_logger;
     swap_cargar_config(path, &swap_config);
 
-    swap_logger = log_create("swap_memory.log", "SWAP_MEMORY", 1, swap_config.log_level);
+    swap_logger = log_create("swap.log", "SWAP", 1, swap_config.log_level);
     if (swap_logger == NULL)
     {
         printf("ERROR AL CREAR EL LOGGER SWAP\n");
