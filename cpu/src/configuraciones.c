@@ -15,10 +15,10 @@ bool cpu_cargar_config(char* path)
     const char* log_level_s = config_get_string_value(configuracion, "LOG_LEVEL");
     cpu_config.LOG_LEVEL = strdup(log_level_s);
     t_log_level LOG_LEVEL = log_level_from_string((char*)log_level_s);
-    g_logger = log_create("cpu.log","cpu",1, LOG_LEVEL);
+    cpuLogger = log_create("cpu.log","cpu",1, LOG_LEVEL);
     
     config_destroy(configuracion);
-    return g_logger != NULL;
+    return cpuLogger != NULL;
 }
 void cpu_liberar_config(void)
 {   
@@ -32,8 +32,8 @@ void cpu_liberar_config(void)
     close(cpu_config.SOCKET_KERNEL_SCHEDULER);
     close(cpu_config.SOCKET_MEMORY_STICK);
     free(cpu_config);
-    if (g_logger) {
-        log_destroy(g_logger);
+    if (cpuLogger) {
+        log_destroy(cpuLogger);
     }
     return;
 }

@@ -1,5 +1,6 @@
 #include "conexiones.h"
 
+
 void realizar_handshake(int socket, int cod_op, char* nombre_modulo) {
     enviar_operacion(socket, cod_op);
     int respuesta = recibir_operacion(socket);
@@ -16,8 +17,8 @@ int conectar_a_kernel_memory(void)
     if (socketKernelMemory == -1 ) 
     {
         log_error(cpuLogger, "Error al intentar establecer conexión inicial con el modulo Kernel Memory");
-        log_error(cpuDebuggingLogger, "Error al intentar establecer conexión inicial con el Kernel Memory");
-        cpu_destroy(cpuConfig, cpuLogger, cpuDebuggingLogger);
+        config_destroy(cpuConfig);
+        log_destroy(cpuLogger);
         exit(EXIT_FAILURE);
     }
 
@@ -33,8 +34,8 @@ int conectar_a_kernel_memory(void)
     else
     {
         log_error(cpuLogger, "Error al realizar handshake con %s", nombre_modulo);
-        log_error(cpuDebuggingLogger, "Error al realizar handshake con %s", nombre_modulo);
-        cpu_destroy(cpuConfig, cpuLogger, cpuDebuggingLogger);
+        config_destroy(cpuConfig);
+        log_destroy(cpuLogger);
         exit(EXIT_FAILURE);
     }
 
@@ -49,8 +50,8 @@ int conectar_a_kernel_scheduler(void)
 
     if (socketKernelScheduler == -1 ) {
         log_error(cpuLogger, "Error al intentar establecer conexión inicial con el modulo Kernel Scheduler");
-        log_error(cpuDebuggingLogger, "Error al intentar establecer conexión inicial con el modulo Kernel Scheduler");
-        cpu_destroy(cpuConfig, cpuLogger, cpuDebuggingLogger);
+        config_destroy(cpuConfig);
+        log_destroy(cpuLogger);
         exit(EXIT_FAILURE);
     }
 
@@ -66,8 +67,8 @@ int conectar_a_kernel_scheduler(void)
     else
     {
         log_error(cpuLogger, "Error al realizar handshake con %s", nombre_modulo);
-        log_error(cpuDebuggingLogger, "Error al realizar handshake con %s", nombre_modulo);
-        cpu_destroy(cpuConfig, cpuLogger, cpuDebuggingLogger);
+        config_destroy(cpuConfig);
+        log_destroy(cpuLogger);
         exit(EXIT_FAILURE);
     }
 
@@ -84,8 +85,8 @@ int conectar_a_memory_stick(void)
 
     if (socketMemoryStick == -1 ) {
         log_error(cpuLogger, "Error al intentar establecer conexión inicial con el modulo Memoria");
-        log_error(cpuDebuggingLogger, "Error al intentar establecer conexión inicial con el modulo Memoria");
-        cpu_destroy(cpuConfig, cpuLogger, cpuDebuggingLogger);
+        config_destroy(cpuConfig);
+        log_destroy(cpuLogger);
         exit(EXIT_FAILURE);
     }
 
@@ -103,6 +104,6 @@ void conectar_a_nuevo_memory_stick(char* ip, char* puerto) {
         enviar_operacion(nuevo_socket, 1001); 
         recibir_operacion(socketMemoryStick);
         list_add(lista_sticks, (void*)(intptr_t)nuevo_socket);
-        log_info(g_logger, "Nuevo Memory Stick conectado en socket %d", nuevo_socket);
+        log_info(cpuLogger, "Nuevo Memory Stick conectado en socket %d", nuevo_socket);
     }
 }

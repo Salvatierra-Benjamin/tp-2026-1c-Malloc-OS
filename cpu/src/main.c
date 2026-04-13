@@ -1,9 +1,12 @@
-#include "utils/hello.h"
-#include "cpu.h"
+#include "utils/protocolos.h"
+#include "main.h"
 #include "configuraciones.c"
-t_log* cpu_logger = NULL;
+#include "conexiones.c"
+#include <pthread.h>
+#include "instrucciones.c"
 cpu_config  cpu_config;
-t_log_level LOG_LEVEL_INFO = log_level_from_string(cpuConfig.LOG_LEVEL);
+t_log* cpuLogger = NULL; 
+
 bool cpu_cargar_config(char* path)
 {
     t_config* configuracion = config_create(path);
@@ -12,20 +15,18 @@ bool cpu_cargar_config(char* path)
         return false;
     }
 
-    cpu.ip_kernel_memory    = strdup(config_get_string_value(configuracion, "IP_KERNEL_MEMORY"));
-    cpu.puerto_kernel_memory = strdup(config_get_string_value(configuracion, "PUERTO_KERNEL_MEMORY"));
-    cpu.ip_kernel_scheduler = strdup(config_get_string_value(configuracion, "IP_KERNEL_SCHEDULER"));
-    cpu.puerto_kernel_scheduler = strdup(config_get_string_value(configuracion, "PUERTO_KERNEL_SCHEDULER"));
-    cpu.ip_memory_stick     = strdup(config_get_string_value(configuracion, "IP_MEMORY_STICK"));
-    cpu.puerto_memory_stick = strdup(config_get_string_value(configuracion, "PUERTO_MEMORY_STICK"));
+    cpu_config.IP_KERNEL_MEMORY    = strdup(config_get_string_value(configuracion, "IP_KERNEL_MEMORY"));
+    cpu_config.PUERTO_KERNEL_MEMORY = strdup(config_get_string_value(configuracion, "PUERTO_KERNEL_MEMORY"));
+    cpu_config.IP_KERNEL_SCHEDULER = strdup(config_get_string_value(configuracion, "IP_KERNEL_SCHEDULER"));
+    cpu_config.PUERTO_KERNEL_SCHEDULER = strdup(config_get_string_value(configuracion, "PUERTO_KERNEL_SCHEDULER"));
+    cpu_config.IP_MEMORY_STICK     = strdup(config_get_string_value(configuracion, "IP_MEMORY_STICK"));
+    cpu_config.PUERTO_MEMORY_STICK = strdup(config_get_string_value(configuracion, "PUERTO_MEMORY_STICK"));
 
-    const char* log_level_s = config_get_string_value(configuracion, "LOG_LEVEL");
-    t_log_level lvl = log_level_from_string((char*)log_level_s);
-    char* nombre_archivo_log = string_from_format("cpu_%s.log", id_cpu); 
-    g_logger = log_create(nombre_archivo_log, "CPU", 1, lvl); [cite: 162]
-    free(nombre_archivo_log); 
+    const char* log_level_string = config_get_string_value(configuracion, "LOG_LEVEL");
+    t_log_level level = log_level_from_string((char*)log_level_string);
+    cpuLogger = log_create("cpu.log", "CPU", true, level);
     config_destroy(configuracion);
-    return g_logger != NULL;
+    return cpuLogger != NULL;
 }
 void cpu_liberar_config(void)
 {   
@@ -38,11 +39,13 @@ void cpu_liberar_config(void)
     close(cpu_config.SOCKET_KERNEL_SCHEDULER);
     close(cpu_config.SOCKET_MEMORY_STICK);
     free(cpu_config);
-    if (g_logger) {
-        log_destroy(g_logger);
-    }
+    if (cpuLogger) 
+    {
+        log_destroy(cpuLogger);
+    }  
     return;
 }
+
 void* cpu_conexion_memoryStick(void* _arg)
 {
     (void)_arg;
@@ -51,11 +54,11 @@ void* cpu_conexion_memoryStick(void* _arg)
 
     if(socket_cpu < 0)
     {
-        log_error(ks_logger, "No pude conectar al Memory Stick %s:%s", cpu_config.IP_MEMORY_STICK, cpu_config.PUERTO_MEMORY_STICK);
+        log_error(cpuLogger, "No pude conectar al Memory Stick %s:%s", cpu_config.IP_MEMORY_STICK, cpu_config.PUERTO_MEMORY_STICK);
         return NULL;
     }
 
-    log_info(cpu_logger, "Conectado a Kernel Memory en %s:%s", cpu_config.IP_MEMORY_STICK, cpu_config.PUERTO_MEMORY_STICK);
+    log_info(cpuLogger, "Conectado a Memory Stick en %s:%s", cpu_config.IP_MEMORY_STICK, cpu_config.PUERTO_MEMORY_STICK);
 
     enviar_operacion(socket_cpu, 1001);
 
@@ -63,25 +66,25 @@ void* cpu_conexion_memoryStick(void* _arg)
 
     if(op <= 0)
     {
-        log_error(ks_logger, "Memory Stick cerró durante handshake");
+        log_error(cpuLogger, "Memory Stick cerró durante handshake");
         close(socket_cpu);
         return NULL;
     }
 
     if(op != MS_OK_CONEXION){
-        log_error(cpu_logger, "Handshake invalido. Esperaba MS_OK_CONEXION (%d), llegó %d", MS_OK_CONEXION, op);
+        log_error(cpuLogger, "Handshake invalido. Esperaba MS_OK_CONEXION (%d), llegó %d", MS_OK_CONEXION, op);
         close(socket_cpu);
         return NULL;
     }
 
-    log_info(cpu_logger, "Handshake con Memory Stick OK");
+    log_info(cpuLogger, "Handshake con Memory Stick OK");
 
-    // 🔁 Loop de comunicación con KM
+    // 🔁 Loop de comunicación con MS
     while(1){
         int cod_op = recibir_operacion(socket_cpu);
 
         if(cod_op <= 0){
-            log_error(cpu_logger, "Memory Stick se desconectó");
+            log_error(cpuLogger, "Memory Stick se desconectó");
             close(socket_cpu);
             break;
         }
@@ -109,13 +112,8 @@ int main(int argc, char* argv[])
         fprintf(stderr, "Error al cargar la configuración\n");
         return EXIT_FAILURE;
     }
-    if (conectar_a_kernel_memory() < 0) return EXIT_FAILURE; [cite: 163]
-    if (conectar_a_kernel_scheduler() < 0) return EXIT_FAILURE; [cite: 163]
-    if (conectar_a_memory_stick() < 0) 
-    {
-        log_warning(g_logger, "No se encontraron Memory Sticks iniciales, esperando conexión dinámica...");
-    }
-    
+    if (conectar_a_kernel_memory() < 0) return EXIT_FAILURE; 
+    if (conectar_a_kernel_scheduler() < 0) return EXIT_FAILURE;   
     pthread_t hilo_cpu;
     pthread_create(&hilo_cpu, NULL, cpu_conexion_memoryStick, NULL);
     pthread_detach(hilo_cpu);

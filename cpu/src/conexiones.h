@@ -28,3 +28,4 @@ int conectar_a_kernel_scheduler(void);
 int conectar_a_memory_stick(void);
 
 void conectar_a_nuevo_memory_stick(char* ip, char* puerto);
+
