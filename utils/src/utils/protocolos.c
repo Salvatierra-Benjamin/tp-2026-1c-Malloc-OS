@@ -46,42 +46,46 @@ void eliminar_paquete(t_paquete *paquete)
 	free(paquete);
 }
 
-void buffer_read(void* dest, t_buffer* buffer, int size) {
-    memcpy(dest, buffer->stream + buffer->offset, size);
-    buffer->offset += size;
+void buffer_read(void *dest, t_buffer *buffer, int size)
+{
+	memcpy(dest, buffer->stream + buffer->offset, size);
+	buffer->offset += size;
 }
 
-t_paquete* recibir_paquete(int socket) 
+t_paquete *recibir_paquete(int socket)
 {
-    t_paquete* paquete = malloc(sizeof(t_paquete));
-    paquete->buffer = malloc(sizeof(t_buffer));
-    // Recibir el tamaño del buffer
-    recv(socket, &paquete->buffer->size, sizeof(int), 0);
-    // Recibir el buffer
-    paquete->buffer->stream = malloc(paquete->buffer->size);
-    recv(socket, paquete->buffer->stream, paquete->buffer->size, 0);
-    return paquete;
+	t_paquete *paquete = malloc(sizeof(t_paquete));
+	paquete->buffer = malloc(sizeof(t_buffer));
+	// Recibir el tamaño del buffer
+	recv(socket, &paquete->buffer->size, sizeof(int), 0);
+	// Recibir el buffer
+	paquete->buffer->stream = malloc(paquete->buffer->size);
+	recv(socket, paquete->buffer->stream, paquete->buffer->size, 0);
+	return paquete;
 }
 int enviar_operacion(int socket_destino, op_code codigo_operacion)
 {
-    // Envia SOLO el opcode (sin size, sin payload)
-    int result = send(socket_destino, &codigo_operacion, sizeof(op_code), 0);
-    if (result < 0) {
-        printf("Error al enviar la operacion (solo opcode)\n");
-    }
-    return result;
+	// Envia SOLO el opcode (sin size, sin payload)
+	int result = send(socket_destino, &codigo_operacion, sizeof(op_code), 0);
+	if (result < 0)
+	{
+		printf("Error al enviar la operacion (solo opcode)\n");
+	}
+	return result;
 }
-int recibir_operacion(int cliente_fd) {
-    op_code codigo_operacion;
-    int bytes_recibidos = recv(cliente_fd, &codigo_operacion, sizeof(op_code), 0);
-    if (bytes_recibidos <= 0) {
-        return -1;
-    }
-    return codigo_operacion;
+int recibir_operacion(int cliente_fd)
+{
+	op_code codigo_operacion;
+	int bytes_recibidos = recv(cliente_fd, &codigo_operacion, sizeof(op_code), 0);
+	if (bytes_recibidos <= 0)
+	{
+		return -1;
+	}
+	return codigo_operacion;
 }
 
-static void add_cstring(t_paquete* p, const char* s){
-    int len = s ? (int)strlen(s) + 1 : 1;
-    agregar_a_paquete(p, &len, sizeof(int));
-    agregar_a_paquete(p, (void*)s, len);
-}
+// static void add_cstring(t_paquete* p, const char* s){
+//     int len = s ? (int)strlen(s) + 1 : 1;
+//     agregar_a_paquete(p, &len, sizeof(int));
+//     agregar_a_paquete(p, (void*)s, len);
+// }
