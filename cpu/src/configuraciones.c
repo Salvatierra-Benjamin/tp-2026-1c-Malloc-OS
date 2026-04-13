@@ -1,4 +1,4 @@
-#include <configuraciones.h>
+#include "configuraciones.h"
 bool cpu_cargar_config(char* path)
 {
     t_config* configuracion = config_create(path);

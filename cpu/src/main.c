@@ -1,6 +1,6 @@
-#include <utils/hello.h>
-#include <cpu.h>
-#include <configuraciones.c>
+#include "utils/hello.h"
+#include "cpu.h"
+#include "configuraciones.c"
 t_log* cpu_logger = NULL;
 cpu_config  cpu_config;
 t_log_level LOG_LEVEL_INFO = log_level_from_string(cpuConfig.LOG_LEVEL);

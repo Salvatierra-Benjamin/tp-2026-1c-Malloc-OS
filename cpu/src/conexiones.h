@@ -17,7 +17,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <pthread.h>
-#include<main.h>
+#include "main.h"
 
 void realizar_handshake(int socket, int cod_op, char* nombre_modulo);
 

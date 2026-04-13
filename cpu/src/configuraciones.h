@@ -15,8 +15,8 @@
 #include <unistd.h>
 #include <string.h>
 #include <pthread.h>
-#include<main.h>
-#include<conexiones.h>
+#include "main.h"
+#include "conexiones.h"
 
 bool cpu_cargar_config(char* path);
 
