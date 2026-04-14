@@ -70,18 +70,22 @@ void *seleccion_dispositivo(void *arg)
                 continue;
             }
             pthread_detach(hilo_km);
+            break;
         }
         case HANDSHAKE_CPU:
         {
             log_info(logger, "se conecto cpu");
+            break;
         }
         case HANDSHAKE_IO:
         {
             log_info(logger, "se conecto io");
+            break;
         }
         case HANDSHAKE_SWAP:
         {
             log_info(logger, "se conecto swap");
+            break;
         }
         }
     }
