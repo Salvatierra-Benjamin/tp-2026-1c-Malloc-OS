@@ -20,6 +20,7 @@ typedef struct
 
 extern t_log *logger;
 extern t_config *config;
+extern km_config *parametros;
 
 void liberar_recursos();
 

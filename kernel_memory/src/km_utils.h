@@ -1,5 +1,5 @@
 #ifndef KERNEL_MEMORY_UTILS_H
-#define KERNERL_MEMORY_UTILS_H
+#define KERNEL_MEMORY_UTILS_H
 
 #include <recursos_globales/recursos_globales.h>
 #include <servidor/manejador_global.h>

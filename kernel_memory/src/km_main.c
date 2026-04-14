@@ -11,7 +11,7 @@ int main(int argc, char *argv[])
     char *config_name = argv[1];
 
     config = config_create(config_name);
-    km_config *parametros = iniciar_config(config);
+    parametros = iniciar_config(config);
     logger = log_create("km.log", "LOGGER - KM", 1, parametros->log_level);
 
     log_info(logger, "Inicio Kernel Memory");

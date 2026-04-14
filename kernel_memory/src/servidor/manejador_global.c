@@ -52,24 +52,24 @@ void *seleccion_dispositivo(void *arg)
         {
             log_info(logger, "se conecto ks");
 
-            int *socket_km_ptr = malloc(sizeof(int));
-            if (socket_km_ptr == NULL)
+            int *socket_ks_ptr = malloc(sizeof(int));
+            if (socket_ks_ptr == NULL)
             {
                 log_error(logger, "Error al alocar memoria para socket");
                 close(socket_cliente);
                 continue;
             }
-            *socket_km_ptr = socket_cliente;
+            *socket_ks_ptr = socket_cliente;
 
-            pthread_t hilo_km;
-            if (pthread_create(&hilo_km, NULL, manejador_ks, socket_km_ptr) != 0)
+            pthread_t hilo_ks;
+            if (pthread_create(&hilo_ks, NULL, manejador_ks, socket_ks_ptr) != 0)
             {
                 log_error(logger, "Error al crear hilo para kernel memory");
-                free(socket_km_ptr);
+                free(socket_ks_ptr);
                 close(socket_cliente);
                 continue;
             }
-            pthread_detach(hilo_km);
+            pthread_detach(hilo_ks);
             break;
         }
         case HANDSHAKE_CPU:

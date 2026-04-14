@@ -2,5 +2,6 @@
 
 void *manejador_ks(void *arg)
 {
-    // A IMPLEMENTAR
+    int socket_ks = *(int *)arg;
+    free(arg);
 }
