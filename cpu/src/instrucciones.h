@@ -1,5 +1,6 @@
 #ifndef CPU_INSTRUCCION_H
 #define CPU_INSTRUCCION_H
+#include "main.h"
 struct instruccion 
 {
     uint32_t PC;
@@ -14,3 +15,4 @@ struct instruccion
     uint32_t SI;
     uint32_t DI;
 }
+#endif // CPU_INSTRUCCION_H

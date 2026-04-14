@@ -17,7 +17,6 @@
 #include <unistd.h>
 #include <string.h>
 #include <pthread.h>
-#include "main.h"
 
 void realizar_handshake(int socket, int cod_op, char* nombre_modulo);
 
@@ -29,3 +28,4 @@ int conectar_a_memory_stick(void);
 
 void conectar_a_nuevo_memory_stick(char* ip, char* puerto);
 
+#endif // CPU_CONEXIONES_H
