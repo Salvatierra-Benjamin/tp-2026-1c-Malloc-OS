@@ -50,7 +50,7 @@ void *seleccion_dispositivo(void *arg)
         {
         case HANDSHAKE_KS:
         {
-            log_info(logger, "se conecto ks");
+            log_info(logger, "se conecto KS");
 
             int *socket_km_ptr = malloc(sizeof(int));
             if (socket_km_ptr == NULL)
@@ -73,15 +73,23 @@ void *seleccion_dispositivo(void *arg)
         }
         case HANDSHAKE_CPU:
         {
-            log_info(logger, "se conecto cpu");
+            log_info(logger, "se conecto CPU");
+            break;
+        }
+        case HANDSHAKE_MS:
+        {
+            log_info(logger, "se conecto MEMORY_STICK");
+            break;
         }
         case HANDSHAKE_IO:
         {
-            log_info(logger, "se conecto io");
+            log_info(logger, "se conecto IO");
+            break;
         }
         case HANDSHAKE_SWAP:
         {
-            log_info(logger, "se conecto swap");
+            log_info(logger, "se conecto SWAP");
+            break;
         }
         }
     }

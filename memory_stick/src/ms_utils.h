@@ -1,5 +1,5 @@
-#ifndef SP_UTILS_H
-#define SP_UTILS_H
+#ifndef MS_UTILS_H
+#define MS_UTILS_H
 #include <stdint.h>
 #include <stdbool.h>
 #include <commons/log.h>
@@ -19,25 +19,16 @@
 #include <string.h>
 #include <pthread.h>
 
-typedef struct
-{
-    char *swap_file_path;
-    int swap_file_size;
-    int swap_block_size;
-    char *puerto_km;
-    char *ip_km;
+typedef struct {
+    char *ip_km;         // FIFO, RR, CMN
+    char *puerto_km;     // lista entre FIFO, RR
+    int memoria_delay;
     t_log_level log_level;
-} swap_config;
+} ms_config_struct;
 
-typedef struct
-{
-    int swap_file_size;  // FIFO, RR, CMN
-    int swap_block_size; // lista entre FIFO, RR
 
-} parametros_swap;
-
-void swap_cargar_config(char *path, swap_config *swap_config);
-void swap_liberar_config(swap_config *swap_config);
-void swap_liberar_log(t_log *logger);
-
+void ms_cargar_config(char *path, ms_config_struct *ms_config);
+void ms_liberar_config(ms_config_struct *ms_config, t_log *ms_logger);
+void ms_liberar_log(t_log *ms_logger);
+    
 #endif

@@ -1,15 +1,13 @@
-#include <sp_utils.h>
-void swap_cargar_config(char *path, swap_config *swap_config)
+#include <swap_utils.h>
+void swap_cargar_config(char *path, swap_config_struct *swap_config)
 {
 
     t_config *config = config_create(path);
     if (!config)
     {
-        printf("ERROR AL CREAR CONFIG DE SWAP\n");
-        // config_destroy(config);
-        return;
+        fprintf(stderr, "ERROR AL CREAR CONFIG DE SWAP\n");
+        exit(EXIT_FAILURE);
     }
-    printf("se pudo crear el config\n");
 
     swap_config->swap_file_path = strdup(config_get_string_value(config, "SWAP_FILE_PATH"));
     swap_config->swap_file_size = config_get_int_value(config, "SWAP_FILE_SIZE");
@@ -18,22 +16,23 @@ void swap_cargar_config(char *path, swap_config *swap_config)
     swap_config->puerto_km = strdup(config_get_string_value(config, "PUERTO_KM"));
     char *log_level_string = config_get_string_value(config, "LOG_LEVEL");
     swap_config->log_level = log_level_from_string((char *)log_level_string);
-    printf("ip_km: %s \n", swap_config->ip_km);
-    printf("puerto_km: %s \n", swap_config->puerto_km);
-    // printf("ip_km: %s \n", swap_config->ip_km);
-    // printf("ip_km: %s \n", swap_config->ip_km);
+
+    config_destroy(config);
+
 }
 
-void swap_liberar_config(swap_config *swap_config)
+void swap_liberar_config(swap_config_struct *swap_config,t_log *swap_logger)
 {
     free(swap_config->swap_file_path);
     free(swap_config->ip_km);
     free(swap_config->puerto_km);
-    printf("swap configs liberados\n");
+   
+    log_debug(swap_logger,"Estructura de la Config Liberada\n");
 }
 
-void swap_liberar_log(t_log *logger)
+void swap_liberar_log(t_log *swap_logger)
 {
-    log_destroy(logger);
-    printf("log liberado\n");
+    log_debug(swap_logger,"Log Liberado!!!\n");
+    log_destroy(swap_logger);
+    
 }
