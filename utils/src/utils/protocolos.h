@@ -39,7 +39,10 @@ typedef enum {
     CPU_IDENTIFICACION = 3000,
 
     // ---------------- SWAP -> KM ----------------
-    BLOCK_SIZE = 4000
+    BLOCK_SIZE = 4000,
+
+    // ---------------- KS -> KM ----------------
+    CREACION_PROCESO = 5000
 } op_code;
 
 
