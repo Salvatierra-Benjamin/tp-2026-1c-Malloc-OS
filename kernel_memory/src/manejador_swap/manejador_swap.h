@@ -4,5 +4,6 @@
 #include <recursos_globales/recursos_globales.h>
 
 void *manejador_swap(void *arg);
+void agregar_swap(int tam_bloque, int tam_swap);
 
 #endif
