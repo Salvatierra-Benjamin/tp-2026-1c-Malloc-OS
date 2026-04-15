@@ -1,5 +1,5 @@
-#ifndef SWAP_UTILS_H
-#define SWAP_UTILS_H
+#ifndef GESTORS_SWAP_H
+#define GESTORS_SWAP_H
 #include <stdint.h>
 #include <stdbool.h>
 #include <commons/log.h>
@@ -29,14 +29,8 @@ typedef struct
     t_log_level log_level;
 } swap_config_struct;
 
-typedef struct
-{
-    int swap_file_size;  // FIFO, RR, CMN
-    int swap_block_size; // lista entre FIFO, RR
-} parametros_swap;
-
-void swap_cargar_config(char *path, swap_config_struct *swap_config);
-void swap_liberar_config(swap_config_struct *swap_config, t_log *swap_logger);
-void swap_liberar_log(t_log *swap_logger);
+// Variables globales
+extern t_log *swap_logger;
+extern swap_config_struct swap_config;
 
 #endif
