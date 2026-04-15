@@ -46,64 +46,6 @@ void cpu_liberar_config(void)
     return;
 }
 
-void* cpu_conexion_memoryStick(void* _arg)
-{
-    (void)_arg;
-
-    int socket_cpu = crear_conexion(cpu_config.IP_MEMORY_STICK,cpu_config.PUERTO_MEMORY_STICK);
-
-    if(socket_cpu < 0)
-    {
-        log_error(cpuLogger, "No pude conectar al Memory Stick %s:%s", cpu_config.IP_MEMORY_STICK, cpu_config.PUERTO_MEMORY_STICK);
-        return NULL;
-    }
-
-    log_info(cpuLogger, "Conectado a Memory Stick en %s:%s", cpu_config.IP_MEMORY_STICK, cpu_config.PUERTO_MEMORY_STICK);
-
-    enviar_operacion(socket_cpu, 1001);
-
-    int op = recibir_operacion(socket_cpu);
-
-    if(op <= 0)
-    {
-        log_error(cpuLogger, "Memory Stick cerró durante handshake");
-        close(socket_cpu);
-        return NULL;
-    }
-
-    if(op != MS_OK_CONEXION){
-        log_error(cpuLogger, "Handshake invalido. Esperaba MS_OK_CONEXION (%d), llegó %d", MS_OK_CONEXION, op);
-        close(socket_cpu);
-        return NULL;
-    }
-
-    log_info(cpuLogger, "Handshake con Memory Stick OK");
-
-    // 🔁 Loop de comunicación con MS
-    while(1){
-        int cod_op = recibir_operacion(socket_cpu);
-
-        if(cod_op <= 0){
-            log_error(cpuLogger, "Memory Stick se desconectó");
-            close(socket_cpu);
-            break;
-        }
-
-        switch(cod_op){
-            // case RESPUESTA_MEMORIA:
-            //     ...
-            //     break;
-
-            default:
-                log_warning(cpu_logger, "Operacion desconocida de MS (%d)", cod_op);
-                t_paquete* basura = recibir_paquete(socket_cpu);
-                if(basura) eliminar_paquete(basura);
-                break;
-        }
-    }
-
-    return NULL;
-}
 
 int main(int argc, char* argv[]) 
 {

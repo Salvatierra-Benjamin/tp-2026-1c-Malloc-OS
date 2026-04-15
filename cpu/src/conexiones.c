@@ -75,35 +75,61 @@ int conectar_a_kernel_scheduler(void)
     return socketKernelScheduler;
 }
 
-t_list* lista_sticks;
-
-int conectar_a_memory_stick(void)
+void* cpu_conexion_memoryStick(void* _arg)
 {
-    char *ipMemoryStick = cpuConfig.IP_MEMORY_STICK;
-    char *puertoMemoryStick = cpuConfig.PUERTO_MEMORY_STICK;
-    int socketMemoryStick = crear_conexion(ipMemoryStick, puertoMemoryStick);
+    (void)_arg;
 
-    if (socketMemoryStick == -1 ) {
-        log_error(cpuLogger, "Error al intentar establecer conexión inicial con el modulo Memoria");
-        config_destroy(cpuConfig);
-        log_destroy(cpuLogger);
-        exit(EXIT_FAILURE);
+    int socket_cpu = crear_conexion(cpu_config.IP_MEMORY_STICK,cpu_config.PUERTO_MEMORY_STICK);
+
+    if(socket_cpu < 0)
+    {
+        log_error(cpuLogger, "No pude conectar al Memory Stick %s:%s", cpu_config.IP_MEMORY_STICK, cpu_config.PUERTO_MEMORY_STICK);
+        return NULL;
     }
 
-    cpu_config_set_socket_memory_stick(cpuConfig, socketMemoryStick);
+    log_info(cpuLogger, "Conectado a Memory Stick en %s:%s", cpu_config.IP_MEMORY_STICK, cpu_config.PUERTO_MEMORY_STICK);
 
-    enviar_operacion(socketMemoryStick, 1001);
-    recibir_operacion(socketMemoryStick);
+    enviar_operacion(socket_cpu, 1001);
 
-    return socketMemoryStick;
-}
-void conectar_a_nuevo_memory_stick(char* ip, char* puerto) {
-    int nuevo_socket = crear_conexion(ip, puerto);
-    if (nuevo_socket != -1) {
-     
-        enviar_operacion(nuevo_socket, 1001); 
-        recibir_operacion(socketMemoryStick);
-        list_add(lista_sticks, (void*)(intptr_t)nuevo_socket);
-        log_info(cpuLogger, "Nuevo Memory Stick conectado en socket %d", nuevo_socket);
+    int op = recibir_operacion(socket_cpu);
+
+    if(op <= 0)
+    {
+        log_error(cpuLogger, "Memory Stick cerró durante handshake");
+        close(socket_cpu);
+        return NULL;
     }
+
+    if(op != MS_OK_CONEXION){
+        log_error(cpuLogger, "Handshake invalido. Esperaba MS_OK_CONEXION (%d), llegó %d", MS_OK_CONEXION, op);
+        close(socket_cpu);
+        return NULL;
+    }
+
+    log_info(cpuLogger, "Handshake con Memory Stick OK");
+
+    // 🔁 Loop de comunicación con MS
+    while(1){
+        int cod_op = recibir_operacion(socket_cpu);
+
+        if(cod_op <= 0){
+            log_error(cpuLogger, "Memory Stick se desconectó");
+            close(socket_cpu);
+            break;
+        }
+
+        switch(cod_op){
+            // case RESPUESTA_MEMORIA:
+            //     ...
+            //     break;
+
+            default:
+                log_warning(cpu_logger, "Operacion desconocida de MS (%d)", cod_op);
+                t_paquete* basura = recibir_paquete(socket_cpu);
+                if(basura) eliminar_paquete(basura);
+                break;
+        }
+    }
+
+    return NULL;
 }
