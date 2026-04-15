@@ -4,4 +4,28 @@ void *manejador_memory_stick(void *arg)
 {
     int socket_memory_stick = *(int *)arg;
     free(arg);
+    while (1)
+    {
+        int cod_op = recibir_operacion(socket_memory_stick);
+        switch (cod_op)
+        {
+        case MEMORY_STICK_SIZE:
+        {
+            t_paquete *tam_memory_stick = recibir_paquete(socket_memory_stick);
+            int tam_ms;
+            buffer_read(&tam_ms, tam_memory_stick->buffer, sizeof(int));
+            agregar_memory_stick(tam_ms);
+            break;
+        }
+        default:
+        {
+            log_warning(logger, "[MS] operacion desconocida : %d", cod_op);
+        }
+        }
+    }
+}
+
+void agregar_memory_stick(int tam_ms)
+{
+    log_info(logger, "## Memory Stick de %d bytes Conectada", tam_ms);
 }

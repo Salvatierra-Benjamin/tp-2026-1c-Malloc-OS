@@ -31,12 +31,16 @@ void *manejador_ks(void *arg)
             eliminar_paquete(info_proceso);
             break;
         }
+        default:
+        {
+            log_warning(logger, "[KS] operacion desconocida : %d", op_code);
+        }
         }
     }
 }
 
 void creacion_proceso(int pid, char *path)
 {
-    log_debug(logger, "PATH : %s", path);
+    log_debug(logger, "[KS] PATH : %s", path);
     log_info(logger, "## PID: %d - Proceso Creado", pid);
 }

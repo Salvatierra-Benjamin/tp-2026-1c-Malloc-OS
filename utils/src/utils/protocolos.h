@@ -27,6 +27,7 @@ typedef enum {
     HANDSHAKE_CPU      = 1001,
     HANDSHAKE_SWAP     = 1003, // Swap envia HS a km
     HANDSHAKE_KS       = 1004, // KS se conecta a KM
+    HANDSHAKE_MS       = 1005, // MS se conecta a KM
 
     // Respuesta
     KM_OK_CONEXION     = 1100, // KM responde a KS
@@ -37,12 +38,18 @@ typedef enum {
 
     // ---------------- CPU -> SCHEDULER ----------------
     CPU_IDENTIFICACION = 3000,
+    SOLICITUD_CONTEXTO_EJECUCION = 3001, // CPU solicita contexto a KM
+    ENVIO_CPU_ID = 3002,
 
     // ---------------- SWAP -> KM ----------------
     BLOCK_SIZE = 4000,
 
     // ---------------- KS -> KM ----------------
-    CREACION_PROCESO = 5000
+    CREACION_PROCESO = 5000,
+
+    // ---------------- MS -> KM ----------------
+    MEMORY_STICK_SIZE = 6000,
+
 } op_code;
 
 

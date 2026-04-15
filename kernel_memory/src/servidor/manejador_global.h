@@ -4,7 +4,6 @@
 #include <recursos_globales/recursos_globales.h>
 #include <manejador_ks/manejador_ks.h>
 #include <manejador_cpu/manejador_cpu.h>
-#include <manejador_io/manejador_io.h>
 #include <manejador_memory_stick/manejador_memory_stick.h>
 #include <manejador_swap/manejador_swap.h>
 

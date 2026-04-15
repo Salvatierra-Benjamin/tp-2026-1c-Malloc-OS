@@ -58,14 +58,19 @@ void *seleccion_dispositivo(void *arg)
             delegar_a(socket_cliente, manejador_cpu, "CPU");
             break;
         }
-        case HANDSHAKE_IO:
-        {
-            delegar_a(socket_cliente, manejador_io, "IO");
-            break;
-        }
         case HANDSHAKE_SWAP:
         {
             delegar_a(socket_cliente, manejador_swap, "SWAP");
+            break;
+        }
+        case HANDSHAKE_MS:
+        {
+            delegar_a(socket_cliente, manejador_memory_stick, "Memory Stick");
+            break;
+        }
+        default:
+        {
+            log_warning(logger, "se conecto un modulo desconocido : %d", socket_cliente);
             break;
         }
         }
