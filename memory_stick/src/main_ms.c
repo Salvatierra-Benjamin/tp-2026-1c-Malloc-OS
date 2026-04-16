@@ -41,6 +41,9 @@ int main(int argc, char *argv[])
     }
     enviar_operacion(conexion_ms, HANDSHAKE_MS); // Nuestro Handshake con KM
 
+    int socket_servidor = iniciar_servidor(ms_config.puerto_escucha_cpu);
+    esperar_cpus(socket_servidor);
+
     log_debug(ms_logger, "Memory Stick TERMINO.\n");
 
     ms_liberar_config();

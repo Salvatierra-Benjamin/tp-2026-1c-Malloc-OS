@@ -24,17 +24,18 @@ typedef enum
 {
     // ---------------- Handshakes ----------------
     // Solicitud
-    HANDSHAKE_IO = 1000, // se recibe al IO (io es quien lo manda)
-    HANDSHAKE_CPU = 1001,
-    HANDSHAKE_SWAP = 1003, // Swap envia HS a KM
-    HANDSHAKE_KS = 1004,   // KS se envia a HS a KM
-    HANDSHAKE_MS = 1005,   // MS envia HS a KM
+    HANDSHAKE_IO = 1000,   // se recibe al IO (io es quien lo manda)
+    HANDSHAKE_CPU = 1001,  // CPU envia HS a MS
+    HANDSHAKE_SWAP = 1002, // Swap envia HS a KM
+    HANDSHAKE_KS = 1003,   // KS se envia a HS a KM
+    HANDSHAKE_MS = 1004,   // MS envia HS a KM
 
     // Respuesta
-    KM_OK_CONEXION = 1100, // KM responde a KS
-    KS_OK_CONEXION = 1101, // KS responde a KM
-    MS_OK_CONEXION = 1102, // KS responde a KM
-    IO_OK_CONEXION = 1103, // KS responde a IO
+    KM_OK_CONEXION = 1100,  // KM responde a KS
+    KS_OK_CONEXION = 1101,  // KM responde a KS
+    MS_OK_CONEXION = 1102,  // KM responde a MS
+    IO_OK_CONEXION = 1103,  // KS responde a IO
+    CPU_OK_CONEXION = 1104, // MS responde a CPU
 
     // ---------------- IO -> SCHEDULER ----------------
     IO_ENVIA_IO = 2000,

@@ -30,4 +30,4 @@ typedef struct cpu_config
     char *LOG_LEVEL;
 };
 
-#endif // CPU_MAIN_H
+#endif

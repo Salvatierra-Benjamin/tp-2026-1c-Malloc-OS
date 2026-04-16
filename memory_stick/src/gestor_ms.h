@@ -21,6 +21,7 @@
 
 typedef struct
 {
+    char *puerto_escucha_cpu;
     char *ip_km;     // FIFO, RR, CMN
     char *puerto_km; // lista entre FIFO, RR
     int memory_delay;
