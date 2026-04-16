@@ -1,5 +1,5 @@
-#ifndef SWAP_H
-#define SWAP_H
+#ifndef GESTORS_SWAP_H
+#define GESTORS_SWAP_H
 #include <stdint.h>
 #include <stdbool.h>
 #include <commons/log.h>
@@ -19,25 +19,16 @@
 #include <string.h>
 #include <pthread.h>
 
-
-
-typedef struct {
-    char* swap_file_path;
-    int swap_file_size; // FIFO, RR, CMN
-    int swap_block_size; // lista entre FIFO, RR
-    int puerto_km;
-    int ip_km;
-    t_log_level log_level;
-} swap_config;
-
 typedef struct
 {
-    int swap_file_size; // FIFO, RR, CMN
-    int swap_block_size; // lista entre FIFO, RR
+    char *ip_km;     // FIFO, RR, CMN
+    char *puerto_km; // lista entre FIFO, RR
+    int memory_delay;
+    t_log_level log_level;
+} ms_config_struct;
 
-} parametros_swap;
-
-
-    
+// Variables globales
+extern t_log *ms_logger;
+extern ms_config_struct ms_config;
 
 #endif
