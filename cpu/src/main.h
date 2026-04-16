@@ -16,7 +16,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <pthread.h>
-typedef struct cpu_config
+typedef struct
 {
     char *IP_KERNEL_MEMORY;
     char *IP_KERNEL_SCHEDULER;
@@ -28,6 +28,8 @@ typedef struct cpu_config
     int SOCKET_KERNEL_SCHEDULER;
     int SOCKET_MEMORY_STICK;
     char *LOG_LEVEL;
-};
+} cpu_struct_config;
+extern cpu_struct_config cpu_config;
+extern t_log *cpuLogger;
 
 #endif

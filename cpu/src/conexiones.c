@@ -11,19 +11,19 @@ void realizar_handshake(int socket, int cod_op, char *nombre_modulo)
 }
 int conectar_a_kernel_memory(void)
 {
-    char *ipKernelMemory = cpuConfig.IP_KERNEL_MEMORY;
-    char *puertoKernelMemory = cpuConfig.PUERTO_KERNEL_MEMORY;
+    char *ipKernelMemory = cpu_config.IP_KERNEL_MEMORY;
+    char *puertoKernelMemory = cpu_config.PUERTO_KERNEL_MEMORY;
     int socketKernelMemory = crear_conexion(ipKernelMemory, puertoKernelMemory);
 
     if (socketKernelMemory == -1)
     {
         log_error(cpuLogger, "Error al intentar establecer conexión inicial con el modulo Kernel Memory");
-        config_destroy(cpuConfig);
+        // config_destroy(cpu_config);
         log_destroy(cpuLogger);
         exit(EXIT_FAILURE);
     }
 
-    cpu_config_set_socket_kernel_memory(cpuConfig, socketKernelMemory);
+    cpu_config_set_socket_kernel_memory(socketKernelMemory);
 
     enviar_operacion(socketKernelMemory, 1001);
     recibir_operacion(socketKernelMemory);
@@ -35,7 +35,7 @@ int conectar_a_kernel_memory(void)
     else
     {
         log_error(cpuLogger, "Error al realizar handshake con %s", nombre_modulo);
-        config_destroy(cpuConfig);
+        // config_destroy(cpu_config);
         log_destroy(cpuLogger);
         exit(EXIT_FAILURE);
     }
@@ -45,19 +45,19 @@ int conectar_a_kernel_memory(void)
 
 int conectar_a_kernel_scheduler(void)
 {
-    char *ipKernelScheduler = cpuConfig.IP_KERNEL_SCHEDULER;
-    char *puertoKernelScheduler = cpuConfig.PUERTO_KERNEL_SCHEDULER;
+    char *ipKernelScheduler = cpu_config.IP_KERNEL_SCHEDULER;
+    char *puertoKernelScheduler = cpu_config.PUERTO_KERNEL_SCHEDULER;
     int socketKernelScheduler = crear_conexion(ipKernelScheduler, puertoKernelScheduler);
 
     if (socketKernelScheduler == -1)
     {
         log_error(cpuLogger, "Error al intentar establecer conexión inicial con el modulo Kernel Scheduler");
-        config_destroy(cpuConfig);
+        // config_destroy(cpu_config);
         log_destroy(cpuLogger);
         exit(EXIT_FAILURE);
     }
 
-    cpu_config_set_socket_kernel_scheduler(cpuConfig, socketKernelScheduler);
+    cpu_config_set_socket_kernel_scheduler(socketKernelScheduler);
 
     enviar_operacion(socketKernelScheduler, 1001);
     recibir_operacion(socketKernelScheduler);
@@ -69,7 +69,7 @@ int conectar_a_kernel_scheduler(void)
     else
     {
         log_error(cpuLogger, "Error al realizar handshake con %s", nombre_modulo);
-        config_destroy(cpuConfig);
+        // config_destroy(cpu_config);
         log_destroy(cpuLogger);
         exit(EXIT_FAILURE);
     }
@@ -130,7 +130,7 @@ void *cpu_conexion_memoryStick(void *_arg)
             //     break;
 
         default:
-            log_warning(cpu_logger, "Operacion desconocida de MS (%d)", cod_op);
+            log_warning(cpuLogger, "Operacion desconocida de MS (%d)", cod_op);
             t_paquete *basura = recibir_paquete(socket_cpu);
             if (basura)
                 eliminar_paquete(basura);
