@@ -27,7 +27,7 @@ typedef enum
     HANDSHAKE_IO = 1000, // se recibe al IO (io es quien lo manda)
     HANDSHAKE_CPU = 1001,
     HANDSHAKE_SWAP = 1003, // Swap envia HS a KM
-    HANDSHAKE_KS = 1004,   // KS se conecta HS a KM
+    HANDSHAKE_KS = 1004,   // KS se envia a HS a KM
     HANDSHAKE_MS = 1005,   // MS envia HS a KM
 
     // Respuesta
