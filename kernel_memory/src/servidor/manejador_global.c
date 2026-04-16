@@ -50,50 +50,60 @@ void *seleccion_dispositivo(void *arg)
         {
         case HANDSHAKE_KS:
         {
-            log_info(logger, "se conecto KS");
-
-            int *socket_km_ptr = malloc(sizeof(int));
-            if (socket_km_ptr == NULL)
-            {
-                log_error(logger, "Error al alocar memoria para socket");
-                close(socket_cliente);
-                continue;
-            }
-            *socket_km_ptr = socket_cliente;
-
-            pthread_t hilo_km;
-            if (pthread_create(&hilo_km, NULL, manejador_ks, socket_km_ptr) != 0)
-            {
-                log_error(logger, "Error al crear hilo para kernel memory");
-                free(socket_km_ptr);
-                close(socket_cliente);
-                continue;
-            }
-            pthread_detach(hilo_km);
+            delegar_a(socket_cliente, manejador_ks, "Kernel Scheduler");
+            break;
         }
         case HANDSHAKE_CPU:
         {
-            log_info(logger, "se conecto CPU");
-            break;
-        }
-        case HANDSHAKE_MS:
-        {
-            log_info(logger, "se conecto MEMORY_STICK");
-            break;
-        }
-        case HANDSHAKE_IO:
-        {
-            log_info(logger, "se conecto IO");
+            delegar_a(socket_cliente, manejador_cpu, "CPU");
             break;
         }
         case HANDSHAKE_SWAP:
         {
-            log_info(logger, "se conecto SWAP");
+            delegar_a(socket_cliente, manejador_swap, "SWAP");
             break;
         }
+        case HANDSHAKE_MS:
+        {
+            delegar_a(socket_cliente, manejador_memory_stick, "Memory Stick");
+            break;
         }
+        default:
+        {
+            log_warning(logger, "se conecto un modulo desconocido : %d", socket_cliente);
+            break;
+        }
+            pthread_detach(hilo);
+        }
+
+        close(socket_cliente);
+        return NULL;
     }
 
-    close(socket_cliente);
-    return NULL;
-}
+    void delegar_a(int socket_cliente, void *(*manejador)(void *), const char *nombre_modulo)
+    {
+        log_info(logger, "Se conectó %s", nombre_modulo);
+
+        int *socket_ptr = malloc(sizeof(int));
+        if (socket_ptr == NULL)
+        {
+            log_error(logger, "Error al alocar memoria para socket de %s", nombre_modulo);
+            close(socket_cliente);
+            return;
+        }
+        *socket_ptr = socket_cliente;
+
+        t_paquete *ok_conexion = crear_paquete(KM_OK_CONEXION);
+        enviar_paquete(ok_conexion, socket_cliente);
+        eliminar_paquete(ok_conexion);
+
+        pthread_t hilo;
+        if (pthread_create(&hilo, NULL, manejador, socket_ptr) != 0)
+        {
+            log_error(logger, "Error al crear hilo para %s", nombre_modulo);
+            free(socket_ptr);
+            close(socket_cliente);
+            return;
+        }
+        pthread_detach(hilo);
+    }

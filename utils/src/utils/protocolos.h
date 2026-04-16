@@ -41,9 +41,18 @@ typedef enum
 
     // ---------------- CPU -> SCHEDULER ----------------
     CPU_IDENTIFICACION = 3000,
+    SOLICITUD_CONTEXTO_EJECUCION = 3001, // CPU solicita contexto a KM
+    ENVIO_CPU_ID = 3002,
 
     // ---------------- SWAP -> KM ----------------
-    BLOCK_SIZE = 4000
+    BLOCK_SIZE = 4000,
+
+    // ---------------- KS -> KM ----------------
+    CREACION_PROCESO = 5000,
+
+    // ---------------- MS -> KM ----------------
+    MEMORY_STICK_SIZE = 6000,
+
 } op_code;
 
 typedef enum

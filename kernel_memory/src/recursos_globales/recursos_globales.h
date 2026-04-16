@@ -7,10 +7,9 @@
 #include <commons/log.h>
 #include <pthread.h>
 
-
 typedef struct
 {
-    char* puerto_escucha;
+    char *puerto_escucha;
     t_log_level log_level;
     int segment_max_size;
     char *allocation_strategy;
@@ -21,5 +20,8 @@ typedef struct
 
 extern t_log *logger;
 extern t_config *config;
+extern km_config *parametros;
+
+void liberar_recursos();
 
 #endif
