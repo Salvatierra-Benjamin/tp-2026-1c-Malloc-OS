@@ -1,5 +1,5 @@
-#ifndef MS_UTILS_H
-#define MS_UTILS_H
+#ifndef GESTORS_SWAP_H
+#define GESTORS_SWAP_H
 #include <stdint.h>
 #include <stdbool.h>
 #include <commons/log.h>
@@ -19,16 +19,16 @@
 #include <string.h>
 #include <pthread.h>
 
-typedef struct {
-    char *ip_km;         // FIFO, RR, CMN
-    char *puerto_km;     // lista entre FIFO, RR
-    int memoria_delay;
+typedef struct
+{
+    char *ip_km;     // FIFO, RR, CMN
+    char *puerto_km; // lista entre FIFO, RR
+    int memory_delay;
     t_log_level log_level;
 } ms_config_struct;
 
+// Variables globales
+extern t_log *ms_logger;
+extern ms_config_struct ms_config;
 
-void ms_cargar_config(char *path, ms_config_struct *ms_config);
-void ms_liberar_config(ms_config_struct *ms_config, t_log *ms_logger);
-void ms_liberar_log(t_log *ms_logger);
-    
 #endif
