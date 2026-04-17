@@ -12,7 +12,7 @@ int main(int argc, char *argv[])
 
     swap_cargar_config(path);
     inicializar_logger();
-    imprimir_valores_config();
+    imprimir_valores_config_swap();
 
     int conexion_swap = crear_conexion(swap_config.ip_km, swap_config.puerto_km);
     if (conexion_swap == -1)

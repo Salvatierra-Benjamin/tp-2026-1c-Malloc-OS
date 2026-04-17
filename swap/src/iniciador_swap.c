@@ -33,9 +33,9 @@ void inicializar_logger()
     log_debug(swap_logger, "Se creo log de Swap correctamente");
 }
 
-void imprimir_valores_config()
+void imprimir_valores_config_swap()
 {
-    log_debug(swap_logger, "Valores cargados en Swap:");
+    log_debug(swap_logger, "Valores cargados en SWAP:");
     log_debug(swap_logger, "Path Archivo: %s", swap_config.swap_file_path);
     log_debug(swap_logger, "Tamaño Archivo: %d", swap_config.swap_file_size);
     log_debug(swap_logger, "Tamaño Bloque: %d", swap_config.swap_block_size);

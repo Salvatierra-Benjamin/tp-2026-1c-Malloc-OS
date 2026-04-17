@@ -21,7 +21,7 @@ int main(int argc, char *argv[])
 
     ms_cargar_config(path);
     inicializar_logger();
-    imprimir_valores_config();
+    imprimir_valores_config_ms();
 
     void *memoria = malloc(tamanio_memoria);
     if (memoria == NULL)

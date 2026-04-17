@@ -44,7 +44,7 @@ void inicializar_logger()
     log_debug(io_logger, "Se creo log de IO correctamente");
 }
 
-void imprimir_valores_config()
+void imprimir_valores_config_io()
 {
     // log_debug(swap_logger, "Config y Logger del SWAP creados correctamente.\n");
     log_debug(io_logger, "Valores cargados en Config de IO:");

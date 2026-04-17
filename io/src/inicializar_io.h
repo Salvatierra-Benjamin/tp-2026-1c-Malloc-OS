@@ -7,7 +7,7 @@ char *normalizar(char *tipo_io);
 void imprimir_tipo_de_io(char *argumento_mayusculas);
 void io_cargar_config(char *path);
 void inicializar_logger();
-void imprimir_valores_config();
+void imprimir_valores_config_io();
 void io_liberar_config();
 void io_liberar_log();
 

@@ -1,0 +1,71 @@
+#include "iniciador_cpu.h"
+t_log *cpu_logger;
+cpu_struct_config cpu_config;
+void cpu_cargar_config(char *path)
+{
+
+    t_config *config = config_create(path);
+    if (!config)
+    {
+        fprintf(stderr, "ERROR AL CREAR CONFIG DE MEMORY STICK\n");
+        exit(EXIT_FAILURE);
+    }
+    char *log_level_string = config_get_string_value(config, "LOG_LEVEL");
+    cpu_config.log_level = log_level_from_string((char *)log_level_string);
+    cpu_config.ip_kernel_memory = strdup(config_get_string_value(config, "IP_KERNEL_MEMORY"));
+    cpu_config.ip_kernel_scheduler = strdup(config_get_string_value(config, "IP_KERNEL_SCHEDULER"));
+    cpu_config.ip_memory_stick = strdup(config_get_string_value(config, "IP_MEMORY_STICK"));
+    cpu_config.puerto_kernel_memory = strdup(config_get_string_value(config, "PUERTO_KERNEL_MEMORY"));
+    cpu_config.puerto_kernel_scheduler = strdup(config_get_string_value(config, "PUERTO_KERNEL_SCHEDULER"));
+    cpu_config.puerto_memory_stick = strdup(config_get_string_value(config, "PUERTO_MEMORY_STICK"));
+
+    config_destroy(config);
+}
+
+void inicializar_logger()
+{
+    cpu_logger = log_create("memory_stick.log", "memory_stick", 1, cpu_config.log_level);
+
+    if (cpu_logger == NULL)
+    {
+        fprintf(stderr, "ERROR AL CREAR EL LOGGER MEMORY STICK\n");
+        exit(EXIT_FAILURE);
+    }
+    log_debug(cpu_logger, "Se creo log de MEMORY STICK correctamente");
+}
+
+void imprimir_valores_config_cpu()
+{
+    log_debug(cpu_logger, "Valores cargados en CPU:");
+
+    // IPs
+    log_debug(cpu_logger, "IP Kernel Memory: %s", cpu_config.ip_kernel_memory);
+    log_debug(cpu_logger, "IP Kernel Scheduler: %s", cpu_config.ip_kernel_scheduler);
+    log_debug(cpu_logger, "IP Memory Stick: %s", cpu_config.ip_memory_stick);
+
+    // Puertos
+    log_debug(cpu_logger, "Puerto Kernel Memory: %s", cpu_config.puerto_kernel_memory);
+    log_debug(cpu_logger, "Puerto Kernel Scheduler: %s", cpu_config.puerto_kernel_scheduler);
+    log_debug(cpu_logger, "Puerto Memory Stick: %s", cpu_config.puerto_memory_stick);
+
+    // Log Level
+    log_debug(cpu_logger, "Nivel de Log: %d\n", cpu_config.log_level);
+}
+
+void cpu_liberar_config()
+{
+    free(cpu_config.ip_kernel_memory);
+    free(cpu_config.ip_kernel_scheduler);
+    free(cpu_config.ip_memory_stick);
+    free(cpu_config.puerto_kernel_memory);
+    free(cpu_config.puerto_kernel_scheduler);
+    free(cpu_config.puerto_memory_stick);
+
+    log_debug(cpu_logger, "Estructura de la Config Liberada\n");
+}
+
+void cpu_liberar_log()
+{
+    log_debug(cpu_logger, "Log Liberado!!!\n");
+    log_destroy(cpu_logger);
+}
