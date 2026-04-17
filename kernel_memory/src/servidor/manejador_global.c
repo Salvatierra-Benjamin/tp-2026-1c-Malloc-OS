@@ -72,9 +72,6 @@ void *seleccion_dispositivo(void *arg)
         {
             log_warning(logger, "se conecto un modulo desconocido : %d", socket_cliente);
             break;
-
-            //! pthread_detach(hilo);
-            //!  TE LO COMENTE PORQUE ROMPIA TODO, ADEMÁS FLATABA UNA LLAVE.
         }
         }
     }

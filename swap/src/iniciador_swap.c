@@ -52,7 +52,7 @@ void swap_liberar_config()
     free(swap_config.ip_km);
     free(swap_config.puerto_km);
 
-    fprintf(stderr, "Estructura de la Config Liberada\n");
+    log_debug(swap_logger, "Estructura de la Config Liberada\n");
 }
 
 void swap_liberar_log()

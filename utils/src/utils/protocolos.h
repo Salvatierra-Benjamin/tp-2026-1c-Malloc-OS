@@ -31,12 +31,9 @@ typedef enum
     HANDSHAKE_MS = 1004,   // MS envia HS a KM
 
     // Respuesta
-    KM_OK_CONEXION = 1100,   // KM responde a KS
-    KS_OK_CONEXION = 1101,   // KM responde a KS
-    MS_OK_CONEXION = 1102,   // KM responde a MS
-    IO_OK_CONEXION = 1103,   // KS responde a IO
-    CPU_OK_CONEXION = 1104,  // KM, KS y MS responde a CPU
-    SWAP_OK_CONEXION = 1105, // KM responde a SWAP
+    KM_OK_CONEXION = 1100, // KM responde a KS, SWAP, MS
+    KS_OK_CONEXION = 1101, // KM responde a KS, CPU, IO
+    MS_OK_CONEXION = 1102, // MS responde a CPU
 
     // ---------------- IO -> SCHEDULER ----------------
     IO_ENVIA_IO = 2000,

@@ -12,12 +12,6 @@ void *manejador_ks(void *arg)
         int op_code = recibir_operacion(socket_ks);
         switch (op_code)
         {
-        case HANDSHAKE_KS:
-        {
-            log_debug(logger, "[KS] ME LLEGO EL HANDSHAKE DE KERNEL SCHEDULER : %d", op_code);
-            enviar_operacion(socket_ks, KS_OK_CONEXION);
-            break;
-        }
         case CREACION_PROCESO:
         {
             t_paquete *info_proceso = recibir_paquete(socket_ks);

@@ -1,4 +1,4 @@
-#include "atender_cpu.h"
+#include "receptor_cpus.h"
 void esperar_cpus(int socket_servidor)
 {
     while (1)
@@ -16,7 +16,7 @@ void esperar_cpus(int socket_servidor)
 
 void *atencion_cpus(void *socket_cliente_puntero)
 {
-    log_debug(ms_logger, "Se conecto una cpu");
+    log_debug(ms_logger, "Se conecto el cpu");
     int socket_cliente = *((int *)(socket_cliente_puntero));
     free(socket_cliente_puntero);
 
@@ -28,7 +28,9 @@ void *atencion_cpus(void *socket_cliente_puntero)
         {
         case HANDSHAKE_CPU:
         {
-            enviar_operacion(socket_cliente, CPU_OK_CONEXION);
+            t_paquete *ok_conexion = crear_paquete(MS_OK_CONEXION);
+            enviar_paquete(ok_conexion, socket_cliente);
+            eliminar_paquete(ok_conexion);
             break;
         }
         case -1:

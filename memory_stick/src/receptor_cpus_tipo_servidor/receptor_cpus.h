@@ -1,5 +1,5 @@
-#ifndef ATENDER_CPU_H
-#define ATENDER_CPU_H
+#ifndef RECEPTOR_CPU_H
+#define RECEPTOR_CPU_H
 
 #include "gestor_ms.h"
 void esperar_cpus(int socket_servidor);

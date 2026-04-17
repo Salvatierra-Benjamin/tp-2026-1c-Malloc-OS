@@ -59,6 +59,7 @@ void io_liberar_config()
 {
     free(io_config.ip_ks);
     free(io_config.puerto_ks);
+
     log_debug(io_logger, "Estructura de la Config Liberada\n");
 }
 

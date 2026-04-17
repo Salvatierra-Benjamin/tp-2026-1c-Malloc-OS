@@ -9,12 +9,6 @@ void *manejador_memory_stick(void *arg)
         int op_code = recibir_operacion(socket_memory_stick);
         switch (op_code)
         {
-        case HANDSHAKE_MS:
-        {
-            log_debug(logger, "[MS] ME LLEGO EL HANDSHAKE DE MEMORY STICK : %d", op_code);
-            enviar_operacion(socket_memory_stick, MS_OK_CONEXION);
-            break;
-        }
         case MEMORY_STICK_SIZE:
         {
             t_paquete *tam_memory_stick = recibir_paquete(socket_memory_stick);

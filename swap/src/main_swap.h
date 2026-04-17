@@ -3,6 +3,6 @@
 
 #include "gestor_swap.h"
 #include "iniciador_swap.h"
-#include "receptor_swap_km.h"
+#include "receptor_km_tipo_cliente/receptor_km.h"
 
 #endif

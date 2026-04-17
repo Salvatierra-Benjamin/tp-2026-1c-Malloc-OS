@@ -41,7 +41,7 @@ int main(int argc, char *argv[])
     }
     enviar_operacion(conexion_km, HANDSHAKE_MS); // Nuestro Handshake con KM
 
-    receptor_ms_km(conexion_km);
+    receptor_km(conexion_km);
 
     int socket_servidor = iniciar_servidor(ms_config.puerto_escucha_cpu);
     esperar_cpus(socket_servidor);

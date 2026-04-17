@@ -4,6 +4,6 @@
 #include "gestor_ms.h"
 #include "iniciador_ms.h"
 
-void receptor_ms_km(int conexion_km);
+void receptor_km(int conexion_km);
 
 #endif

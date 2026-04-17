@@ -9,12 +9,6 @@ void *manejador_cpu(void *arg)
         int op_code = recibir_operacion(socket_cpu);
         switch (op_code)
         {
-        case HANDSHAKE_CPU:
-        {
-            log_debug(logger, "[CPU] ME LLEGO EL HANDSHAKE DE CPU : %d", op_code);
-            enviar_operacion(socket_cpu, KS_OK_CONEXION);
-            break;
-        }
         case ENVIO_CPU_ID:
         {
             t_paquete *paquete_cpu_id = recibir_paquete(socket_cpu);

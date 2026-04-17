@@ -24,7 +24,7 @@ int main(int argc, char *argv[])
     }
     enviar_operacion(conexion_km, HANDSHAKE_SWAP); // Nuestro Handshake con KM
 
-    receptor_swap_km(conexion_km);
+    receptor_km(conexion_km);
 
     log_debug(swap_logger, "SWAP TERMINO.\n");
 

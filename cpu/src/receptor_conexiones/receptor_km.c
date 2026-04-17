@@ -14,9 +14,11 @@ void *receptor_km(void *arg)
         }
         switch (cod_op1)
         {
-        case CPU_OK_CONEXION:
+        case KM_OK_CONEXION:
         {
-            log_debug(cpu_logger, "[RECEPTOR_KM] EL HANSHAKE CON KM SE HA REALIZADO CORRECTAMENTE!!!");
+            t_paquete *ok_conexion = recibir_paquete(parametros_km.conexion_km);
+            eliminar_paquete(ok_conexion);
+            log_debug(cpu_logger, "[RECEPTOR_KM] EL HANDSHAKE CON KM SE HA REALIZADO CORRECTAMENTE!!!");
             break;
         }
         default:

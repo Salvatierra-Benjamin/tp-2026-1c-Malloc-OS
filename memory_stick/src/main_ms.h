@@ -3,7 +3,7 @@
 
 #include "gestor_ms.h"
 #include "iniciador_ms.h"
-#include "atender_cpu/atender_cpu.h"
-#include "receptor_ms_km.h"
+#include "receptor_cpus_tipo_servidor/receptor_cpus.h"
+#include "receptor_km_tipo_cliente/receptor_km.h"
 
 #endif

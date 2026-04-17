@@ -1,5 +1,5 @@
-#include "receptor_ms_km.h"
-void receptor_ms_km(int conexion_km)
+#include "receptor_km.h"
+void receptor_km(int conexion_km)
 {
     int cod_op1 = recibir_operacion(conexion_km);
     if (cod_op1 < 0)
@@ -10,8 +10,10 @@ void receptor_ms_km(int conexion_km)
     }
     switch (cod_op1)
     {
-    case MS_OK_CONEXION:
+    case KM_OK_CONEXION:
     {
+        t_paquete *ok_conexion = recibir_paquete(conexion_km);
+        eliminar_paquete(ok_conexion);
         log_debug(ms_logger, "[RECEPTOR_KM] EL HANSHAKE CON KM SE HA REALIZADO CORRECTAMENTE!!!");
         break;
     }

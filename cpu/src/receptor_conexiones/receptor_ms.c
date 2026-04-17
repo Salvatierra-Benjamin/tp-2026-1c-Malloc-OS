@@ -14,9 +14,11 @@ void *receptor_ms(void *arg)
         }
         switch (cod_op1)
         {
-        case CPU_OK_CONEXION:
+        case MS_OK_CONEXION:
         {
-            log_debug(cpu_logger, "[RECEPTOR_MS] EL HANSHAKE CON MS SE HA REALIZADO CORRECTAMENTE!!!");
+            t_paquete *ok_conexion = recibir_paquete(parametros_ms.conexion_ms);
+            eliminar_paquete(ok_conexion);
+            log_debug(cpu_logger, "[RECEPTOR_MS] EL HANDSHAKE CON MS SE HA REALIZADO CORRECTAMENTE!!!");
             break;
         }
         default:
