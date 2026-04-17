@@ -2,6 +2,7 @@
 #define INICIADOR_IO_H
 
 #include "gestor_io.h"
+// Declaración Funciones:
 
 char *normalizar(char *tipo_io);
 void imprimir_tipo_de_io(char *argumento_mayusculas);

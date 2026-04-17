@@ -19,6 +19,7 @@
 #include <string.h>
 #include <pthread.h>
 
+// Definición de Tipos:
 typedef struct
 {
     char *puerto_escucha_cpu;
@@ -28,7 +29,7 @@ typedef struct
     t_log_level log_level;
 } ms_config_struct;
 
-// Variables globales
+// Declaración Variables Globales:
 extern t_log *ms_logger;
 extern ms_config_struct ms_config;
 

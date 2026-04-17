@@ -1,12 +1,12 @@
 #ifndef CPU_INSTRUCCION_H
 #define CPU_INSTRUCCION_H
-#include "main.h"
-struct instruccion 
+#include "gestor_cpu.h"
+struct instruccion
 {
     uint32_t PC;
     uint8_t AX;
     uint8_t BX;
-    uint8_t CX; 
+    uint8_t CX;
     uint8_t DX;
     uint32_t EAX;
     uint32_t EBX;
@@ -15,4 +15,4 @@ struct instruccion
     uint32_t SI;
     uint32_t DI;
 }
-#endif // CPU_INSTRUCCION_H
+#endif

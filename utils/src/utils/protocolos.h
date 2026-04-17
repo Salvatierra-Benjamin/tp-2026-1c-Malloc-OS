@@ -35,7 +35,7 @@ typedef enum
     KS_OK_CONEXION = 1101,  // KM responde a KS
     MS_OK_CONEXION = 1102,  // KM responde a MS
     IO_OK_CONEXION = 1103,  // KS responde a IO
-    CPU_OK_CONEXION = 1104, // MS responde a CPU
+    CPU_OK_CONEXION = 1104, // KM, KS y MS responde a CPU
 
     // ---------------- IO -> SCHEDULER ----------------
     IO_ENVIA_IO = 2000,

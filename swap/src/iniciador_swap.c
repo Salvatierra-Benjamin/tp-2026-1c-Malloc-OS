@@ -1,6 +1,8 @@
 #include "iniciador_swap.h"
+// Definiciones de Variables Globales y Funciones:
 t_log *swap_logger;
 swap_config_struct swap_config;
+
 void swap_cargar_config(char *path)
 {
 

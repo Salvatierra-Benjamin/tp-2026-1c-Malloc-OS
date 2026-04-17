@@ -1,6 +1,8 @@
 #include "iniciador_ms.h"
+// Definiciones de Variables Globales y Funciones:
 t_log *ms_logger;
 ms_config_struct ms_config;
+
 void ms_cargar_config(char *path)
 {
 

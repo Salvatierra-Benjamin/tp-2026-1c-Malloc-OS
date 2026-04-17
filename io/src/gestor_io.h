@@ -19,7 +19,7 @@
 #include <string.h>
 #include <pthread.h>
 
-// Variables globales
+// Definición de Tipos:
 typedef struct
 {
     t_log_level log_level;
@@ -27,7 +27,7 @@ typedef struct
     char *puerto_ks;
 } io_config_struct;
 
-// Variables globales
+// Declaración Variables Globales:
 extern t_log *io_logger;
 extern io_config_struct io_config;
 #endif

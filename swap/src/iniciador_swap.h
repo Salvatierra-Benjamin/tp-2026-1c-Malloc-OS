@@ -2,6 +2,7 @@
 #define INICIADOR_SWAP_H
 
 #include "gestor_swap.h"
+// Declaración Funciones:
 
 void imprimir_valores_config_swap();
 void swap_cargar_config(char *path);

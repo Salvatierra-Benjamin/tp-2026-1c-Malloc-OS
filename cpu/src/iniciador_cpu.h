@@ -2,6 +2,7 @@
 #define INICIADOR_CPU_H
 
 #include "gestor_cpu.h"
+// Declaración Funciones:
 
 void imprimir_valores_config_cpu();
 void cpu_cargar_config(char *path);

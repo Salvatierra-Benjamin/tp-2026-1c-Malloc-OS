@@ -2,6 +2,7 @@
 #define INICIADOR_MS_H
 
 #include "gestor_ms.h"
+// Declaración Funciones:
 
 void imprimir_valores_config_ms();
 void ms_cargar_config(char *path);
