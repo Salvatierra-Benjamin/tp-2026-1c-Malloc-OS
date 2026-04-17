@@ -1,9 +1,4 @@
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-#include <commons/string.h>
-#include <../../utils/src/utils/protocolos.h>
-#include "ks_main.h"
+#include "ks_maneja_io.h"
 
 void ks_maneja_io(int fd) {
     // espera IO_ENVIA_IO

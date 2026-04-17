@@ -1,9 +1,4 @@
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-#include <commons/string.h>
-#include <../../utils/src/utils/protocolos.h>
-#include "ks_main.h"
+#include "ks_maneja_cpu.h"
 
 void ks_maneja_cpu(int fd) {
     // Recibir CPU_IDENTIFICACION
@@ -19,7 +14,7 @@ void ks_maneja_cpu(int fd) {
     eliminar_paquete(paquete);
 
     // Registrar cpu
-    cpu_t* cpu = malloc(sizeof(cpu_t));
+    t_cpu* cpu = malloc(sizeof(t_cpu));
 
     // Cada cpu tiene su hilo para recibir mensajes
     for(;;) {
@@ -27,13 +22,13 @@ void ks_maneja_cpu(int fd) {
         if(op <= 0){
             // desconexion de cpu
 
-            uint32_t error_cpu = cpu->running_qid==0xFFFFFFFF ? 0xFFFFFFFF : w->running_qid;
-            log_worker_desconectado(cpu->id, error_cpu);
+            // uint32_t error_cpu = cpu->running_qid==0xFFFFFFFF ? 0xFFFFFFFF : w->running_qid;
+            // log_worker_desconectado(cpu->id, error_cpu);
 
-            if(error_cpu != 0xFFFFFFFF) {
-                // desconectar cp
-            }
-            // borrar cpu de lista
+            // if(error_cpu != 0xFFFFFFFF) {
+            //     // desconectar cp
+            // }
+            // // borrar cpu de lista
 
             close(fd);
             return;
@@ -51,6 +46,6 @@ void ks_maneja_cpu(int fd) {
         //         break;
         // }
 
-        eliminar_paquete(pk);
+        eliminar_paquete(paquete);
     }
 }
