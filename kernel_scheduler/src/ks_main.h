@@ -1,34 +1,36 @@
 #ifndef KS_MAIN_H
 #define KS_MAIN_H
 
-#include <stdint.h>
-#include <stdbool.h>
-#include <commons/log.h>
-#include <commons/config.h>
-#include <commons/collections/list.h>
-#include <commons/collections/queue.h>
-#include <arpa/inet.h>
-#include <commons/collections/dictionary.h>
-#include <../../utils/src/utils/conexiones.h>
-#include <../../utils/src/utils/protocolos.h>
-#include <pthread.h>
+#include "ks_estructuras.h"
+
 #include <stdio.h>
 #include <stdlib.h>
-#include <signal.h>
-#include <unistd.h>
 #include <string.h>
+#include <unistd.h>
+#include <signal.h>
 #include <pthread.h>
 
+#include <commons/config.h>
+#include <commons/log.h>
 
-typedef struct {
-    char* ip_kernel_memory;
-    char* puerto_escucha;
-    char* algoritmo; // FIFO, RR, CMN
-    char* algoritmo_queues; // lista entre FIFO, RR
-    int rr_quantum;
-    bool  queue_preemption;
-    int   suspension_timeout;
-    t_log_level log_level;
-} ks_config;
+#include <../../utils/src/utils/conexiones.h>
+#include <../../utils/src/utils/protocolos.h>
+
+// VARIABLES GLOBALES
+t_log* ks_logger = NULL;
+t_ks_config ks_config;
+int ks_server_fd = -1;
+
+// FUNCIONES
+// auxiliares
+t_list* ks_parsear_algoritmos(char* raw);
+
+// config
+bool ks_cargar_config(char* path);
+void ks_liberar_config(void);
+
+// conexiones
+void* ks_conexion_loop(void* arg);
+void* ks_conexion_km(void* arg);
 
 #endif

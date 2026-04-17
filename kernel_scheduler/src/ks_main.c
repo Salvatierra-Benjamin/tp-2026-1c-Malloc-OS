@@ -1,9 +1,56 @@
-#include <ks_main.h>
-#include "unistd.h"
+#include "ks_main.h"
+#include "ks_maneja_cpu.h"
+#include "ks_maneja_io.h"
 
-t_log* ks_logger = NULL;
-ks_config  ks_config;
-int ks_server_fd = -1;
+#include <commons/string.h>
+#include <commons/collections/list.h>
+#include <string.h>
+#include <stdlib.h>
+
+static algoritmos ks_algoritmo_from_string(char* str) {
+    if (strcmp(str, "FIFO") == 0) return FIFO;
+    if (strcmp(str, "RR") == 0) return RR;
+    if (strcmp(str, "CMN") == 0) return CMN;
+
+    return INVALIDO;
+}
+
+t_list* ks_parsear_algoritmos(char* raw) {
+    t_list* lista = list_create();
+
+    if (!raw) return lista;
+
+    // saco corchetes
+    char* limpio = string_duplicate(raw);
+    string_replace(&limpio, "[", "");
+    string_replace(&limpio, "]", "");
+
+    // separo por coma
+    char** tokens = string_split(limpio, ",");
+
+    for (int i = 0; tokens[i] != NULL; i++) {
+
+        string_trim(&tokens[i]);
+
+        algoritmos* alg = malloc(sizeof(algoritmos));
+
+        if (string_equals_ignore_case(tokens[i], "FIFO")) {
+            *alg = FIFO;
+        } else if (string_equals_ignore_case(tokens[i], "RR")) {
+            *alg = RR;
+        } else {
+            free(alg);
+            continue;
+        }
+        list_add(lista, alg);
+    }
+
+    // liberar auxiliares
+    string_array_destroy(tokens);
+    free(limpio);
+
+    return lista;
+}
 
 bool ks_cargar_config(char* path){
     t_config* config = config_create(path);
@@ -12,10 +59,11 @@ bool ks_cargar_config(char* path){
         return false;
     }
 
-    ks_config.ip_kernel_memory = strdup(config_get_string_value(config,"IP_KERNEL_MEMORY"));
+    ks_config.ip_km = strdup(config_get_string_value(config,"IP_KM"));
+    ks_config.puerto_km = strdup(config_get_string_value(config,"PUERTO_KM"));
     ks_config.puerto_escucha = strdup(config_get_string_value(config,"PUERTO_ESCUCHA"));
-    ks_config.algoritmo = strdup(config_get_string_value(config,"PLANIFICATION_ALGORITHM"));  // FIFO, RR, CMN
-    ks_config.algoritmo_queues = strdup(config_get_string_value(config,"QUEUES_ALGORITHMS")); // lista entre FIFO, RR
+    ks_config.algoritmo = ks_algoritmo_from_string(config_get_string_value(config, "PLANIFICATION_ALGORITHM"));
+    ks_config.algoritmo_queues = ks_parsear_algoritmos(config_get_string_value(config, "QUEUES_ALGORITHMS"));
     ks_config.rr_quantum = config_get_int_value(config,"RR_QUANTUM");
     ks_config.queue_preemption = config_get_bool_value(config,"QUEUE_PREEMPTION");
     ks_config.suspension_timeout = config_get_int_value(config,"SUSPENSION_TIMEOUT");
@@ -25,6 +73,20 @@ bool ks_cargar_config(char* path){
     ks_logger = log_create("kernel_scheduler.log","KERNEL_SCHEDULER",1, level);
 
     config_destroy(config);
+
+    // // Leer la lista de algoritmo queues
+    // for (int i = 0; i < list_size(ks_config.algoritmo_queues); i++) {
+    // algoritmos* alg = list_get(ks_config.algoritmo_queues, i);
+
+    //     switch (*alg) {
+    //         case FIFO:
+    //             printf("FIFO\n");
+    //             break;
+    //         case RR:
+    //             printf("RR\n");
+    //             break;
+    //     }
+    // }
     
     return ks_logger != NULL;
 }
@@ -152,6 +214,20 @@ void* ks_conexion_km(void* _arg){
     }
 
     return NULL;
+}
+
+static void sigint_handler(int _sig){
+    (void)_sig;
+
+    if(ks_logger)
+        log_info(ks_logger, "SIGINT: cerrando Kernel Scheduler...");
+
+    if(ks_server_fd != -1)
+        close(ks_server_fd);
+
+    ks_liberar_config();
+
+    exit(0);
 }
 
 int main(int argc, char* argv[]) {
