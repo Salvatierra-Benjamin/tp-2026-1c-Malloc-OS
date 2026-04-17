@@ -3,7 +3,7 @@
 t_log *cpu_logger;
 cpu_struct_config cpu_config;
 parametros_km_struct parametros_km;
-parametros_ks_struct parasetros_ks;
+parametros_ks_struct parametros_ks;
 parametros_ms_struct parametros_ms;
 
 void cpu_cargar_config(char *path)

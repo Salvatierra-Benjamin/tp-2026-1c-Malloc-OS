@@ -72,38 +72,39 @@ void *seleccion_dispositivo(void *arg)
         {
             log_warning(logger, "se conecto un modulo desconocido : %d", socket_cliente);
             break;
-        }
-            pthread_detach(hilo);
-        }
 
-        close(socket_cliente);
-        return NULL;
+            //! pthread_detach(hilo);
+            //!  TE LO COMENTE PORQUE ROMPIA TODO, ADEMÁS FLATABA UNA LLAVE.
+        }
+        }
     }
+    close(socket_cliente); //! ESTO LO MOVI ACÁ COMO ESTA EN TU VERSION, TAL VEZ EL MERGEO LO MEZCLO.
+    return NULL;
+}
+void delegar_a(int socket_cliente, void *(*manejador)(void *), const char *nombre_modulo)
+{
+    log_info(logger, "Se conectó %s", nombre_modulo);
 
-    void delegar_a(int socket_cliente, void *(*manejador)(void *), const char *nombre_modulo)
+    int *socket_ptr = malloc(sizeof(int));
+    if (socket_ptr == NULL)
     {
-        log_info(logger, "Se conectó %s", nombre_modulo);
-
-        int *socket_ptr = malloc(sizeof(int));
-        if (socket_ptr == NULL)
-        {
-            log_error(logger, "Error al alocar memoria para socket de %s", nombre_modulo);
-            close(socket_cliente);
-            return;
-        }
-        *socket_ptr = socket_cliente;
-
-        t_paquete *ok_conexion = crear_paquete(KM_OK_CONEXION);
-        enviar_paquete(ok_conexion, socket_cliente);
-        eliminar_paquete(ok_conexion);
-
-        pthread_t hilo;
-        if (pthread_create(&hilo, NULL, manejador, socket_ptr) != 0)
-        {
-            log_error(logger, "Error al crear hilo para %s", nombre_modulo);
-            free(socket_ptr);
-            close(socket_cliente);
-            return;
-        }
-        pthread_detach(hilo);
+        log_error(logger, "Error al alocar memoria para socket de %s", nombre_modulo);
+        close(socket_cliente);
+        return;
     }
+    *socket_ptr = socket_cliente;
+
+    t_paquete *ok_conexion = crear_paquete(KM_OK_CONEXION);
+    enviar_paquete(ok_conexion, socket_cliente);
+    eliminar_paquete(ok_conexion);
+
+    pthread_t hilo;
+    if (pthread_create(&hilo, NULL, manejador, socket_ptr) != 0)
+    {
+        log_error(logger, "Error al crear hilo para %s", nombre_modulo);
+        free(socket_ptr);
+        close(socket_cliente);
+        return;
+    }
+    pthread_detach(hilo);
+}

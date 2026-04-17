@@ -14,15 +14,17 @@ int main(int argc, char *argv[])
     inicializar_logger();
     imprimir_valores_config_swap();
 
-    int conexion_swap = crear_conexion(swap_config.ip_km, swap_config.puerto_km);
-    if (conexion_swap == -1)
+    int conexion_km = crear_conexion(swap_config.ip_km, swap_config.puerto_km);
+    if (conexion_km == -1)
     {
         log_info(swap_logger, "ERROR AL CREAR CONEXION SWAP->KM.\n");
         swap_liberar_config();
         swap_liberar_log();
         return -1;
     }
-    enviar_operacion(conexion_swap, HANDSHAKE_SWAP); // Nuestro Handshake con KM
+    enviar_operacion(conexion_km, HANDSHAKE_SWAP); // Nuestro Handshake con KM
+
+    receptor_swap_km(conexion_km);
 
     log_debug(swap_logger, "SWAP TERMINO.\n");
 

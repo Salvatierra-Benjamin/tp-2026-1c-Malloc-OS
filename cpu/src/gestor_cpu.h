@@ -51,7 +51,7 @@ typedef struct
 extern t_log *cpu_logger;
 extern cpu_struct_config cpu_config;
 extern parametros_km_struct parametros_km;
-extern parametros_ks_struct parasetros_ks;
+extern parametros_ks_struct parametros_ks;
 extern parametros_ms_struct parametros_ms;
 
 #endif

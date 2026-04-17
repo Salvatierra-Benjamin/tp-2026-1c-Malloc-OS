@@ -31,15 +31,17 @@ int main(int argc, char *argv[])
     }
     log_debug(ms_logger, "Memoria de %d bytes reservada con éxito.\n", tamanio_memoria);
 
-    int conexion_ms = crear_conexion(ms_config.ip_km, ms_config.puerto_km);
-    if (conexion_ms == -1)
+    int conexion_km = crear_conexion(ms_config.ip_km, ms_config.puerto_km);
+    if (conexion_km == -1)
     {
         log_info(ms_logger, "ERROR AL CREAR CONEXION MS->KM.\n");
         ms_liberar_config();
         ms_liberar_log();
         return -1;
     }
-    enviar_operacion(conexion_ms, HANDSHAKE_MS); // Nuestro Handshake con KM
+    enviar_operacion(conexion_km, HANDSHAKE_MS); // Nuestro Handshake con KM
+
+    receptor_ms_km(conexion_km);
 
     int socket_servidor = iniciar_servidor(ms_config.puerto_escucha_cpu);
     esperar_cpus(socket_servidor);

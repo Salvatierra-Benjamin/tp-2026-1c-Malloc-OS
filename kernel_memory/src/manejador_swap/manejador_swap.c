@@ -10,6 +10,12 @@ void *manejador_swap(void *arg)
         int op_code = recibir_operacion(socket_swap);
         switch (op_code)
         {
+        case HANDSHAKE_SWAP:
+        {
+            log_debug(logger, "[SWAP] ME LLEGO EL HANDSHAKE DE SWAP : %d", op_code);
+            enviar_operacion(socket_swap, SWAP_OK_CONEXION);
+            break;
+        }
         case BLOCK_SIZE:
         {
             t_paquete *block_size_total_swap = recibir_paquete(socket_swap);
