@@ -18,6 +18,7 @@ void *manejador_cpu(void *arg)
             int cpu_id;
             buffer_read(&cpu_id, paquete_cpu_id->buffer, sizeof(int));
             conexion_cpu(cpu_id);
+            eliminar_paquete(paquete_cpu_id);
             break;
         }
         case SOLICITUD_CONTEXTO_EJECUCION:
@@ -26,6 +27,7 @@ void *manejador_cpu(void *arg)
             int pid;
             buffer_read(&pid, paquete_pid->buffer, sizeof(int));
             solicitar_contexto(pid);
+            eliminar_paquete(paquete_pid);
             break;
         }
         case -1:
