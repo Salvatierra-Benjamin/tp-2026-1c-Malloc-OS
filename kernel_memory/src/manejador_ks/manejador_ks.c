@@ -46,6 +46,7 @@ void *manejador_ks(void *arg)
         }
         }
     }
+    close(socket_ks);
 }
 
 void creacion_proceso(int pid, char *path)

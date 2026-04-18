@@ -35,6 +35,7 @@ void *manejador_swap(void *arg)
         }
         }
     }
+    close(socket_swap);
 }
 
 void agregar_swap(int tam_bloque, int tam_swap)

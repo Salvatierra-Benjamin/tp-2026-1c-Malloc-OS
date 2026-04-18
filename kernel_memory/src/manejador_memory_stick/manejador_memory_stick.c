@@ -33,6 +33,7 @@ void *manejador_memory_stick(void *arg)
         }
         }
     }
+    close(socket_memory_stick);
 }
 
 void agregar_memory_stick(int tam_ms)

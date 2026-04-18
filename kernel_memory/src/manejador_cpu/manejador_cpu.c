@@ -41,6 +41,7 @@ void *manejador_cpu(void *arg)
         }
         }
     }
+    close(socket_cpu);
 }
 
 void conexion_cpu(int cpu_id)
