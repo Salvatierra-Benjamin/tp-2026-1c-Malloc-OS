@@ -7,7 +7,9 @@ void *manejador_ks(void *arg)
 
     log_info(logger, "## Kernel Scheduler Conectado - FD del socket: %d", socket_ks);
 
-    while (1)
+    int ejecutando = 1;
+
+    while (ejecutando)
     {
         int op_code = recibir_operacion(socket_ks);
         switch (op_code)
@@ -31,12 +33,21 @@ void *manejador_ks(void *arg)
             eliminar_paquete(info_proceso);
             break;
         }
+        case -1:
+        {
+            log_warning(logger, "[KS] se desconecto ks");
+            ejecutando = 0;
+            break;
+        }
         default:
         {
             log_warning(logger, "[KS] operacion desconocida : %d", op_code);
+            break;
         }
         }
     }
+    close(socket_ks);
+    return NULL;
 }
 
 void creacion_proceso(int pid, char *path)

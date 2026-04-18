@@ -37,45 +37,40 @@ void *seleccion_dispositivo(void *arg)
     int socket_cliente = *(int *)arg;
     free(arg);
 
-    while (1)
-    {
-        int cod_op = recibir_operacion(socket_cliente);
-        if (cod_op == -1)
-        {
-            log_warning(logger, "dispositivo se desconecto");
-            break;
-        }
+    int cod_op = recibir_operacion(socket_cliente);
 
-        switch (cod_op)
-        {
-        case HANDSHAKE_KS:
-        {
-            delegar_a(socket_cliente, manejador_ks, "Kernel Scheduler");
-            break;
-        }
-        case HANDSHAKE_CPU:
-        {
-            delegar_a(socket_cliente, manejador_cpu, "CPU");
-            break;
-        }
-        case HANDSHAKE_SWAP:
-        {
-            delegar_a(socket_cliente, manejador_swap, "SWAP");
-            break;
-        }
-        case HANDSHAKE_MS:
-        {
-            delegar_a(socket_cliente, manejador_memory_stick, "Memory Stick");
-            break;
-        }
-        default:
-        {
-            log_warning(logger, "se conecto un modulo desconocido : %d", socket_cliente);
-            break;
-        }
-        }
+    switch (cod_op)
+    {
+    case HANDSHAKE_KS:
+    {
+        delegar_a(socket_cliente, manejador_ks, "Kernel Scheduler");
+        break;
     }
-    close(socket_cliente); //! ESTO LO MOVI ACÁ COMO ESTA EN TU VERSION, TAL VEZ EL MERGEO LO MEZCLO.
+    case HANDSHAKE_CPU:
+    {
+        delegar_a(socket_cliente, manejador_cpu, "CPU");
+        break;
+    }
+    case HANDSHAKE_SWAP:
+    {
+        delegar_a(socket_cliente, manejador_swap, "SWAP");
+        break;
+    }
+    case HANDSHAKE_MS:
+    {
+        delegar_a(socket_cliente, manejador_memory_stick, "Memory Stick");
+        break;
+    }
+    case -1:
+    {
+        break;
+    }
+    default:
+    {
+        log_warning(logger, "se conecto un modulo desconocido : %d", socket_cliente);
+        break;
+    }
+    }
     return NULL;
 }
 void delegar_a(int socket_cliente, void *(*manejador)(void *), const char *nombre_modulo)

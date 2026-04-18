@@ -5,7 +5,9 @@ void *manejador_swap(void *arg)
     int socket_swap = *(int *)arg;
     free(arg);
 
-    while (1)
+    int ejecutando = 1;
+
+    while (ejecutando)
     {
         int op_code = recibir_operacion(socket_swap);
         switch (op_code)
@@ -18,14 +20,24 @@ void *manejador_swap(void *arg)
             int tam_swap;
             buffer_read(&tam_swap, block_size_total_swap->buffer, sizeof(int));
             agregar_swap(tam_bloque, tam_swap);
+            eliminar_paquete(block_size_total_swap);
+            break;
+        }
+        case -1:
+        {
+            log_warning(logger, "[SWAP] se desconecto swap");
+            ejecutando = 0;
             break;
         }
         default:
         {
             log_warning(logger, "[SWAP] operacion desconocida : %d", op_code);
+            break;
         }
         }
     }
+    close(socket_swap);
+    return NULL;
 }
 
 void agregar_swap(int tam_bloque, int tam_swap)
