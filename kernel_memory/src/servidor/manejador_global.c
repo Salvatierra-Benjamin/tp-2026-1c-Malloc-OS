@@ -40,11 +40,6 @@ void *seleccion_dispositivo(void *arg)
     while (1)
     {
         int cod_op = recibir_operacion(socket_cliente);
-        if (cod_op == -1)
-        {
-            log_warning(logger, "dispositivo se desconecto");
-            break;
-        }
 
         switch (cod_op)
         {
@@ -66,6 +61,10 @@ void *seleccion_dispositivo(void *arg)
         case HANDSHAKE_MS:
         {
             delegar_a(socket_cliente, manejador_memory_stick, "Memory Stick");
+            break;
+        }
+        case -1:
+        {
             break;
         }
         default:

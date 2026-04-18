@@ -4,7 +4,10 @@ void *manejador_cpu(void *arg)
 {
     int socket_cpu = *(int *)arg;
     free(arg);
-    while (1)
+
+    int ejecutando = 1;
+
+    while (ejecutando)
     {
         int op_code = recibir_operacion(socket_cpu);
         switch (op_code)
@@ -25,9 +28,16 @@ void *manejador_cpu(void *arg)
             solicitar_contexto(pid);
             break;
         }
+        case -1:
+        {
+            log_warning(logger, "[CPU] se deconecto cpu");
+            ejecutando = 0;
+            break;
+        }
         default:
         {
             log_warning(logger, "[CPU] cod_op desconocido : %d", op_code);
+            break;
         }
         }
     }
