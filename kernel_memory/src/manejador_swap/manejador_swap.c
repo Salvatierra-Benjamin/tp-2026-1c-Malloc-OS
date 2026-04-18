@@ -20,6 +20,7 @@ void *manejador_swap(void *arg)
             int tam_swap;
             buffer_read(&tam_swap, block_size_total_swap->buffer, sizeof(int));
             agregar_swap(tam_bloque, tam_swap);
+            eliminar_paquete(block_size_total_swap);
             break;
         }
         case -1:

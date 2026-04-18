@@ -18,6 +18,7 @@ void *manejador_memory_stick(void *arg)
             int tam_ms;
             buffer_read(&tam_ms, tam_memory_stick->buffer, sizeof(int));
             agregar_memory_stick(tam_ms);
+            eliminar_paquete(tam_memory_stick);
             break;
         }
         case -1:
