@@ -2,6 +2,7 @@
 // Definiciones de Variables Globales y Funciones:
 t_log *swap_logger;
 swap_config_struct swap_config;
+int conexion_km;
 
 void swap_cargar_config(char *path)
 {

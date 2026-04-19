@@ -30,4 +30,6 @@ typedef struct
 // Declaración Variables Globales:
 extern t_log *io_logger;
 extern io_config_struct io_config;
+extern int conexion_ks;
+
 #endif

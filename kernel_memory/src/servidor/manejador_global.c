@@ -86,9 +86,7 @@ void delegar_a(int socket_cliente, void *(*manejador)(void *), const char *nombr
     }
     *socket_ptr = socket_cliente;
 
-    t_paquete *ok_conexion = crear_paquete(KM_OK_CONEXION);
-    enviar_paquete(ok_conexion, socket_cliente);
-    eliminar_paquete(ok_conexion);
+    enviar_operacion(socket_cliente, KM_OK_CONEXION);
 
     pthread_t hilo;
     if (pthread_create(&hilo, NULL, manejador, socket_ptr) != 0)

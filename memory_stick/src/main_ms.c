@@ -2,7 +2,6 @@
 
 int main(int argc, char *argv[])
 {
-
     if (argc < 3)
     {
         fprintf(stderr, "ERROR: ARGUMENTOS INSUFICIENTES\n");
@@ -11,7 +10,7 @@ int main(int argc, char *argv[])
     }
 
     char *path = argv[1];
-    int tamanio_memoria = atoi(argv[2]);
+    tamanio_memoria = atoi(argv[2]);
 
     if (tamanio_memoria <= 0)
     {
@@ -22,35 +21,14 @@ int main(int argc, char *argv[])
     ms_cargar_config(path);
     inicializar_logger();
     imprimir_valores_config_ms();
-
-    void *memoria = malloc(tamanio_memoria);
-    if (memoria == NULL)
-    {
-        log_debug(ms_logger, "Error al hacer malloc de la memoria principal.\n");
-        return EXIT_FAILURE;
-    }
-    log_debug(ms_logger, "Memoria de %d bytes reservada con éxito.\n", tamanio_memoria);
-
-    int conexion_km = crear_conexion(ms_config.ip_km, ms_config.puerto_km);
-    if (conexion_km == -1)
-    {
-        log_info(ms_logger, "ERROR AL CREAR CONEXION MS->KM.\n");
-        ms_liberar_config();
-        ms_liberar_log();
-        return -1;
-    }
-    enviar_operacion(conexion_km, HANDSHAKE_MS); // Nuestro Handshake con KM
-
-    receptor_km(conexion_km);
-
-    int socket_servidor = iniciar_servidor(ms_config.puerto_escucha_cpu);
-    esperar_cpus(socket_servidor);
+    memoria_reservada();
+    creacion_conexiones_ms();
 
     log_debug(ms_logger, "Memory Stick TERMINO.\n");
 
     ms_liberar_config();
     ms_liberar_log();
-    free(memoria);
+    free(memoria_ms);
 
     return 0;
 }

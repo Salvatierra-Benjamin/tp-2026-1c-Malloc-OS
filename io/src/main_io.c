@@ -37,27 +37,9 @@ int main(int argc, char *argv[])
     inicializar_logger();
     imprimir_valores_config_io();
 
-    int conexion_ks = crear_conexion(io_config.ip_ks, io_config.puerto_ks);
-    if (conexion_ks == -1)
-    {
-        log_info(io_logger, "ERROR AL CREAR CONEXION IO->KS.\n");
-        io_liberar_config();
-        io_liberar_log();
-        return -1;
-    }
-
-    enviar_operacion(conexion_ks, HANDSHAKE_IO);
-
-    int recepcion_operacion = recibir_operacion(conexion_ks);
-    if (recepcion_operacion == IO_OK_CONEXION)
-    {
-        log_debug(io_logger, "Se recibio respuesta OK de KS");
-    }
-    else
-    {
-        log_info(io_logger, "Error al recibir respuesta OK de KS");
-        return -1;
-    }
+    //! PONER FUNCIONES ARRIBA DE LA  "creacion_conexiones_swap()" Ó EN EL RECEPTOR EN SU RESPECTIVO CASE (RECOMENDADO CREAR NUEVOS CASES PARA EL SWITCH) PORQUE ESTA UTILIZANDO UN HILO TIPO JOIN PARA QUE EL PROGRAMA NO SE CIERRER.
+    //! NO USAR DETACH!!!! SALVO QUE HAYA UN BUCLE EN EL MAIN QUE SIRVA COMO ANCLAJE DEL PROGRAMA PARA QUE NO SE CIERRE!!!!
+    creacion_conexiones_io();
 
     log_debug(io_logger, "IO TERMINO.\n");
 

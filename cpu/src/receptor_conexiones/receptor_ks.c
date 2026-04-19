@@ -1,29 +1,50 @@
 #include "receptor_ks.h"
-void *receptor_ks(void *arg)
+void receptor_ks()
 {
+    log_debug(cpu_logger, "[RECEPTOR_KS_CPU] Conectando con KS...");
+    pthread_t hilo_atencion_ks;
+    pthread_create(&hilo_atencion_ks, NULL, atencion_ks, NULL);
+    pthread_detach(hilo_atencion_ks);
+
+    // Si usás pthread_join: El hilo principal se queda "frizado" en esa línea. No podría avanzar a la siguiente función (como esperar_cpus).
+    // Si usás pthread_detach: El hilo principal lanza el receptor y sigue de largo (OJO!!! PUEDE LLEGAR AL FIN DEL PROGRAMA!!!). Es la opción correcta si querés que el módulo haga más de una cosa a la vez (como ser cliente de KM y servidor de CPU al mismo tiempo).
+}
+
+void *atencion_ks()
+{
+    log_debug(cpu_logger, "[RECEPTOR_KS_CPU] CPU CONECTADO CON KS");
+
     while (1)
     {
         // pthread_mutex_lock(&mutex_conexion); <-- NO TOCAR ES PARA DESPUÉS!!!
-        int cod_op1 = recibir_operacion(parametros_ks.conexion_ks);
+        int cod_op = recibir_operacion(conexion_ks);
         // pthread_mutex_unlock(&mutex_conexion); <-- NO TOCAR ES PARA DESPUÉS!!!
-        if (cod_op1 < 0)
+
+        if (cod_op < 0)
         {
-            log_error(cpu_logger, "cod op1 %d", cod_op1);
+            log_error(cpu_logger, "cod op %d", cod_op);
             log_error(cpu_logger, "KS desconectado o error");
             exit(EXIT_FAILURE);
         }
-        switch (cod_op1)
+        switch (cod_op)
         {
         case KS_OK_CONEXION:
         {
-            t_paquete *ok_conexion = recibir_paquete(parametros_ks.conexion_ks);
-            eliminar_paquete(ok_conexion);
-            log_debug(cpu_logger, "[RECEPTOR_KS] EL HANDSHAKE CON KS SE HA REALIZADO CORRECTAMENTE!!!");
+            log_debug(cpu_logger, "[RECEPTOR_KS_CPU] EL HANDSHAKE CON KS SE HA REALIZADO CORRECTAMENTE!!!");
+            break;
+        }
+        case -1:
+        {
+            log_error(cpu_logger, "Error de comunicación con la KS");
+            cpu_liberar_config();
+            cpu_liberar_log();
+            exit(EXIT_FAILURE);
             break;
         }
         default:
         {
-            log_warning(cpu_logger, "[RECEPTOR_KS] operacion desconocida : %d", cod_op1);
+            log_warning(cpu_logger, "[RECEPTOR_KS_CPU] operacion desconocida : %d", cod_op);
+            break;
         }
         }
     }
