@@ -32,5 +32,9 @@ typedef struct
 // Declaración Variables Globales:
 extern t_log *ms_logger;
 extern ms_config_struct ms_config;
+extern int conexion_km;
+extern int socket_servidor_con_cpu;
+extern int tamanio_memoria;
+extern void *memoria_ms;
 
 #endif

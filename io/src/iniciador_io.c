@@ -1,7 +1,8 @@
-#include "inicializar_io.h"
+#include "iniciador_io.h"
 // Definiciones de Variables Globales y Funciones:
 t_log *io_logger;
 io_config_struct io_config;
+int conexion_ks;
 
 char *normalizar(char *tipo_io)
 {

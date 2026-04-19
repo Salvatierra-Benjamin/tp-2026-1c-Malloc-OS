@@ -31,27 +31,12 @@ typedef struct
     t_log_level log_level;
 
 } cpu_struct_config;
-typedef struct
-{
-    int conexion_km;
-
-} parametros_km_struct;
-typedef struct
-{
-    int conexion_ks;
-
-} parametros_ks_struct;
-typedef struct
-{
-    int conexion_ms;
-
-} parametros_ms_struct;
 
 // Declaración Variables Globales:
 extern t_log *cpu_logger;
 extern cpu_struct_config cpu_config;
-extern parametros_km_struct parametros_km;
-extern parametros_ks_struct parametros_ks;
-extern parametros_ms_struct parametros_ms;
+extern int conexion_km;
+extern int conexion_ks;
+extern int conexion_ms;
 
 #endif

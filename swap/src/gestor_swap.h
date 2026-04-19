@@ -33,5 +33,6 @@ typedef struct
 // Declaración Variables Globales:
 extern t_log *swap_logger;
 extern swap_config_struct swap_config;
+extern int conexion_km;
 
 #endif

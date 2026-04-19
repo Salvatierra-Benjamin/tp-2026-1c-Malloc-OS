@@ -3,7 +3,7 @@
 
 #include "gestor_ms.h"
 #include "iniciador_ms.h"
-#include "receptor_cpus_tipo_servidor/receptor_cpus.h"
-#include "receptor_km_tipo_cliente/receptor_km.h"
+#include "memoria_reservada/memoria_reservada.h"
+#include "conexiones_ms/conexiones_ms.h"
 
 #endif

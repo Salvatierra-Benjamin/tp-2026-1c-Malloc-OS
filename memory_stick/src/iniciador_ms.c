@@ -2,6 +2,10 @@
 // Definiciones de Variables Globales y Funciones:
 t_log *ms_logger;
 ms_config_struct ms_config;
+int conexion_km;
+int socket_servidor_con_cpu;
+int tamanio_memoria;
+void *memoria_ms;
 
 void ms_cargar_config(char *path)
 {
