@@ -49,9 +49,11 @@ int main(int argc, char *argv[])
     enviar_operacion(conexion_ks, HANDSHAKE_IO);
 
     int recepcion_operacion = recibir_operacion(conexion_ks);
-    if (recepcion_operacion == IO_OK_CONEXION)
+    if (recepcion_operacion == KS_OK_CONEXION)
     {
-        log_debug(io_logger, "Se recibio respuesta OK de KS");
+        t_paquete *ok_conexion = recibir_paquete(conexion_ks);
+        eliminar_paquete(ok_conexion);
+        log_debug(io_logger, "[RECEPTOR_KS] EL HANSHAKE CON KS SE HA REALIZADO CORRECTAMENTE!!!");
     }
     else
     {

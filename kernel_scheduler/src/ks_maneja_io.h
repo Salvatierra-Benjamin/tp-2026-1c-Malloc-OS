@@ -13,6 +13,5 @@
 #include <../../utils/src/utils/protocolos.h>
 
 // firma correcta para pthread
-void* ks_maneja_io(void* arg);
-
+void ks_maneja_io(int arg);
 #endif
