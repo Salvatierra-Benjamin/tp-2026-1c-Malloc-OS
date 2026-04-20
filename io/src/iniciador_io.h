@@ -11,5 +11,7 @@ void inicializar_logger();
 void imprimir_valores_config_io();
 void io_liberar_config();
 void io_liberar_log();
+void *recibir_buffer(int *, int);
+void recibir_paquete_equipo_cpu(int socket_cliente, t_list **respuesta);
 
 #endif

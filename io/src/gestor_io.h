@@ -31,5 +31,6 @@ typedef struct
 extern t_log *io_logger;
 extern io_config_struct io_config;
 extern int conexion_ks;
+extern char* tipo_io_mayusculas;
 
 #endif

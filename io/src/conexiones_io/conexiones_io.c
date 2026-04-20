@@ -9,6 +9,7 @@ void creacion_conexiones_io()
         io_liberar_log();
         exit(EXIT_FAILURE);
     }
+    log_info(io_logger, "## Conectado a Kernel Scheduler");
     enviar_operacion(conexion_ks, HANDSHAKE_IO);
     receptor_ks();
 }
