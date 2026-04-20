@@ -53,10 +53,12 @@ void *atencion_ks()
         case KM_OK_CONEXION:
         {
             log_debug(io_logger, "[RECEPTOR_KS_IO] EL HANSHAKE CON KS SE HA REALIZADO CORRECTAMENTE!!!");
-            t_list *paquete;
-            recibir_paquete_equipo_cpu(conexion_ks, &paquete);
-            int *pid = list_get(paquete, 0);
-            log_info(io_logger, "## PID: %d - Inicio de IO", *pid);
+            // t_list *paquete;
+            // recibir_paquete_equipo_cpu(conexion_ks, &paquete);
+            // int *pid = list_get(paquete, 0);
+            // t_paquete * paquete = recibir_paquete()
+            // log_info(io_logger, "## PID: %d - Inicio de IO", *pid);
+            // TODO En que momento es que se envia el paquete, despues del handshake o justo antes de cada operacion?
 
             break;
         }
@@ -64,16 +66,25 @@ void *atencion_ks()
         {
             if (strcmp(tipo_io_mayusculas, "STDIN") == 0)
             {
-                t_list *paquete;
-                recibir_paquete_equipo_cpu(conexion_ks, &paquete);
-                int *cant_bytes = list_get(paquete, 0);
-                int *pid = list_get(paquete, 1);
-                char *leido = funcion_stdin(*cant_bytes);
+                // t_list *paquete;
+                t_paquete *paquete;
+                // recibir_paquete_equipo_cpu(conexion_ks, &paquete);
+                // int *cant_bytes = list_get(paquete, 0);
+                // int *pid = list_get(paquete, 1);
+                recibir_paquete(conexion_ks);
+
+                int pid;
+                int cant_bytes;
+                // KS debe enviar [cod_op, pid, cant_bytes]
+                buffer_read(&pid, paquete->buffer, sizeof(int));
+                buffer_read(&cant_bytes, paquete->buffer, sizeof(int));
+
+                char *leido = funcion_stdin(cant_bytes);
                 t_paquete *paquete_leido = crear_paquete(OK_STDIN);
                 agregar_a_paquete(paquete_leido, leido, sizeof(leido));
-                list_destroy_and_destroy_elements(paquete, free);
+                // list_destroy_and_destroy_elements(paquete, free);
                 free(leido);
-                log_info(io_logger, "## PID: %d - Ingrese %s caracteres:", *pid, leido);
+                log_info(io_logger, "## PID: %d - Ingrese %s caracteres:", pid, leido);
                 // Solo para STDIN: “## PID: <PID> - Ingrese <CANTIDAD A LEER> caracteres:”
             }
         }
@@ -81,14 +92,23 @@ void *atencion_ks()
         {
             if (strcmp(tipo_io_mayusculas, "STOUT") == 0)
             {
-                t_list *paquete;
-                recibir_paquete_equipo_cpu(conexion_ks, &paquete);
-                char *cadena_a_imprimir = list_get(paquete, 0);
-                int *pid = list_get(paquete, 1);
+                // t_list *paquete;
+                t_paquete *paquete = recibir_paquete(conexion_ks);
+                // recibir_paquete_equipo_cpu(conexion_ks, &paquete);
+                // char *cadena_a_imprimir = list_get(paquete, 0);
+                // int *pid = list_get(paquete, 1);
+
+                int pid;
+                char *cadena_a_imprimir;
+                int longitud_a_imprimir;
+                buffer_read(&pid, paquete->buffer, sizeof(int));
+                buffer_read(&longitud_a_imprimir, paquete->buffer, sizeof(int));
+                buffer_read(&cadena_a_imprimir, paquete->buffer, longitud_a_imprimir + 1);
+
                 printf("Cadena recibida de KS: %s\n", cadena_a_imprimir);
-                list_destroy_and_destroy_elements(paquete, free);
+                // list_destroy_and_destroy_elements(paquete, free);
                 enviar_operacion(conexion_ks, OK_STDOUT);
-                log_info(io_logger, "## PID: %d - %s ", *pid, cadena_a_imprimir);
+                log_info(io_logger, "## PID: %d - %s ", pid, cadena_a_imprimir);
                 // Solo para STDOUT: “## PID: <PID> - <CONTENIDO A IMPRIMIR>”
             }
         }
@@ -97,15 +117,22 @@ void *atencion_ks()
             if (strcmp(tipo_io_mayusculas, "SLEEP") == 0)
             {
 
-                t_list *paquete;
-                recibir_paquete_equipo_cpu(conexion_ks, &paquete);
-                int *tiempo_espera = list_get(paquete, 0);
-                int *pid = list_get(paquete, 1);
-                int tiempo_en_micro = *tiempo_espera * 1000;
+                // t_list *paquete;
+                // recibir_paquete_equipo_cpu(conexion_ks, &paquete);
+                // int *tiempo_espera = list_get(paquete, 0);
+                // int *pid = list_get(paquete, 1);
+
+                t_paquete *paquete = recibir_paquete(conexion_ks);
+                int pid;
+                int tiempo_espera;
+                buffer_read(&pid, paquete->buffer, sizeof(int));
+                buffer_read(&tiempo_espera, paquete->buffer, sizeof(int));
+
+                int tiempo_en_micro = tiempo_espera * 1000;
                 usleep(tiempo_en_micro);
                 enviar_operacion(conexion_ks, OK_SLEEP);
-                list_destroy_and_destroy_elements(paquete, free);
-                log_info(io_logger, "## PID: %d - Haciendo sleep por %d milisegundos.", *pid, *tiempo_espera);
+                // list_destroy_and_destroy_elements(paquete, free);
+                log_info(io_logger, "## PID: %d - Haciendo sleep por %d milisegundos.", pid, tiempo_espera);
                 // Solo para SLEEP: “## PID: <PID> - Haciendo sleep por <TIEMPO> milisegundos.”
             }
         }
