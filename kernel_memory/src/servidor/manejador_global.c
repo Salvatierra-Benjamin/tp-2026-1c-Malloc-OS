@@ -61,13 +61,6 @@ void *seleccion_dispositivo(void *arg)
         delegar_a(socket_cliente, manejador_memory_stick, "Memory Stick");
         break;
     }
-    case HANDSHAKE_IO: // BORRALO EN TU RAMA AL MERGEAR, LO ESCRIBI APROPOSITO PARA QUE BENJA HAGA LAS PRUEBAS DE IO HASTA QUE ESTE EL KS. NO TOQUE NADA MAS. SALUDOS :-)
-    {
-
-        log_info(logger, "Se conectó IO");
-        enviar_operacion(socket_cliente, KM_OK_CONEXION);
-        break;
-    }
     case -1:
     {
         break;
