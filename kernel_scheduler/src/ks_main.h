@@ -12,6 +12,8 @@
 
 #include <commons/config.h>
 #include <commons/log.h>
+#include <commons/string.h>
+#include <commons/collections/list.h>
 
 #include <../../utils/src/utils/conexiones.h>
 #include <../../utils/src/utils/protocolos.h>

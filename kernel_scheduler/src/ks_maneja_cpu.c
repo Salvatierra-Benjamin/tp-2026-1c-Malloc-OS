@@ -1,51 +1,57 @@
 #include "ks_maneja_cpu.h"
 
-void ks_maneja_cpu(int fd) {
-    // Recibir CPU_IDENTIFICACION
-    int cpu_id = recibir_operacion(fd);
-    if(cpu_id != CPU_IDENTIFICACION) { 
-        close(fd); 
-        return; 
-    }
+void* ks_maneja_cpu(void* arg) {
+    int fd = *(int*)arg;
+    free(arg);
 
-    t_paquete* paquete = recibir_paquete(fd);
-    paquete->buffer->offset = 0;
-    uint32_t wid = read_u32_from_pkg(paquete);
-    eliminar_paquete(paquete);
+    log_info(ks_logger, "Entra en ks_maneja_cpu (fd=%d)", fd);
+    // // Recibir CPU_IDENTIFICACION
+    // int cpu_id = recibir_operacion(fd);
+    // if(cpu_id != CPU_IDENTIFICACION) { 
+    //     close(fd); 
+    //     return; 
+    // }
 
-    // Registrar cpu
-    t_cpu* cpu = malloc(sizeof(t_cpu));
+    // t_paquete* paquete = recibir_paquete(fd);
+    // paquete->buffer->offset = 0;
+    // uint32_t wid = read_u32_from_pkg(paquete);
+    // eliminar_paquete(paquete);
 
-    // Cada cpu tiene su hilo para recibir mensajes
-    for(;;) {
-        int op = recibir_operacion(fd);
-        if(op <= 0){
-            // desconexion de cpu
+    // // Registrar cpu
+    // t_cpu* cpu = malloc(sizeof(t_cpu));
 
-            // uint32_t error_cpu = cpu->running_qid==0xFFFFFFFF ? 0xFFFFFFFF : w->running_qid;
-            // log_worker_desconectado(cpu->id, error_cpu);
+    // // Cada cpu tiene su hilo para recibir mensajes
+    // for(;;) {
+    //     int op = recibir_operacion(fd);
+    //     if(op <= 0){
+    //         // desconexion de cpu
 
-            // if(error_cpu != 0xFFFFFFFF) {
-            //     // desconectar cp
-            // }
-            // // borrar cpu de lista
+    //         // uint32_t error_cpu = cpu->running_qid==0xFFFFFFFF ? 0xFFFFFFFF : w->running_qid;
+    //         // log_worker_desconectado(cpu->id, error_cpu);
 
-            close(fd);
-            return;
-        }
+    //         // if(error_cpu != 0xFFFFFFFF) {
+    //         //     // desconectar cp
+    //         // }
+    //         // // borrar cpu de lista
 
-        t_paquete* paquete = recibir_paquete(fd);
-        paquete->buffer->offset = 0;
+    //         close(fd);
+    //         return;
+    //     }
 
-        // switch(op) {
-        //     case  {
+    //     t_paquete* paquete = recibir_paquete(fd);
+    //     paquete->buffer->offset = 0;
 
-        //     }
+    //     // switch(op) {
+    //     //     case  {
 
-        //     default:
-        //         break;
-        // }
+    //     //     }
 
-        eliminar_paquete(paquete);
-    }
+    //     //     default:
+    //     //         break;
+    //     // }
+
+    //     eliminar_paquete(paquete);
+    // }
+
+    return NULL;
 }

@@ -21,6 +21,7 @@ int main(int argc, char *argv[])
     if (socket_servidor == -1)
     {
         log_error(logger, "No se pudo iniciar servidor");
+        liberar_recursos();
         exit(0);
     }
 

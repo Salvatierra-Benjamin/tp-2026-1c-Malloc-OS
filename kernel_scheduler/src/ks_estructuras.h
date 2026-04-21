@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <commons/log.h>
+#include <commons/collections/list.h>
 
 // Config
 
@@ -36,9 +37,11 @@ typedef struct
     char *ip_km;
     char *puerto_km;
     char *puerto_escucha;
-    algoritmos *algoritmo; // FIFO, RR, CMN
-    // t_list *algoritmo_queues; // lista entre FIFO, RR // LO COMENTAMOS PARA VER COMO ANDABA EQUIPO CPU
-    bool queue_preemption;
+    algoritmos algoritmo;     // FIFO, RR, CMN
+    t_list *algoritmo_queues; // lista entre FIFO, RR // LO COMENTAMOS PARA VER COMO ANDABA EQUIPO CPU
+    // bool queue_preemption;
+    char* queue_preemption; // convertir.a bool
+    int rr_quantum;
     int suspension_timeout;
     t_log_level log_level;
 } t_ks_config;
