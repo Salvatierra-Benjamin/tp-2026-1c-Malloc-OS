@@ -37,6 +37,17 @@ typedef enum
 
     // ---------------- IO -> SCHEDULER ----------------
     IO_ENVIA_IO = 2000,
+    STDIN_IO = 2001,  // ks envia stdin
+    STDOUT_IO = 2002, // ks envia stdout
+    SLEEP_IO = 2003,  // ks envia sleep
+
+    OK_STDIN = 2004,
+    OK_STDOUT = 2005,
+    OK_SLEEP = 2006,
+
+    // PAQUETE_STDIN = 2100,
+    // PAQUETE_STDOUT = 2101,
+    // PAQUETE_STDSLEEP = 2102,
 
     // ---------------- CPU -> SCHEDULER ----------------
     CPU_IDENTIFICACION = 3000,
