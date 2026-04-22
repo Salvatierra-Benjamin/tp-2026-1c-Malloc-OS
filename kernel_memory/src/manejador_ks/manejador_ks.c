@@ -52,6 +52,10 @@ void *manejador_ks(void *arg)
 
 void creacion_proceso(int pid, char *path)
 {
+    // list_lineas = dividir_archivo_por_linea(path_archivo)
+    // list_instrucciones = convertir_list_lineas_en_list_instrucciones(list_lineas)
+    // contexto_ejecucion = crear_contexto_ejecucion()
+    // crear proceso_memoria y añadir al diccionario (vinculado a pid) (NO OLVIDAD MUTEX)
     log_debug(logger, "[KS] PATH : %s", path);
     log_info(logger, "## PID: %d - Proceso Creado", pid);
 }

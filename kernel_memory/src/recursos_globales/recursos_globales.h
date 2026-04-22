@@ -18,18 +18,41 @@ typedef struct
     char *scripts_basepath;
 } km_config;
 
-// propuesta estructuras para contexto de ejecucion
-/*
+typedef enum
+{
+    NOOP,
+    SET, // REGISTRO , VALOR
+    MOV_IN, // REGISTRO, DATOS
+    MOV_OUT, // REGISTRO, DATOS
+    SUM, // REGISTRO_DESTINO, REGISTRO_ORIGEN
+    SUB, // REGISTRO_DESTINO, REGISTRO_ORIGEN
+    JNZ, // REGISTRO, INSTRUCCION
+    COPY_MEM, // REGISTRO, TAMAÑO
+    MUTEX_CREATE, // NOMBRE_MUTEX
+    MUTEX_LOCK, // NOMBRE_MUTEX
+    MUTEX_UNLOCK, // NOMBRE_MUTEX
+    MEM_ALLOC, // ID_SEGMENTO, TAMAÑO
+    MEM_FREE, // ID_SEGMENTO
+    SLEEP, // TIEMPO
+    STDOUT, // REGISTRO_DIRECCION_LOGICA, REGISTRO_TAMAÑO
+    STDIN, // REGISTRO_DIRECCION_LOGICA, REGISTRO_TAMAÑO
+    INIT_PROC, // ARCHIVO_INSTRUCCIONES, PRIORIDAD
+    EXIT
+} t_palabra_reservada;
+
 typedef struct
 {
-    t_funcion *func; // enum con instrucciones
-    char *param1;
-    char *param2;
+    t_palabra_reservada comando;
+    char *parametro_1;
+    char *parametro_2;
 } t_instruccion;
 
 typedef struct
 {
-    int pc, ax, bx, cx, dx, eax, ebx, ecx, edx, si, di;
+    uint32_t pc;
+    uint8_t ax, bx, cx, dx;
+    uint32_t eax, ebx, ecx, edx;
+    uint32_t si, di;
 } t_registros_cpu;
 
 typedef struct
@@ -40,19 +63,18 @@ typedef struct
 
 typedef struct
 {
-    t_list *instrucciones;
+    t_list *instrucciones; // t_instruccion []
     t_contexto_ejecucion *contexto;
 } t_procesos_memoria;
 
 extern t_dictionary *procesos_memoria;
-pthread_mutex_t mutex_procesos;
-*/
-// fin propuesta
+extern pthread_mutex_t mutex_procesos_memoria;
 
 extern t_log *logger;
 extern t_config *config;
 extern km_config *parametros;
 
+void iniciar_recursos();
 void liberar_recursos();
 
 #endif
