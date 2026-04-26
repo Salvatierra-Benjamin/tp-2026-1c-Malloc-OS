@@ -70,36 +70,3 @@ void io_liberar_log()
     log_debug(io_logger, "Log Liberado!");
     log_destroy(io_logger);
 }
-// void *recibir_buffer(int *size, int socket_cliente)
-// {
-//     void *buffer;
-
-//     recv(socket_cliente, size, sizeof(int), MSG_WAITALL);
-//     buffer = malloc(*size);
-//     recv(socket_cliente, buffer, *size, MSG_WAITALL);
-
-//     return buffer;
-// }
-// void recibir_paquete_equipo_cpu(int socket_cliente, t_list **respuesta)
-// {
-//     int size;
-//     int desplazamiento = 0;
-//     void *buffer;
-//     *respuesta = list_create();
-//     int tamanio;
-
-//     buffer = recibir_buffer(&size, socket_cliente);
-//     while (desplazamiento < size)
-//     {
-//         memcpy(&tamanio, buffer + desplazamiento, sizeof(int));
-//         desplazamiento += sizeof(int);
-//         char *valor = malloc(tamanio + 1);
-//         memcpy(valor, buffer + desplazamiento, tamanio);
-//         valor[tamanio] = '\0';
-//         desplazamiento += tamanio;
-//         list_add(*respuesta, valor);
-//     }
-//     free(buffer);
-//     // liberar memoria manualmente
-//     // MEMORY LEAK VER !!!!!!!!!!!!!!!!!!!!!!
-// }
