@@ -39,10 +39,11 @@ void *atencion_km()
             // {
             //      ME LLEGA EL CONTEXTO DE EJECUCION CON EL PID, LOS REGISTROS Y LA TABLE SEGMENTOS DEL PROCESO EN ESPECIFICO
             //      SIGNAL HACIA EL CASE DEL KS OK_ALOJAR Y LE MANDAS EL PID
-            //    MUTEX CONEXION KS
             // CREAS UN PAQUETE
             //      LLENAR CON PID
+            //    MUTEX CONEXION KS
             //      ENVIAR PAQUETE (CONEXION KS,CODIGO DE OPERACION: OK_ALOJAR)
+            //      ELIMINO PAQUETE DENTRO MUTEX
             //     MUTEX CONEXION KS
             //      BREAK
             // }
