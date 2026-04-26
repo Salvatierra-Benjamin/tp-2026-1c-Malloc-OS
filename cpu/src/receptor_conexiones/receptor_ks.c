@@ -33,6 +33,10 @@ void *atencion_ks()
             log_debug(cpu_logger, "[RECEPTOR_KS_CPU] EL HANDSHAKE CON KS SE HA REALIZADO CORRECTAMENTE!!!");
             break;
         }
+        // case ALOJAR_PROCESO
+        // {
+        //     RECIBO EL PAQUETE CON EL PID DEL KS
+        // }
         case -1:
         {
             log_error(cpu_logger, "Error de comunicación con la KS");

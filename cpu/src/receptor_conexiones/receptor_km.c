@@ -31,8 +31,21 @@ void *atencion_km()
         case KM_OK_CONEXION:
         {
             log_debug(cpu_logger, "[RECEPTOR_KM_CPU] EL HANDSHAKE CON KM SE HA REALIZADO CORRECTAMENTE!!!");
+            // enviar paquete con operacion de solicitud contexto ejecucicion , con el pid que guardaste en ks
+
             break;
         }
+            // case CONTEXTO_EJECUCION:
+            // {
+            //      ME LLEGA EL CONTEXTO DE EJECUCION CON EL PID, LOS REGISTROS Y LA TABLE SEGMENTOS DEL PROCESO EN ESPECIFICO
+            //      SIGNAL HACIA EL CASE DEL KS OK_ALOJAR Y LE MANDAS EL PID
+            //    MUTEX CONEXION KS
+            // CREAS UN PAQUETE
+            //      LLENAR CON PID
+            //      ENVIAR PAQUETE (CONEXION KS,CODIGO DE OPERACION: OK_ALOJAR)
+            //     MUTEX CONEXION KS
+            //      BREAK
+            // }
         case -1:
         {
             log_error(cpu_logger, "Error de comunicación con la KM");

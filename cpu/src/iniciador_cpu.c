@@ -5,6 +5,7 @@ cpu_struct_config cpu_config;
 int conexion_km;
 int conexion_ks;
 int conexion_ms;
+t_contexto_ejecucion contexto_ejecucion;
 
 void cpu_cargar_config(char *path)
 {

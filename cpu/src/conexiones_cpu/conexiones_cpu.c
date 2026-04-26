@@ -1,6 +1,8 @@
 #include "conexiones_cpu.h"
 void creacion_conexiones_cpu()
 {
+    // TODO //PAQUETITO CON ID CPU PARA TODOS !!!!
+
     //! ACLARACIÓN: CUANDO ESTE EN FUNCIONAMIENTO SE DESCOMENTA !!!!
     // //! CONEXIÓN CPU->KERNEL_SCHEDULER
     conexion_ks = crear_conexion(cpu_config.ip_kernel_scheduler, cpu_config.puerto_kernel_scheduler);
@@ -11,7 +13,8 @@ void creacion_conexiones_cpu()
         cpu_liberar_log();
         exit(EXIT_FAILURE);
     }
-    enviar_operacion(conexion_ks, HANDSHAKE_CPU); // HANDSHAKE CPU->KS
+    enviar_operacion(conexion_ks, HANDSHAKE_CPU); // HANDSHAKE CPU->KS //! Se cambia por un handshake con enviar paquete con el id
+    // enviar_paquete con el id y HANDSHAKE_CPU
 
     //! CONEXIÓN CPU->KERNEL_MEMORY
     conexion_km = crear_conexion(cpu_config.ip_kernel_memory, cpu_config.puerto_kernel_memory);
@@ -22,7 +25,8 @@ void creacion_conexiones_cpu()
         cpu_liberar_log();
         exit(EXIT_FAILURE);
     }
-    enviar_operacion(conexion_km, HANDSHAKE_CPU); // HANDSHAKE CPU->KM
+    enviar_operacion(conexion_km, HANDSHAKE_CPU); // HANDSHAKE CPU->KM //! Se cambia por un handshake con enviar paquete con el id
+    // enviar_paquete con el id y HANDSHAKE_CPU
 
     //! CONEXIÓN CPU->MEMORY_STICK
     conexion_ms = crear_conexion(cpu_config.ip_memory_stick, cpu_config.puerto_memory_stick);
@@ -33,9 +37,10 @@ void creacion_conexiones_cpu()
         cpu_liberar_log();
         exit(EXIT_FAILURE);
     }
-    enviar_operacion(conexion_ms, HANDSHAKE_CPU); // HANDSHAKE CPU->MS
+    enviar_operacion(conexion_ms, HANDSHAKE_CPU); // HANDSHAKE CPU->MS //! Se cambia por un handshake con enviar paquete con el id
+    // enviar_paquete con el id y HANDSHAKE_CPU
 
-    receptor_km();
     // receptor_ks();
+    receptor_km();
     receptor_ms();
 }
