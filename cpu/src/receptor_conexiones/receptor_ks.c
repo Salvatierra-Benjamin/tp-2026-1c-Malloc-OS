@@ -33,10 +33,22 @@ void *atencion_ks()
             log_debug(cpu_logger, "[RECEPTOR_KS_CPU] EL HANDSHAKE CON KS SE HA REALIZADO CORRECTAMENTE!!!");
             break;
         }
-        // case ALOJAR_PROCESO
-        // {
-        //     RECIBO EL PAQUETE CON EL PID DEL KS
-        // }
+        case ALOJAR_PROCESO:
+        {
+
+            t_paquete *paquete_alojar_proceso = recibir_paquete(conexion_ks);
+
+            int pid;
+            buffer_read(&pid, paquete_alojar_proceso->buffer, sizeof(int));
+
+            t_paquete paquete_solicitud_contexto = crear_paquete(SOLICITUD_CONTEXTO_EJECUCION);
+            agregar_a_paquete(paquete_solicitud_contexto, &pid, sizeof(int));
+            enviar_paquete(paquete_solicitud_contexto, conexion_km);
+            eliminar_paquete(paquete_alojar_proceso);
+            eliminar_paquete(paquete_solicitud_contexto);
+
+            break;
+        }
         case -1:
         {
             log_error(cpu_logger, "Error de comunicación con la KS");

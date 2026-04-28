@@ -1,4 +1,5 @@
 #include "receptor_km.h"
+
 void receptor_km()
 {
     log_debug(cpu_logger, "[RECEPTOR_KM_CPU] Conectando con KM...");
@@ -35,7 +36,25 @@ void *atencion_km()
 
             break;
         }
+
+        case CONTEXTO_EJECUCION:
+        {
+            t_paquete *paquete_contexto_de_ejecucion = recibir_paquete(conexion_km);
+            t_contexto_ejecucion nuevo_contexto_ejecucion;
+            buffer_read(&nuevo_contexto_ejecucion, paquete_contexto_de_ejecucion->buffer, sizeof(nuevo_contexto_ejecucion));
+
+            contexto_ejecucion.PDI = nuevo_contexto_ejecucion.PDI;
+            contexto_ejecucion.registros = nuevo_contexto_ejecucion.registros;
+            contexto_ejecucion.tabla_segmentos = nuevo_contexto_ejecucion.tabla_segmentos;
+
+            // TODO iniciar_fetch ();  ya con los registros globales,
+
+            eliminar_paquete(paquete_contexto_de_ejecucion);
+        }
+
             // case CONTEXTO_EJECUCION:
+            // ACA RECIBO EL CONTEXTO, Y ES DONDE DEBERIA DE METER EL SEMAFORO PARA DESBLOQUEAR EL RECEPTOR_KS
+            // ACA PODRIA LLAMAR A OTRA FUNCION QUE SEA EJECUCION_INSTRUCCIONES)
             // {
             //      ME LLEGA EL CONTEXTO DE EJECUCION CON EL PID, LOS REGISTROS Y LA TABLE SEGMENTOS DEL PROCESO EN ESPECIFICO
             //      SIGNAL HACIA EL CASE DEL KS OK_ALOJAR Y LE MANDAS EL PID

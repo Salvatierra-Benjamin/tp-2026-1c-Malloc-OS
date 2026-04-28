@@ -51,6 +51,8 @@ typedef enum
 
     // ---------------- CPU -> SCHEDULER ----------------
     CPU_IDENTIFICACION = 3000,
+
+    // ---------------- CPU -> KM ----------------
     SOLICITUD_CONTEXTO_EJECUCION = 3001, // CPU solicita contexto a KM
     ENVIO_CPU_ID = 3002,
 
@@ -62,6 +64,12 @@ typedef enum
 
     // ---------------- MS -> KM ----------------
     MEMORY_STICK_SIZE = 6000,
+
+    // ---------------- KS -> CPU ----------------
+    ALOJAR_PROCESO = 7000, // KS envia pid a CPU
+
+    // ---------------- KM -> CPU ----------------
+    CONTEXTO_EJECUCION = 8000 // KM envia [t_registros, t_tabla_de_segmentos]
 
 } op_code;
 
