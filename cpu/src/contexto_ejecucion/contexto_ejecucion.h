@@ -33,5 +33,5 @@ typedef struct
 
 // Declaración Variables Globales:
 extern t_contexto_ejecucion contexto_ejecucion;
-
+extern reg_id reg;
 #endif

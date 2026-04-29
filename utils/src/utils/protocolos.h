@@ -56,7 +56,7 @@ typedef enum
     SOLICITUD_CONTEXTO_EJECUCION = 3001, // CPU solicita contexto a KM
     ENVIO_CPU_ID = 3002,
     SOLICITUD_INSTRUCCION = 3003, // cpu solicuta instruccion [pid, pc]
-    OK_ALOJAR = 3004,   // cpu 
+    OK_ALOJAR = 3004,             // cpu
 
     // ---------------- SWAP -> KM ----------------
     BLOCK_SIZE = 4000,
@@ -95,17 +95,18 @@ typedef struct
     t_buffer *buffer;
 } t_paquete;
 
-typedef enum {
+typedef enum
+{
     PC,
-    AX, 
-    BX, 
-    CX, 
+    AX,
+    BX,
+    CX,
     DX,
-    EAX, 
-    EBX, 
-    ECX, 
+    EAX,
+    EBX,
+    ECX,
     EDX,
-    SI, 
+    SI,
     DI
 } reg_id;
 

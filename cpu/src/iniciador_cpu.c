@@ -6,6 +6,7 @@ int conexion_km;
 int conexion_ks;
 int conexion_ms;
 t_contexto_ejecucion contexto_ejecucion;
+reg_id reg;
 int identificador;
 
 void cpu_cargar_config(char *path)
@@ -32,9 +33,8 @@ void cpu_cargar_config(char *path)
 void inicializar_logger()
 {
 
+    char *ruta_con_cpu_id = string_from_format("cpu_%d_.log", identificador);
 
-    char* ruta_con_cpu_id = string_from_format("cpu_%d_.log", identificador);
-  
     cpu_logger = log_create(ruta_con_cpu_id, "CPU", 1, cpu_config.log_level);
 
     if (cpu_logger == NULL)

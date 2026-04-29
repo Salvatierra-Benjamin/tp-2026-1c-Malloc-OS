@@ -40,5 +40,4 @@ extern int conexion_ks;
 extern int conexion_ms;
 extern int identificador;
 
-
 #endif
