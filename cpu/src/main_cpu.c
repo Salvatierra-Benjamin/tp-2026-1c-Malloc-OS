@@ -1,5 +1,4 @@
 #include "main_cpu.h"
-int identificador = 0;
 
 int main(int argc, char *argv[])
 {
@@ -30,5 +29,7 @@ int main(int argc, char *argv[])
     cpu_liberar_config();
     cpu_liberar_log();
 
+
+    // TODO funcion liberar_conexiones();
     return 0;
 }

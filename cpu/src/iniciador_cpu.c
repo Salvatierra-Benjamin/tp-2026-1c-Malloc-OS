@@ -6,6 +6,7 @@ int conexion_km;
 int conexion_ks;
 int conexion_ms;
 t_contexto_ejecucion contexto_ejecucion;
+int identificador;
 
 void cpu_cargar_config(char *path)
 {

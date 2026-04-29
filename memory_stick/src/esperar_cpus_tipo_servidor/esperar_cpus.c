@@ -29,7 +29,7 @@ void *atencion_cpus(void *socket_cliente_puntero)
         switch (cod_op)
         {
         case HANDSHAKE_CPU:
-        {
+        {  
             enviar_operacion(socket_cliente, MS_OK_CONEXION);
             break;
         }

@@ -50,7 +50,7 @@ void *atencion_ks()
         }
         switch (cod_op)
         {
-        case KM_OK_CONEXION:
+        case KS_OK_CONEXION:
         {
             log_debug(io_logger, "[RECEPTOR_KS_IO] EL HANSHAKE CON KS SE HA REALIZADO CORRECTAMENTE!!!");
             break;

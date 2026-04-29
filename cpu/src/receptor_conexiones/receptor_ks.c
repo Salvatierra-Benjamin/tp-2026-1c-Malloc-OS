@@ -37,13 +37,14 @@ void *atencion_ks()
         {
 
             t_paquete *paquete_alojar_proceso = recibir_paquete(conexion_ks);
-
             int pid;
             buffer_read(&pid, paquete_alojar_proceso->buffer, sizeof(int));
 
             t_paquete *paquete_solicitud_contexto = crear_paquete(SOLICITUD_CONTEXTO_EJECUCION);
             agregar_a_paquete(paquete_solicitud_contexto, &pid, sizeof(int));
+            //MUTEX 
             enviar_paquete(paquete_solicitud_contexto, conexion_km);
+            //MUTEX
             eliminar_paquete(paquete_alojar_proceso);
             eliminar_paquete(paquete_solicitud_contexto);
 

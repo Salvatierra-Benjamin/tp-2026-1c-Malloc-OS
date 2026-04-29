@@ -2,7 +2,7 @@
 #define CONTEXTO_EJECUCION_H
 #include "gestor_cpu.h"
 
-// Definición de Tipos:
+// Definición de Tipos
 typedef struct
 {
     uint32_t PC;
@@ -16,7 +16,6 @@ typedef struct
     uint32_t EDX;
     uint32_t SI;
     uint32_t DI;
-
 } t_registros;
 
 typedef struct

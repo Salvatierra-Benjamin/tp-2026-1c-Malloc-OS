@@ -95,6 +95,20 @@ typedef struct
     t_buffer *buffer;
 } t_paquete;
 
+typedef enum {
+    PC,
+    AX, 
+    BX, 
+    CX, 
+    DX,
+    EAX, 
+    EBX, 
+    ECX, 
+    EDX,
+    SI, 
+    DI
+} reg_id;
+
 int enviar_operacion(int socket_destino, op_code codigo_operacion);
 int recibir_operacion(int);
 t_paquete *crear_paquete(op_code);

@@ -1,7 +1,6 @@
 #include "conexiones_cpu.h"
 void creacion_conexiones_cpu()
 {
-    // TODO //PAQUETITO CON ID CPU PARA TODOS !!!!
 
     //! ACLARACIÓN: CUANDO ESTE EN FUNCIONAMIENTO SE DESCOMENTA !!!!
     // //! CONEXIÓN CPU->KERNEL_SCHEDULER

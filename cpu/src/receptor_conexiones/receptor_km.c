@@ -49,12 +49,12 @@ void *atencion_km()
             contexto_ejecucion.registros = nuevo_contexto_ejecucion.registros;
             contexto_ejecucion.tabla_segmentos = nuevo_contexto_ejecucion.tabla_segmentos;
 
-            
+            // !Poner semaforo para resguardar la conexion con ks 
             t_paquete * paquete_ok_alojo =  crear_paquete(OK_ALOJAR);
             agregar_a_paquete(paquete_ok_alojo, &contexto_ejecucion.PID, sizeof(int));
+            //MUTEX
             enviar_paquete(paquete_ok_alojo, conexion_ks);
-
-            
+            //MUTEX
             eliminar_paquete(paquete_ok_alojo);
             eliminar_paquete(paquete_contexto_de_ejecucion);
 
@@ -83,6 +83,13 @@ void *atencion_km()
             //     MUTEX CONEXION KS
             //      BREAK
             // }
+            
+        case CONTEXTO_EJECUCION:
+        {
+            t_paquete * paquete_contexto = 
+            break;
+
+        }
         case -1:
         {
             log_error(cpu_logger, "Error de comunicación con la KM");
