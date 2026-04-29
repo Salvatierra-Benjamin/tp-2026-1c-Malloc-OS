@@ -26,7 +26,7 @@ typedef struct
 
 typedef struct
 {
-    int PDI;
+    int PID;
     t_registros registros;
     t_segmentos tabla_segmentos;
 

@@ -55,6 +55,8 @@ typedef enum
     // ---------------- CPU -> KM ----------------
     SOLICITUD_CONTEXTO_EJECUCION = 3001, // CPU solicita contexto a KM
     ENVIO_CPU_ID = 3002,
+    SOLICITUD_INSTRUCCION = 3003, // cpu solicuta instruccion [pid, pc]
+    OK_ALOJAR = 3004,   // cpu 
 
     // ---------------- SWAP -> KM ----------------
     BLOCK_SIZE = 4000,

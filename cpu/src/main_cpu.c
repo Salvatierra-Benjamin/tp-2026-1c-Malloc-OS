@@ -1,4 +1,5 @@
 #include "main_cpu.h"
+int identificador = 0;
 
 int main(int argc, char *argv[])
 {
@@ -11,7 +12,7 @@ int main(int argc, char *argv[])
     }
 
     char *path = argv[1];
-    int identificador = atoi(argv[2]);
+    identificador = atoi(argv[2]);
 
     if (identificador <= 0)
     {

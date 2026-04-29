@@ -30,14 +30,18 @@ void cpu_cargar_config(char *path)
 
 void inicializar_logger()
 {
-    cpu_logger = log_create("memory_stick.log", "memory_stick", 1, cpu_config.log_level);
+
+
+    char* ruta_con_cpu_id = string_from_format("cpu_%d_.log", identificador);
+  
+    cpu_logger = log_create(ruta_con_cpu_id, "CPU", 1, cpu_config.log_level);
 
     if (cpu_logger == NULL)
     {
-        fprintf(stderr, "ERROR AL CREAR EL LOGGER MEMORY STICK\n");
+        fprintf(stderr, "ERROR AL CREAR EL LOGGER CPU\n");
         exit(EXIT_FAILURE);
     }
-    log_debug(cpu_logger, "Se creo log de MEMORY STICK correctamente");
+    log_debug(cpu_logger, "Se creo log de CPU correctamente");
 }
 
 void imprimir_valores_config_cpu()

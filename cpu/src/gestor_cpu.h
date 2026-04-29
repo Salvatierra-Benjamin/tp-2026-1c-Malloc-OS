@@ -38,5 +38,7 @@ extern cpu_struct_config cpu_config;
 extern int conexion_km;
 extern int conexion_ks;
 extern int conexion_ms;
+extern int identificador;
+
 
 #endif
