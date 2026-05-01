@@ -22,6 +22,7 @@ void *atencion_km()
         {
             log_error(ms_logger, "cod op %d", cod_op);
             log_error(ms_logger, "KM desconectado o error");
+            liberar_todo();
             exit(EXIT_FAILURE);
         }
         switch (cod_op)
@@ -29,15 +30,6 @@ void *atencion_km()
         case KM_OK_CONEXION:
         {
             log_debug(ms_logger, "[RECEPTOR_KM_MS] EL HANDSHAKE CON KM SE HA REALIZADO CORRECTAMENTE!!!");
-            break;
-        }
-        case -1:
-        {
-            log_error(ms_logger, "Error de comunicación con la KM");
-            ms_liberar_config();
-            ms_liberar_log();
-            free(memoria_ms);
-            exit(EXIT_FAILURE);
             break;
         }
         default:

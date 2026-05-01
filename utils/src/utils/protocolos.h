@@ -109,6 +109,17 @@ typedef enum
     SI,
     DI
 } reg_id;
+typedef struct
+{
+    uint32_t dir_base;
+    uint32_t tam_seg;
+} segmento_t;
+
+typedef struct
+{
+    segmento_t *tabla_segmentos;
+    uint32_t cantidad_segmentos;
+} tabla_segmentos_t;
 
 int enviar_operacion(int socket_destino, op_code codigo_operacion);
 int recibir_operacion(int);

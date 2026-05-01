@@ -21,6 +21,7 @@ void *atencion_km()
         {
             log_error(swap_logger, "cod op %d", cod_op);
             log_error(swap_logger, "KM desconectado o error");
+            liberar_todo();
             exit(EXIT_FAILURE);
         }
         switch (cod_op)
@@ -28,14 +29,6 @@ void *atencion_km()
         case KM_OK_CONEXION:
         {
             log_debug(swap_logger, "[RECEPTOR_KM_SWAP] EL HANSHAKE CON KM SE HA REALIZADO CORRECTAMENTE!!!");
-            break;
-        }
-        case -1:
-        {
-            log_error(swap_logger, "Error de comunicación con la KM");
-            swap_liberar_config();
-            swap_liberar_log();
-            exit(EXIT_FAILURE);
             break;
         }
         default:

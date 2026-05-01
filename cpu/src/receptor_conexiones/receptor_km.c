@@ -17,14 +17,14 @@ void *atencion_km()
 
     while (1)
     {
-        // pthread_mutex_lock(&mutex_conexion); <-- NO TOCAR ES PARA DESPUÉS!!!
+
         int cod_op = recibir_operacion(conexion_km);
-        // pthread_mutex_unlock(&mutex_conexion); <-- NO TOCAR ES PARA DESPUÉS!!!
 
         if (cod_op < 0)
         {
             log_error(cpu_logger, "cod op %d", cod_op);
             log_error(cpu_logger, "KM desconectado o error");
+            liberar_todo();
             exit(EXIT_FAILURE);
         }
         switch (cod_op)
@@ -36,10 +36,11 @@ void *atencion_km()
 
             break;
         }
-
         case CONTEXTO_EJECUCION:
         {
+
             t_paquete *paquete_contexto_de_ejecucion = recibir_paquete(conexion_km);
+
             t_contexto_ejecucion nuevo_contexto_ejecucion;
             buffer_read(&nuevo_contexto_ejecucion, paquete_contexto_de_ejecucion->buffer, sizeof(nuevo_contexto_ejecucion));
 
@@ -52,9 +53,9 @@ void *atencion_km()
             // !Poner semaforo para resguardar la conexion con ks
             t_paquete *paquete_ok_alojo = crear_paquete(OK_ALOJAR);
             agregar_a_paquete(paquete_ok_alojo, &contexto_ejecucion.PID, sizeof(int));
-            // MUTEX
+
             enviar_paquete(paquete_ok_alojo, conexion_ks);
-            // MUTEX
+
             eliminar_paquete(paquete_ok_alojo);
             eliminar_paquete(paquete_contexto_de_ejecucion);
 
@@ -62,29 +63,6 @@ void *atencion_km()
             // ? el ks solicita alojar un proceso, hasta que el
             // ? No poner semaforo para receptor ks porque solo taparia el error en caso de que ks
             // ? siga enviando cosas
-        }
-
-            // case CONTEXTO_EJECUCION:
-            // ACA RECIBO EL CONTEXTO, Y ES DONDE DEBERIA DE METER EL SEMAFORO PARA DESBLOQUEAR EL RECEPTOR_KS
-            // ACA PODRIA LLAMAR A OTRA FUNCION QUE SEA EJECUCION_INSTRUCCIONES)
-            // {
-            //      ME LLEGA EL CONTEXTO DE EJECUCION CON EL PID, LOS REGISTROS Y LA TABLE SEGMENTOS DEL PROCESO EN ESPECIFICO
-            //      SIGNAL HACIA EL CASE DEL KS OK_ALOJAR Y LE MANDAS EL PID
-            // CREAS UN PAQUETE
-            //      LLENAR CON PID
-            //    MUTEX CONEXION KS
-            //      ENVIAR PAQUETE (CONEXION KS,CODIGO DE OPERACION: OK_ALOJAR)
-            //      ELIMINO PAQUETE DENTRO MUTEX
-            //     MUTEX CONEXION KS
-            //      BREAK
-            // }
-        case -1:
-        {
-            log_error(cpu_logger, "Error de comunicación con la KM");
-            cpu_liberar_config();
-            cpu_liberar_log();
-            exit(EXIT_FAILURE);
-            break;
         }
         default:
         {

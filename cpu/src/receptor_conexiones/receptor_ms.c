@@ -16,14 +16,13 @@ void *atencion_ms()
 
     while (1)
     {
-        // pthread_mutex_lock(&mutex_conexion); <-- NO TOCAR ES PARA DESPUÉS!!!
         int cod_op = recibir_operacion(conexion_ms);
-        // pthread_mutex_unlock(&mutex_conexion); <-- NO TOCAR ES PARA DESPUÉS!!!
 
         if (cod_op < 0)
         {
             log_error(cpu_logger, "cod op %d", cod_op);
             log_error(cpu_logger, "MS desconectado o error");
+            liberar_todo();
             exit(EXIT_FAILURE);
         }
         switch (cod_op)
@@ -31,14 +30,6 @@ void *atencion_ms()
         case MS_OK_CONEXION:
         {
             log_debug(cpu_logger, "[RECEPTOR_MS_CPU] EL HANDSHAKE CON MS SE HA REALIZADO CORRECTAMENTE!!!");
-            break;
-        }
-        case -1:
-        {
-            log_error(cpu_logger, "Error de comunicación con la MS");
-            cpu_liberar_config();
-            cpu_liberar_log();
-            exit(EXIT_FAILURE);
             break;
         }
         default:

@@ -3,6 +3,9 @@
 t_log *swap_logger;
 swap_config_struct swap_config;
 int conexion_km;
+// Semaforos:
+pthread_mutex_t conexiones_km = PTHREAD_MUTEX_INITIALIZER; // MUTEX
+sem_t semaphore;
 
 void swap_cargar_config(char *path)
 {
@@ -47,6 +50,23 @@ void imprimir_valores_config_swap()
     log_debug(swap_logger, "Nivel de Log: %d\n", swap_config.log_level);
 }
 
+void inicializar_semaforos_coordinadores()
+{
+    // 0: El semáforo se comparte entre hilos del mismo proceso
+    // 0: Valor inicial (el semáforo empieza "cerrado")
+    sem_init(&semaphore, 0, 0);
+}
+
+void cerrar_conexiones()
+{
+    close(conexion_km);
+}
+
+void liberar_semaforos()
+{
+    sem_destroy(&semaphore);
+}
+
 void swap_liberar_config()
 {
     free(swap_config.swap_file_path);
@@ -60,4 +80,12 @@ void swap_liberar_log()
 {
     log_debug(swap_logger, "Log Liberado!!!\n");
     log_destroy(swap_logger);
+}
+
+void liberar_todo()
+{
+    cerrar_conexiones();
+    liberar_semaforos();
+    swap_liberar_config();
+    swap_liberar_log();
 }

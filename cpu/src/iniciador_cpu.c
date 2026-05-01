@@ -8,6 +8,13 @@ int conexion_ms;
 t_contexto_ejecucion contexto_ejecucion;
 reg_id reg;
 int identificador;
+uint32_t tam_max_segmentos;
+tabla_segmentos_t tab;
+// Semaforos:
+pthread_mutex_t conexiones_km = PTHREAD_MUTEX_INITIALIZER; // MUTEX
+pthread_mutex_t conexiones_ks = PTHREAD_MUTEX_INITIALIZER; // MUTEX
+pthread_mutex_t conexiones_ms = PTHREAD_MUTEX_INITIALIZER; // MUTEX
+sem_t semaphore;                                           // Coordinacion //POR AHORA NO SE USA
 
 void cpu_cargar_config(char *path)
 {
@@ -43,6 +50,7 @@ void inicializar_logger()
         exit(EXIT_FAILURE);
     }
     log_debug(cpu_logger, "Se creo log de CPU correctamente");
+    free(ruta_con_cpu_id);
 }
 
 void imprimir_valores_config_cpu()
@@ -63,6 +71,28 @@ void imprimir_valores_config_cpu()
     log_debug(cpu_logger, "Nivel de Log: %d\n", cpu_config.log_level);
 }
 
+void inicializar_semaforos_coordinadores()
+{
+    // 0: El semáforo se comparte entre hilos del mismo proceso
+    // 0: Valor inicial (el semáforo empieza "cerrado")
+    sem_init(&semaphore, 0, 0);
+}
+
+void cerrar_conexiones()
+{
+    close(conexion_ks);
+    close(conexion_km);
+    close(conexion_ms);
+}
+
+void liberar_semaforos()
+{
+    pthread_mutex_destroy(&conexiones_km);
+    pthread_mutex_destroy(&conexiones_ks);
+    pthread_mutex_destroy(&conexiones_ms);
+    sem_destroy(&semaphore);
+}
+
 void cpu_liberar_config()
 {
     free(cpu_config.ip_kernel_memory);
@@ -79,4 +109,12 @@ void cpu_liberar_log()
 {
     log_debug(cpu_logger, "Log Liberado!!!\n");
     log_destroy(cpu_logger);
+}
+
+void liberar_todo()
+{
+    cerrar_conexiones();
+    liberar_semaforos();
+    cpu_liberar_config();
+    cpu_liberar_log();
 }

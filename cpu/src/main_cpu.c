@@ -22,14 +22,11 @@ int main(int argc, char *argv[])
     cpu_cargar_config(path);
     inicializar_logger();
     imprimir_valores_config_cpu();
+    inicializar_semaforos_coordinadores();
     creacion_conexiones_cpu();
 
     log_debug(cpu_logger, "Memory Stick TERMINO.\n");
 
-    cpu_liberar_config();
-    cpu_liberar_log();
-
-
-    // TODO funcion liberar_conexiones();
+    liberar_todo();
     return 0;
 }

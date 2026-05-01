@@ -3,413 +3,295 @@ void NOOP()
 {
     contexto_ejecucion.registros.PC += 1;
 }
-
-void SET(reg_id reg, uint32_t valor)
+void *obtener_reg_puntero(reg_id reg, size_t *tam)
 {
     switch (reg)
     {
     case AX:
-        contexto_ejecucion.registros.AX = (uint8_t)valor;
-        break;
+        *tam = sizeof(uint8_t);
+        return &contexto_ejecucion.registros.AX;
     case BX:
-        contexto_ejecucion.registros.BX = (uint8_t)valor;
-        break;
+        *tam = sizeof(uint8_t);
+        return &contexto_ejecucion.registros.BX;
     case CX:
-        contexto_ejecucion.registros.CX = (uint8_t)valor;
-        break;
+        *tam = sizeof(uint8_t);
+        return &contexto_ejecucion.registros.CX;
     case DX:
-        contexto_ejecucion.registros.DX = (uint8_t)valor;
-        break;
+        *tam = sizeof(uint8_t);
+        return &contexto_ejecucion.registros.DX;
 
-    case PC:
-        contexto_ejecucion.registros.PC = valor;
-        break;
     case EAX:
-        contexto_ejecucion.registros.EAX = valor;
-        break;
+        *tam = sizeof(uint32_t);
+        return &contexto_ejecucion.registros.EAX;
     case EBX:
-        contexto_ejecucion.registros.EBX = valor;
-        break;
+        *tam = sizeof(uint32_t);
+        return &contexto_ejecucion.registros.EBX;
     case ECX:
-        contexto_ejecucion.registros.ECX = valor;
-        break;
+        *tam = sizeof(uint32_t);
+        return &contexto_ejecucion.registros.ECX;
     case EDX:
-        contexto_ejecucion.registros.EDX = valor;
-        break;
+        *tam = sizeof(uint32_t);
+        return &contexto_ejecucion.registros.EDX;
+
     case SI:
-        contexto_ejecucion.registros.SI = valor;
-        break;
+        *tam = sizeof(uint32_t);
+        return &contexto_ejecucion.registros.SI;
     case DI:
-        contexto_ejecucion.registros.DI = valor;
-        break;
+        *tam = sizeof(uint32_t);
+        return &contexto_ejecucion.registros.DI;
+    case PC:
+        *tam = sizeof(uint32_t);
+        return &contexto_ejecucion.registros.PC;
+    default:
+        *tam = 0;
+        return NULL;
+    }
+}
+void SET(reg_id reg, uint32_t valor)
+{
+    size_t tam;
+    void *ptr = obtener_reg_puntero(reg, &tam);
+
+    if (!ptr)
+        return;
+
+    if (tam == sizeof(uint8_t))
+    {
+        *(uint8_t *)ptr = (uint8_t)valor; // truncamiento
+    }
+    else
+    {
+        *(uint32_t *)ptr = valor;
+    }
+}
+uint32_t leer_reg(reg_id reg)
+{
+    size_t tam;
+    void *ptr = obtener_reg_puntero(reg, &tam);
+    if (!ptr)
+    {
+        log_debug(cpu_logger, "Error en la funcion leer_reg");
+        exit(EXIT_FAILURE);
+    }
+    if (tam == sizeof(uint8_t))
+    {
+        (uint8_t)ptr;
+    }
+    else
+    {
+        (uint32_t)ptr;
+    }
+}
+void escribir_reg(reg_id reg, uint32_t valor)
+{
+    size_t tam;
+    void *ptr = obtener_reg_puntero(reg, &tam);
+    if (!ptr)
+    {
+        log_debug(cpu_logger, "Error en la funcion escribir_reg");
+        exit(EXIT_FAILURE);
+    }
+    if (tam == sizeof(uint8_t))
+    {
+        (uint8_t)ptr = (uint8_t)valor;
+    }
+    else
+    {
+        (uint32_t)ptr = valor;
     }
 }
 
-// TODO mov_in
-// void MOV_IN(reg_id reg)
-// {
-//     uint32_t dir = contexto_ejecucion.registros.SI;
+void leer_memoria(uint32_t dir_fisica, void *buffer_destino, uint32_t tamanio)
+{
+    // =========================================================
+    // 1. ARMAR LA PETICIÓN
+    // =========================================================
+    // Usá el op_code que hayan definido en su protocolos.h
+    t_paquete *paquete_peticion = crear_paquete(LEER_MEMORIA_STICK);
 
-//     switch (reg)
-//     {
-//     // Registros de 8 bits
-//     case AX:
-//         contexto_ejecucion.registros.AX = *((uint8_t *)memoria + dir);
-//         break;
+    // Le decimos a partir de dónde leer
+    agregar_a_paquete(paquete_peticion, &dir_fisica, sizeof(uint32_t));
 
-//     case BX:
-//         contexto_ejecucion.registros.BX = *((uint8_t *)memoria + dir);
-//         break;
+    // Le decimos cuántos bytes queremos que nos devuelva
+    agregar_a_paquete(paquete_peticion, &tamanio, sizeof(uint32_t));
 
-//     case CX:
-//         contexto_ejecucion.registros.CX = *((uint8_t *)memoria + dir);
-//         break;
+    // =========================================================
+    // 2. ENVIAR POR RED
+    // =========================================================
+    enviar_paquete(paquete_peticion, conexion_ms);
+    eliminar_paquete(paquete_peticion); // Siempre liberar la memoria del paquete enviado
 
-//     case DX:
-//         contexto_ejecucion.registros.DX = *((uint8_t *)memoria + dir);
-//         break;
+    // =========================================================
+    // 3. RECIBIR LA RESPUESTA (Queda bloqueado esperando)
+    // =========================================================
+    // Ojo: dependiendo de cómo sea tu red, quizás primero hacés un recv del OP_CODE
+    // int op_code_respuesta = recibir_operacion(conexion_ms;
 
-//     // Registros de 32 bits (forma segura)
-//     case EAX:
-//         memcpy(contexto_ejecucion.registros.EAX, (uint8_t *)memoria + dir, sizeof(uint32_t));
-//         break;
+    t_paquete *paquete_respuesta = recibir_paquete(conexion_ms);
 
-//     case EBX:
-//         memcpy(contexto_ejecucion.registros.EBX, (uint8_t *)memoria + dir, sizeof(uint32_t));
-//         break;
+    // Verificamos que todo haya salido bien del otro lado
+    if (paquete_respuesta->codigo_operacion == RESPUESTA_OK_LEER_MEMORIA)
+    {
+        // =========================================================
+        // 4. PEGAR LOS DATOS EN EL BUFFER DE LA CPU
+        // =========================================================
+        // Usamos tu función buffer_read para sacar los datos serializados
+        // y pegarlos directamente en el puntero que nos pasaron por parámetro.
+        buffer_read(buffer_destino, paquete_respuesta->buffer, tamanio);
+    }
+    else
+    {
+        // Manejo de error si el Memory Stick falló o se desconectó
+        log_error(cpu_logger, "Error: El Memory Stick no devolvió los datos esperados.");
+    }
 
-//     case ECX:
-//         memcpy(contexto_ejecucion.registros.ECX, (uint8_t *)memoria + dir, sizeof(uint32_t));
-//         break;
+    // =========================================================
+    // 5. LIMPIEZA
+    // =========================================================
+    eliminar_paquete(paquete_respuesta);
+}
 
-//     case EDX:
-//         memcpy(contexto_ejecucion.registros.EDX, (uint8_t *)memoria + dir, sizeof(uint32_t));
-//         break;
-//     case SI:
-//         memcpy(contexto_ejecucion.registros.SI, (uint8_t *)memoria + dir, sizeof(uint32_t));
-//         break;
+void MOV_IN(reg_id reg)
+{
+    size_t tam;
+    // 1. Obtenemos el puntero directo al registro
+    void *ptr = obtener_reg_puntero(reg, &tam);
 
-//     case DI:
-//         memcpy(contexto_ejecucion.registros.DI, (uint8_t *)memoria + dir, sizeof(uint32_t));
-//         break;
+    // 2. Origen lógico
+    uint32_t dir_logica = contexto_ejecucion.registros.SI;
 
-//     case PC:
-//         memcpy(contexto_ejecucion.registros.PC, (uint8_t *)memoria + dir, sizeof(uint32_t));
-//         break;
-//     }
-// }
-// TODO mov_in
+    uint32_t restante = tam;
+    uint32_t actual = dir_logica;
 
-// void MOV_OUT()
-// {
-//     uint32_t dir = contexto_ejecucion.registros.DI;
+    // 3. Buffer temporal para unificar todo
+    uint8_t *buffer = malloc(tam);
+    uint32_t offset = 0;
 
-//     switch (reg)
-//     {
-//     // Registros de 8 bits
-//     case AX:
-//         contexto_ejecucion.registros.AX = *((uint8_t *)memoria + dir);
-//         break;
+    // 4. Bucle para lidiar con fragmentación entre Memory Sticks
+    while (restante > 0)
+    {
+        uint32_t dir_fisica;
+        uint32_t bytes_validos;
 
-//     case BX:
-//         contexto_ejecucion.registros.BX = *((uint8_t *)memoria + dir);
-//         break;
+        // OJO: Le pasamos 'restante', no 'tam'
+        int res = MMU_TRADUCCION_FISICA(actual, restante, &dir_fisica, &bytes_validos);
 
-//     case CX:
-//         contexto_ejecucion.registros.CX = *((uint8_t *)memoria + dir);
-//         break;
+        if (res < 0) // Si la MMU detecta SEG_FAULT
+        {
+            log_debug(cpu_logger, "SEG_FAULT en MOV_IN");
+            free(buffer);
+            // Acá además deberías devolver el PID al Scheduler por SegFault
+            return;
+        }
 
-//     case DX:
-//         contexto_ejecucion.registros.DX = *((uint8_t *)memoria + dir);
-//         break;
+        // 5. Leer directo de la red hacia el offset de nuestro buffer
+        leer_memoria(dir_fisica, buffer + offset, bytes_validos);
 
-//     // Registros de 32 bits (forma segura)
-//     case EAX:
-//         memcpy(contexto_ejecucion.registros.EAX, (uint8_t *)memoria + dir, sizeof(uint32_t));
-//         break;
+        // 6. Actualizar contadores
+        offset += bytes_validos;
+        restante -= bytes_validos;
+        actual += bytes_validos;
+    }
 
-//     case EBX:
-//         memcpy(contexto_ejecucion.registros.EBX, (uint8_t *)memoria + dir, sizeof(uint32_t));
-//         break;
+    // 7. Pegar todo el buffer armado directo en el registro original
+    memcpy(ptr, buffer, tam);
 
-//     case ECX:
-//         memcpy(contexto_ejecucion.registros.ECX, (uint8_t *)memoria + dir, sizeof(uint32_t));
-//         break;
+    // 8. Limpiar
+    free(buffer);
+}
 
-//     case EDX:
-//         memcpy(contexto_ejecucion.registros.EDX, (uint8_t *)memoria + dir, sizeof(uint32_t));
-//         break;
-//     case SI:
-//         memcpy(contexto_ejecucion.registros.SI, (uint8_t *)memoria + dir, sizeof(uint32_t));
-//         break;
+// TODO leer_memoria(dir_fisica, buffer + offset, bytes_validos);
 
-//     case DI:
-//         memcpy(contexto_ejecucion.registros.DI, (uint8_t *)memoria + dir, sizeof(uint32_t));
-//         break;
-
-//     case PC:
-//         memcpy(contexto_ejecucion.registros.PC, (uint8_t *)memoria + dir, sizeof(uint32_t));
-//         break;
-//     }
-// }
+void MOV_OUT()
+{
+}
 
 void SUM(reg_id dest, reg_id orig)
 {
+    size_t tam_dest, tam_orig;
+
+    void *ptr_dest = obtener_reg_puntero(dest, &tam_dest);
+    void *ptr_orig = obtener_reg_puntero(orig, &tam_orig);
+
+    if (!ptr_dest || !ptr_orig)
+        return;
+
     // DESTINO 8 bits
-
-    switch (dest)
+    if (tam_dest == sizeof(uint8_t))
     {
-    case AX:
-        switch (orig)
-        {
-        case AX:
-            contexto_ejecucion.registros.AX += contexto_ejecucion.registros.AX;
-            break;
-        case BX:
-            contexto_ejecucion.registros.AX += contexto_ejecucion.registros.BX;
-            break;
-        case CX:
-            contexto_ejecucion.registros.AX += contexto_ejecucion.registros.CX;
-            break;
-        case DX:
-            contexto_ejecucion.registros.AX += contexto_ejecucion.registros.DX;
-            break;
-        default:
-            break;
-        }
-        break;
+        uint8_t *d = (uint8_t *)ptr_dest;
 
-    case BX:
-        switch (orig)
-        {
-        case AX:
-            contexto_ejecucion.registros.BX += contexto_ejecucion.registros.AX;
-            break;
-        case BX:
-            contexto_ejecucion.registros.BX += contexto_ejecucion.registros.BX;
-            break;
-        case CX:
-            contexto_ejecucion.registros.BX += contexto_ejecucion.registros.CX;
-            break;
-        case DX:
-            contexto_ejecucion.registros.BX += contexto_ejecucion.registros.DX;
-            break;
-        default:
-            break;
-        }
-        break;
-
+        if (tam_orig == sizeof(uint8_t))
+            *d += *(uint8_t *)ptr_orig;
+        else
+            *d += (uint8_t)(*(uint32_t *)ptr_orig); // truncamiento
+    }
     // DESTINO 32 bits
-    case EAX:
-        switch (orig)
-        {
-        case EAX:
-            contexto_ejecucion.registros.EAX += contexto_ejecucion.registros.EAX;
-            break;
-        case EBX:
-            contexto_ejecucion.registros.EAX += contexto_ejecucion.registros.EBX;
-            break;
-        case ECX:
-            contexto_ejecucion.registros.EAX += contexto_ejecucion.registros.ECX;
-            break;
-        case EDX:
-            contexto_ejecucion.registros.EAX += contexto_ejecucion.registros.EDX;
-            break;
-        case SI:
-            contexto_ejecucion.registros.EAX += contexto_ejecucion.registros.SI;
-            break;
-        case DI:
-            contexto_ejecucion.registros.EAX += contexto_ejecucion.registros.DI;
-            break;
-        case PC:
-            contexto_ejecucion.registros.EAX += contexto_ejecucion.registros.PC;
-            break;
-        default:
-            break;
-        }
-        break;
+    else
+    {
+        uint32_t *d = (uint32_t *)ptr_dest;
 
-    case EBX:
-        switch (orig)
-        {
-        case EAX:
-            contexto_ejecucion.registros.EBX += contexto_ejecucion.registros.EAX;
-            break;
-        case EBX:
-            contexto_ejecucion.registros.EBX += contexto_ejecucion.registros.EBX;
-            break;
-        case ECX:
-            contexto_ejecucion.registros.EBX += contexto_ejecucion.registros.ECX;
-            break;
-        case EDX:
-            contexto_ejecucion.registros.EBX += contexto_ejecucion.registros.EDX;
-            break;
-        case SI:
-            contexto_ejecucion.registros.EBX += contexto_ejecucion.registros.SI;
-            break;
-        case DI:
-            contexto_ejecucion.registros.EBX += contexto_ejecucion.registros.DI;
-            break;
-        case PC:
-            contexto_ejecucion.registros.EBX += contexto_ejecucion.registros.PC;
-            break;
-        default:
-            break;
-        }
-        break;
+        if (tam_orig == sizeof(uint8_t))
+            *d += *(uint8_t *)ptr_orig;
+        else
+            *d += *(uint32_t *)ptr_orig;
     }
 }
 
 void SUB(reg_id orig, reg_id dest)
 {
-    switch (dest)
-    {
+    size_t tam_dest, tam_orig;
+
+    void *ptr_dest = obtener_reg_puntero(dest, &tam_dest);
+    void *ptr_orig = obtener_reg_puntero(orig, &tam_orig);
+
+    if (!ptr_dest || !ptr_orig)
+        return;
+
     // DESTINO 8 bits
-    case AX:
-        switch (orig)
-        {
-        case AX:
-            contexto_ejecucion.registros.AX -= contexto_ejecucion.registros.AX;
-            break;
-        case BX:
-            contexto_ejecucion.registros.AX -= contexto_ejecucion.registros.BX;
-            break;
-        case CX:
-            contexto_ejecucion.registros.AX -= contexto_ejecucion.registros.CX;
-            break;
-        case DX:
-            contexto_ejecucion.registros.AX -= contexto_ejecucion.registros.DX;
-            break;
-        default:
-            break;
-        }
-        break;
+    if (tam_dest == sizeof(uint8_t))
+    {
+        uint8_t *d = (uint8_t *)ptr_dest;
 
-    case BX:
-        switch (orig)
-        {
-
-        case AX:
-            contexto_ejecucion.registros.BX -= contexto_ejecucion.registros.AX;
-            break;
-        case BX:
-            contexto_ejecucion.registros.BX -= contexto_ejecucion.registros.BX;
-            break;
-        case CX:
-            contexto_ejecucion.registros.BX -= contexto_ejecucion.registros.CX;
-            break;
-        case DX:
-            contexto_ejecucion.registros.BX -= contexto_ejecucion.registros.DX;
-            break;
-        default:
-            break;
-        }
-        break;
-
+        if (tam_orig == sizeof(uint8_t))
+            *d -= *(uint8_t *)ptr_orig;
+        else
+            *d -= (uint8_t)(*(uint32_t *)ptr_orig); // truncamiento
+    }
     // DESTINO 32 bits
-    case EAX:
-        switch (orig)
-        {
-        case EAX:
-            contexto_ejecucion.registros.EAX -= contexto_ejecucion.registros.EAX;
-            break;
-        case EBX:
-            contexto_ejecucion.registros.EAX -= contexto_ejecucion.registros.EBX;
-            break;
-        case ECX:
-            contexto_ejecucion.registros.EAX -= contexto_ejecucion.registros.ECX;
-            break;
-        case EDX:
-            contexto_ejecucion.registros.EAX -= contexto_ejecucion.registros.EDX;
-            break;
-        case SI:
-            contexto_ejecucion.registros.EAX -= contexto_ejecucion.registros.SI;
-            break;
-        case DI:
-            contexto_ejecucion.registros.EAX -= contexto_ejecucion.registros.DI;
-            break;
-        case PC:
-            contexto_ejecucion.registros.EAX -= contexto_ejecucion.registros.PC;
-            break;
-        default:
-            break;
-        }
-        break;
+    else
+    {
+        uint32_t *d = (uint32_t *)ptr_dest;
 
-    case EBX:
-        switch (orig)
-        {
-        case EAX:
-            contexto_ejecucion.registros.EBX -= contexto_ejecucion.registros.EAX;
-            break;
-        case EBX:
-            contexto_ejecucion.registros.EBX -= contexto_ejecucion.registros.EBX;
-            break;
-        case ECX:
-            contexto_ejecucion.registros.EBX -= contexto_ejecucion.registros.ECX;
-            break;
-        case EDX:
-            contexto_ejecucion.registros.EBX -= contexto_ejecucion.registros.EDX;
-            break;
-        case SI:
-            contexto_ejecucion.registros.EBX -= contexto_ejecucion.registros.SI;
-            break;
-        case DI:
-            contexto_ejecucion.registros.EBX -= contexto_ejecucion.registros.DI;
-            break;
-        case PC:
-            contexto_ejecucion.registros.EBX -= contexto_ejecucion.registros.PC;
-            break;
-        default:
-            break;
-        }
-        break;
+        if (tam_orig == sizeof(uint8_t))
+            *d -= *(uint8_t *)ptr_orig;
+        else
+            *d -= *(uint32_t *)ptr_orig;
     }
 }
-
 void JNZ(reg_id registro, uint32_t instruccion)
 {
-    uint32_t valor_registro = 0;
+    size_t tam;
+    void *ptr = obtener_reg_puntero(registro, &tam);
 
-    switch (registro)
+    if (!ptr)
     {
-    case AX:
-        valor_registro = contexto_ejecucion.registros.AX;
-        break;
-    case BX:
-        valor_registro = contexto_ejecucion.registros.BX;
-        break;
-    case CX:
-        valor_registro = contexto_ejecucion.registros.CX;
-        break;
-    case DX:
-        valor_registro = contexto_ejecucion.registros.DX;
-        break;
-    case EAX:
-        valor_registro = contexto_ejecucion.registros.EAX;
-        break;
-    case EBX:
-        valor_registro = contexto_ejecucion.registros.EBX;
-        break;
-    case ECX:
-        valor_registro = contexto_ejecucion.registros.ECX;
-        break;
-    case EDX:
-        valor_registro = contexto_ejecucion.registros.EDX;
-        break;
-    case SI:
-        valor_registro = contexto_ejecucion.registros.SI;
-        break;
-    case DI:
-        valor_registro = contexto_ejecucion.registros.DI;
-        break;
-    default:
         log_debug(cpu_logger, "instruccion incorrecta en jnz");
         return;
     }
 
-    /* info Si el valor del registro es distinto de cero, actualizamos el PC. (119) */
-    if (valor_registro != 0)
+    int es_cero = 0;
+
+    if (tam == sizeof(uint8_t))
+    {
+        es_cero = (*(uint8_t *)ptr == 0);
+    }
+    else
+    {
+        es_cero = (*(uint32_t *)ptr == 0);
+    }
+
+    if (!es_cero)
     {
         contexto_ejecucion.registros.PC = instruccion;
     }
