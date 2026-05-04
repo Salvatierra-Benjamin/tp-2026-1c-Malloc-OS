@@ -59,3 +59,36 @@ void creacion_proceso(int pid, char *path)
     log_debug(logger, "[KS] PATH : %s", path);
     log_info(logger, "## PID: %d - Proceso Creado", pid);
 }
+
+char *armar_ruta(char *ruta_relativa)
+{
+    return string_from_format("%s/%s", parametros->scripts_basepath, ruta_relativa);
+}
+
+t_list *dividir_archivo_por_lineas(char *path)
+{
+    FILE *pseudocodigo = fopen(path, "r");
+    if (pseudocodigo == NULL)
+    {
+        log_error(logger, "[KS] No se pudo abrir el archivo %s", path);
+        return NULL;
+    }
+    t_list *lineas = list_create();
+
+    char buffer[256];
+    while(fgets(buffer, sizeof(buffer), pseudocodigo) != NULL)
+    {
+        size_t len = strlen(buffer);
+        if (len > 0 && buffer[len - 1] == '\n') {
+            buffer[len - 1] = '\0';
+        }
+        if (!string_is_empty(buffer))
+        {
+            list_add(lineas, string_duplicate(buffer));
+        }
+    }
+
+    fclose(pseudocodigo);
+
+    return lineas;
+}

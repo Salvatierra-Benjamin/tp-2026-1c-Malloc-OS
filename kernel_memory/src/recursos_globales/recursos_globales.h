@@ -6,6 +6,7 @@
 #include <commons/config.h>
 #include <commons/log.h>
 #include <pthread.h>
+#include <commons/string.h>
 
 typedef struct
 {
