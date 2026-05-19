@@ -45,7 +45,8 @@ void *atencion_km()
             buffer_read(&nuevo_contexto_ejecucion, paquete_contexto_de_ejecucion->buffer, sizeof(nuevo_contexto_ejecucion));
 
             // No hay necesidad que sea puntero contexto_ejecucion que sea puntero, siempre sera
-            // del mismo tamaño. t_list* solo tendra un nodo tras otro, problema del nodo, no se guarda en la estructura
+            // del mismo tamaño. t_list* solo tendra un nodo tras otro, problema del nodo, no se guarda en la estructura.
+
             contexto_ejecucion.PID = nuevo_contexto_ejecucion.PID;
             contexto_ejecucion.registros = nuevo_contexto_ejecucion.registros;
             contexto_ejecucion.tabla_segmentos = nuevo_contexto_ejecucion.tabla_segmentos;
@@ -59,12 +60,12 @@ void *atencion_km()
             eliminar_paquete(paquete_ok_alojo);
             eliminar_paquete(paquete_contexto_de_ejecucion);
 
-            iniciar_fetch();
+            Iniciar_fetch(); //
             // ? el ks solicita alojar un proceso, hasta que el
             // ? No poner semaforo para receptor ks porque solo taparia el error en caso de que ks
             // ? siga enviando cosas
         }
-        default:
+        case INS_ default:
         {
             log_warning(cpu_logger, "[RECEPTOR_KM_CPU] operacion desconocida : %d", cod_op);
             break;

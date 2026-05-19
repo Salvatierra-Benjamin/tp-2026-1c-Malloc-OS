@@ -95,20 +95,21 @@ typedef struct
     t_buffer *buffer;
 } t_paquete;
 
-typedef enum
+typedef struct
 {
-    PC,
-    AX,
-    BX,
-    CX,
-    DX,
-    EAX,
-    EBX,
-    ECX,
-    EDX,
-    SI,
-    DI
-} reg_id;
+    uint32_t PC;
+    uint8_t AX;
+    uint8_t BX;
+    uint8_t CX;
+    uint8_t DX;
+    uint32_t EAX;
+    uint32_t EBX;
+    uint32_t ECX;
+    uint32_t EDX;
+    uint32_t SI;
+    uint32_t DI;
+} t_registros;
+
 typedef struct
 {
     uint32_t dir_base;
@@ -120,6 +121,14 @@ typedef struct
     segmento_t *tabla_segmentos;
     uint32_t cantidad_segmentos;
 } tabla_segmentos_t;
+
+typedef struct
+{
+    int PID;
+    t_registros registros;
+    tabla_segmentos_t tabla_segmentos;
+
+} t_contexto_ejecucion;
 
 int enviar_operacion(int socket_destino, op_code codigo_operacion);
 int recibir_operacion(int);
