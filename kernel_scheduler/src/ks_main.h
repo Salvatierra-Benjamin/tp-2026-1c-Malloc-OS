@@ -22,6 +22,8 @@
 t_log* ks_logger = NULL;
 t_ks_config ks_config;
 int ks_server_fd = -1;
+t_elemento_array_algoritmos* array_queues;
+int cantidad_algoritmos;
 
 // FUNCIONES
 // auxiliares

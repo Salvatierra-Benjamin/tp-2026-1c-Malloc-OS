@@ -14,12 +14,14 @@ static algoritmos ks_algoritmo_from_string(char *str)
     return INVALIDO;
 }
 
-t_list *ks_parsear_algoritmos(char *raw)
+void *ks_parsear_algoritmos(char *raw)
 {
-    t_list *lista = list_create();
-
     if (!raw)
-        return lista;
+    {
+        cantidad_algoritmos = 0;
+        array_queues = NULL;
+        return;
+    }
 
     // saco corchetes
     char *limpio = string_duplicate(raw);
@@ -29,26 +31,34 @@ t_list *ks_parsear_algoritmos(char *raw)
     // separo por coma
     char **tokens = string_split(limpio, ",");
 
-    for (int i = 0; tokens[i] != NULL; i++)
+    // contar algoritmos
+    cantidad_algoritmos = 0;
+    while (tokens[cantidad_algoritmos] != NULL)
     {
+        cantidad_algoritmos++;
+    }
 
+    // reservar memoria para array global
+    array_queues = malloc(sizeof(t_elemento_array_algoritmos) * cantidad_algoritmos);
+
+    // llenar array
+    for (int i = 0; i < cantidad_algoritmos; i++)
+    {
         string_trim(&tokens[i]);
+        array_queues[i].alg = ks_algoritmo_from_string(tokens[i]);
 
-        algoritmos alg = ks_algoritmo_from_string(tokens[i]);
-
-        list_add(lista, &alg);
+        // crear queue vacía asociada
+        array_queues[i].queue = list_create();
     }
 
     // liberar auxiliares
     string_array_destroy(tokens);
     free(limpio);
-
-    return lista;
 }
 
-bool ks_cargar_config(char *path)
+bool ks_cargar_config(char *path_config, char* path_proceso_inicial)
 {
-    t_config *config = config_create(path);
+    t_config *config = config_create(path_config);
 
     if (!config)
     {
@@ -61,8 +71,19 @@ bool ks_cargar_config(char *path)
     ks_config.algoritmo = ks_algoritmo_from_string(config_get_string_value(config, "PLANIFICATION_ALGORITHM"));
     ks_config.algoritmo_queues = ks_parsear_algoritmos(config_get_string_value(config, "QUEUES_ALGORITHMS"));
     ks_config.rr_quantum = config_get_int_value(config, "RR_QUANTUM");
-    ks_config.queue_preemption = strdup(config_get_string_value(config, "QUEUE_PREEMPTION"));
+    config_get_string_value(config, "QUEUE_PREEMPTION");
+    // ks_config.queue_preemption = strdup(config_get_string_value(config, "QUEUE_PREEMPTION"));
+    if (strdup(config_get_string_value(config, "QUEUE_PREEMPTION")) == "TRUE")
+    {
+        ks_config.queue_preemption = true;
+    }
+    else
+    {
+        ks_config.queue_preemption = false;
+    }
+
     ks_config.suspension_timeout = config_get_int_value(config, "SUSPENSION_TIMEOUT");
+    ks_config.path_proceso_inicial = strdup(path_proceso_inicial);
     const char *log_level_string = config_get_string_value(config, "LOG_LEVEL");
     t_log_level level = log_level_from_string((char *)log_level_string);
 
@@ -96,6 +117,19 @@ void ks_liberar_config(void)
     }
 }
 
+void ks_liberar_array_queues(void)
+{
+    if (array_queues)
+    {
+        for (int i = 0; i < cantidad_algoritmos; i++)
+        {
+            list_destroy(array_queues[i].queue);
+        }
+        
+        free(array_queues);
+    }
+}
+
 void *ks_conexion_loop(void *_arg)
 {
     (void)_arg;
@@ -126,7 +160,7 @@ void *ks_conexion_loop(void *_arg)
             // NO recibir_paquete aca
             // enviar_ks_ok_conexion(fd);
             pthread_t hilo_io;
-            
+
             int *socket_ptr = malloc(sizeof(int));
             if (socket_ptr == NULL)
             {
@@ -135,7 +169,8 @@ void *ks_conexion_loop(void *_arg)
             }
             *socket_ptr = fd;
 
-            if (pthread_create(&hilo_io, NULL, ks_maneja_io, socket_ptr) != 0) {
+            if (pthread_create(&hilo_io, NULL, ks_maneja_io, socket_ptr) != 0)
+            {
                 log_error(ks_logger, "no se inicia el hilo cpu");
                 free(socket_ptr);
                 close(fd);
@@ -158,7 +193,8 @@ void *ks_conexion_loop(void *_arg)
             }
             *socket_ptr = fd;
 
-            if (pthread_create(&hilo_cpu, NULL, ks_maneja_cpu, socket_ptr) != 0) {
+            if (pthread_create(&hilo_cpu, NULL, ks_maneja_cpu, socket_ptr) != 0)
+            {
                 log_error(ks_logger, "no se inicia el hilo cpu");
                 free(socket_ptr);
                 close(fd);
@@ -178,7 +214,6 @@ void *ks_conexion_loop(void *_arg)
             close(fd);
             continue;
         }
-
     }
 
     return NULL;
@@ -263,10 +298,11 @@ static void sigint_handler(int _sig)
     exit(0);
 }
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[]) //  ~ ./bin/kernel_scheduler [Archivo Config] [Path Proceso Inicial]
 {
-    if (!ks_cargar_config("ks.config"))
-    { //! Está hardcodeado el codigo del config
+
+    if (!ks_cargar_config(argv[1], argv[2])) //! Está hardcodeado el codigo del config
+    { 
         fprintf(stderr, "No pude cargar ks.config (busca en el CWD).\n");
 
         return EXIT_FAILURE;

@@ -30,15 +30,21 @@ typedef enum {
 } algoritmos;
 
 typedef struct {
+    algoritmos alg;
+    t_list *queue;
+} t_elemento_array_algoritmos;
+
+typedef struct {
     char *ip_km;
     char *puerto_km;
     char *puerto_escucha;
     algoritmos algoritmo;     // FIFO, RR, CMN
-    t_list *algoritmo_queues; // lista entre FIFO, RR // LO COMENTAMOS PARA VER COMO ANDABA EQUIPO CPU
-    // bool queue_preemption;
-    char* queue_preemption; // convertir.a bool
+    // t_list *algoritmo_queues; // lista entre FIFO, RR // LO COMENTAMOS PARA VER COMO ANDABA EQUIPO CPU
+    bool queue_preemption;
+    // char* queue_preemption; // convertir.a bool
     int rr_quantum;
     int suspension_timeout;
+    char* path_proceso_inicial;
     t_log_level log_level;
 } t_ks_config;
 
@@ -54,5 +60,7 @@ switch (alg) {
 // Variables globales
 extern t_log *ks_logger;
 extern t_ks_config ks_config;
+extern t_elemento_array_algoritmos* array_queues;
+extern int cantidad_algoritmos;
 
 #endif
