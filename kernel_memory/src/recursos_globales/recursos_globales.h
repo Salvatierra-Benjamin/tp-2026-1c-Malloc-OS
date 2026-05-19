@@ -78,4 +78,8 @@ extern km_config *parametros;
 void iniciar_recursos();
 void liberar_recursos();
 
+void destruir_instruccion(void *elem);
+void destruir_contexto(t_contexto_ejecucion *ctx);
+void destruir_proceso_memoria(void *elem);
+
 #endif
