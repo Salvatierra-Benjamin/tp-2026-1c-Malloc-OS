@@ -24,6 +24,10 @@ t_ks_config ks_config;
 int ks_server_fd = -1;
 t_elemento_array_algoritmos* array_queues;
 int cantidad_algoritmos;
+t_list* cpus = NULL;
+t_list* ios = NULL;
+t_list* procesos = NULL;
+
 
 // FUNCIONES
 // auxiliares

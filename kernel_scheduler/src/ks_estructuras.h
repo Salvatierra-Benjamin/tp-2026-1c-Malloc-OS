@@ -48,6 +48,25 @@ typedef struct {
     t_log_level log_level;
 } t_ks_config;
 
+typedef enum {
+    NEW = 0,
+    READY = 1,
+    EXEC = 2,
+    BLOCK = 3,
+    SUSP_BLOCK = 4,
+    SUSP_READY = 5,
+    EXIT = 6
+} estados;
+
+typedef struct {
+    uint32_t id;
+    char *path;
+    uint32_t size;
+    estados state;
+    int fd;
+} t_pcb;
+
+
 /* //! Pongo el enum para despues hacer:
 algoritmos alg = (algoritmos)(intptr_t)list_get(ks_config.algoritmo_queues, i);
 
