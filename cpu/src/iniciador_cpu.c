@@ -5,11 +5,9 @@ cpu_struct_config cpu_config;
 int conexion_km;
 int conexion_ks;
 int conexion_ms;
+int identificador_cpu;
 t_contexto_ejecucion contexto_ejecucion;
 reg_id reg;
-int identificador;
-uint32_t tam_max_segmentos;
-tabla_segmentos_t tab;
 // Semaforos:
 pthread_mutex_t conexiones_km = PTHREAD_MUTEX_INITIALIZER; // MUTEX
 pthread_mutex_t conexiones_ks = PTHREAD_MUTEX_INITIALIZER; // MUTEX
@@ -40,7 +38,7 @@ void cpu_cargar_config(char *path)
 void inicializar_logger()
 {
 
-    char *ruta_con_cpu_id = string_from_format("cpu_%d_.log", identificador);
+    char *ruta_con_cpu_id = string_from_format("cpu_%d_.log", identificador_cpu);
 
     cpu_logger = log_create(ruta_con_cpu_id, "CPU", 1, cpu_config.log_level);
 

@@ -38,8 +38,9 @@ extern cpu_struct_config cpu_config;
 extern int conexion_km;
 extern int conexion_ks;
 extern int conexion_ms;
-extern int identificador;
-extern tabla_segmentos_t tab;
+extern int identificador_cpu;
+extern t_contexto_ejecucion contexto_ejecucion;
+extern reg_id reg;
 // Semaforos:
 extern pthread_mutex_t conexiones_km; // MUTEX
 extern pthread_mutex_t conexiones_ks; // MUTEX

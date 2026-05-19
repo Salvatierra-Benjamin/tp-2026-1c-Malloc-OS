@@ -4,7 +4,6 @@
 #include "gestor_cpu.h"
 #include "../../contexto_ejecucion/contexto_ejecucion.h"
 
-void Iniciar_fetch();
-void Ejecutar_fetch();
+void Iniciar_Fetch();
 
 #endif

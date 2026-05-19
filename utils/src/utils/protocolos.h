@@ -71,10 +71,31 @@ typedef enum
     ALOJAR_PROCESO = 7000, // KS envia pid a CPU
 
     // ---------------- KM -> CPU ----------------
-    CONTEXTO_EJECUCION = 8000 // KM envia [t_registros, t_tabla_de_segmentos]
+    CONTEXTO_EJECUCION = 8000, // KM envia [t_registros, t_tabla_de_segmentos]
+    ENVIO_INSTRUCCION = 80001
 
 } op_code;
-
+typedef enum
+{
+    NOOP,
+    SET,          // REGISTRO , VALOR
+    MOV_IN,       // REGISTRO, DATOS
+    MOV_OUT,      // REGISTRO, DATOS
+    SUM,          // REGISTRO_DESTINO, REGISTRO_ORIGEN
+    SUB,          // REGISTRO_DESTINO, REGISTRO_ORIGEN
+    JNZ,          // REGISTRO, INSTRUCCION
+    COPY_MEM,     // REGISTRO, TAMAÑO
+    MUTEX_CREATE, // NOMBRE_MUTEX
+    MUTEX_LOCK,   // NOMBRE_MUTEX
+    MUTEX_UNLOCK, // NOMBRE_MUTEX
+    MEM_ALLOC,    // ID_SEGMENTO, TAMAÑO
+    MEM_FREE,     // ID_SEGMENTO
+    SLEEP,        // TIEMPO
+    STDOUT,       // REGISTRO_DIRECCION_LOGICA, REGISTRO_TAMAÑO
+    STDIN,        // REGISTRO_DIRECCION_LOGICA, REGISTRO_TAMAÑO
+    INIT_PROC,    // ARCHIVO_INSTRUCCIONES, PRIORIDAD
+    EXIT
+} t_palabra_reservada;
 typedef enum
 {
     OK,
@@ -129,6 +150,14 @@ typedef struct
     tabla_segmentos_t tabla_segmentos;
 
 } t_contexto_ejecucion;
+
+typedef struct
+{
+    t_palabra_reservada comando;
+    int PID;
+    char *parametro_1;
+    char *parametro_2;
+} t_instruccion;
 
 int enviar_operacion(int socket_destino, op_code codigo_operacion);
 int recibir_operacion(int);

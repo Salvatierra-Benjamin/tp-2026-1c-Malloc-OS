@@ -1,18 +1,20 @@
 #include "mmu.h"
-uint32_t tam_max_segmentos;
-tabla_segmentos_t tab;
+
 int MMU_TRADUCCION_FISICA(int dir_logica, uint32_t tam, int *dir_fisica, uint32_t bytes_validos)
 {
+
+    tam_max_segmentos = Get_tam_max_segmentos();
+
     uint32_t num_segmento = floor(dir_logica / tam_max_segmentos);
     uint32_t desplazamiento = dir_logica % tam_max_segmentos;
 
     // segmento invalido
-    if (num_segmento >= tab.cantidad_segmentos * tam)
+    if (num_segmento >= contexto_ejecucion.tabla_s.cantidad_segmentos * tam)
     {
-
+        log_error(cpu_logger, "Seg. Invalido");
         return -1;
     }
-    segmento_t seg = tab.tabla_segmentos[num_segmento];
+    segmento_t seg = contexto_ejecucion.tabla_s.tabla_segmentos[num_segmento];
     // segmentation fault
     if (desplazamiento >= seg.tam_seg)
     {

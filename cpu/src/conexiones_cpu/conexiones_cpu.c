@@ -15,7 +15,7 @@ void creacion_conexiones_cpu()
     //  enviar_paquete con el id y HANDSHAKE_CPU
 
     t_paquete *paquete_handshake_ks = crear_paquete(HANDSHAKE_CPU);
-    agregar_a_paquete(paquete_handshake_ks, &identificador, sizeof(int));
+    agregar_a_paquete(paquete_handshake_ks, &identificador_cpu, sizeof(int));
 
     enviar_paquete(paquete_handshake_ks, conexion_ks);
 
@@ -33,7 +33,7 @@ void creacion_conexiones_cpu()
     //  enviar_paquete con el id y HANDSHAKE_CPU
 
     t_paquete *paquete_handshake_km = crear_paquete(HANDSHAKE_CPU);
-    agregar_a_paquete(paquete_handshake_km, &identificador, sizeof(int));
+    agregar_a_paquete(paquete_handshake_km, &identificador_cpu, sizeof(int));
 
     enviar_paquete(paquete_handshake_km, conexion_km);
 
@@ -51,7 +51,7 @@ void creacion_conexiones_cpu()
     //  enviar_paquete con el id y HANDSHAKE_CPU
 
     t_paquete *paquete_handshake_ms = crear_paquete(HANDSHAKE_CPU);
-    agregar_a_paquete(paquete_handshake_ms, &identificador, sizeof(int));
+    agregar_a_paquete(paquete_handshake_ms, &identificador_cpu, sizeof(int));
 
     enviar_paquete(paquete_handshake_ms, conexion_ms);
 

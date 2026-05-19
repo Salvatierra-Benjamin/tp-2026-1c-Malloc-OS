@@ -6,16 +6,16 @@ int main(int argc, char *argv[])
     if (argc < 3)
     {
         fprintf(stderr, "ERROR: ARGUMENTOS INSUFICIENTES\n");
-        fprintf(stderr, "Uso: %s [path_config] [Identificador]\n", argv[0]);
+        fprintf(stderr, "Uso: %s [path_config] [Identificador_cpu]\n", argv[0]);
         return EXIT_FAILURE;
     }
 
     char *path = argv[1];
-    identificador = atoi(argv[2]);
+    identificador_cpu = atoi(argv[2]);
 
-    if (identificador <= 0)
+    if (identificador_cpu <= 0)
     {
-        fprintf(stderr, "Error: El identificador '%s' no es válido (Debe ser un entero > 0)\n", argv[2]);
+        fprintf(stderr, "Error: El identificador_cpu '%s' no es válido (Debe ser un entero > 0)\n", argv[2]);
         return EXIT_FAILURE;
     }
 

@@ -49,7 +49,7 @@ void *atencion_km()
 
             contexto_ejecucion.PID = nuevo_contexto_ejecucion.PID;
             contexto_ejecucion.registros = nuevo_contexto_ejecucion.registros;
-            contexto_ejecucion.tabla_segmentos = nuevo_contexto_ejecucion.tabla_segmentos;
+            contexto_ejecucion.tabla_s = nuevo_contexto_ejecucion.tabla_segmentos;
 
             // !Poner semaforo para resguardar la conexion con ks
             t_paquete *paquete_ok_alojo = crear_paquete(OK_ALOJAR);
@@ -60,12 +60,26 @@ void *atencion_km()
             eliminar_paquete(paquete_ok_alojo);
             eliminar_paquete(paquete_contexto_de_ejecucion);
 
-            Iniciar_fetch(); //
+            Iniciar_Fetch();
             // ? el ks solicita alojar un proceso, hasta que el
             // ? No poner semaforo para receptor ks porque solo taparia el error en caso de que ks
             // ? siga enviando cosas
+            break;
         }
-        case INS_ default:
+        case ENVIO_INSTRUCCION:
+        {
+
+            t_paquete *paquete_instruccion = recibir_paquete(conexion_km);
+
+            t_instruccion nueva_instruccion; // !VER QUE PASA CON PAQUETE VACIO!!!!!
+
+            buffer_read(&nueva_instruccion, paquete_instruccion, sizeof(nueva_instruccion));
+
+            // instruccion_decodificada = Decode_Instruccion(nueva_instruccion);
+            // ejecutar_instruccion (instruccion_decodificiada)
+            break;
+        }
+        default:
         {
             log_warning(cpu_logger, "[RECEPTOR_KM_CPU] operacion desconocida : %d", cod_op);
             break;
