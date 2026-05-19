@@ -11,7 +11,7 @@ int main(int argc, char *argv[])
     }
 
     char *path = argv[1];
-    int identificador = atoi(argv[2]);
+    identificador = atoi(argv[2]);
 
     if (identificador <= 0)
     {
@@ -22,12 +22,11 @@ int main(int argc, char *argv[])
     cpu_cargar_config(path);
     inicializar_logger();
     imprimir_valores_config_cpu();
+    inicializar_semaforos_coordinadores();
     creacion_conexiones_cpu();
 
     log_debug(cpu_logger, "Memory Stick TERMINO.\n");
 
-    cpu_liberar_config();
-    cpu_liberar_log();
-
+    liberar_todo();
     return 0;
 }

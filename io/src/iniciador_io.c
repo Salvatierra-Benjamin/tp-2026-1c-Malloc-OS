@@ -3,6 +3,10 @@
 t_log *io_logger;
 io_config_struct io_config;
 int conexion_ks;
+char *tipo_io_mayusculas;
+// Semaforos:
+pthread_mutex_t conexiones_ks; // MUTEX
+sem_t semaphore;               // Coordinacion //POR AHORA NO SE USA
 
 char *normalizar(char *tipo_io)
 {
@@ -56,6 +60,24 @@ void imprimir_valores_config_io()
     log_debug(io_logger, "Puerto KS: %s", io_config.puerto_ks);
 }
 
+void inicializar_semaforos_coordinadores()
+{
+    // 0: El semáforo se comparte entre hilos del mismo proceso
+    // 0: Valor inicial (el semáforo empieza "cerrado")
+    sem_init(&semaphore, 0, 0);
+}
+
+void cerrar_conexiones()
+{
+    close(conexion_ks);
+}
+
+void liberar_semaforos()
+{
+    pthread_mutex_destroy(&conexiones_ks);
+    sem_destroy(&semaphore);
+}
+
 void io_liberar_config()
 {
     free(io_config.ip_ks);
@@ -68,4 +90,12 @@ void io_liberar_log()
 {
     log_debug(io_logger, "Log Liberado!");
     log_destroy(io_logger);
+}
+
+void liberar_todo()
+{
+    cerrar_conexiones();
+    liberar_semaforos();
+    io_liberar_config();
+    io_liberar_log();
 }

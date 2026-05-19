@@ -16,14 +16,14 @@ void *atencion_ks()
 
     while (1)
     {
-        // pthread_mutex_lock(&mutex_conexion); <-- NO TOCAR ES PARA DESPUÉS!!!
+
         int cod_op = recibir_operacion(conexion_ks);
-        // pthread_mutex_unlock(&mutex_conexion); <-- NO TOCAR ES PARA DESPUÉS!!!
 
         if (cod_op < 0)
         {
             log_error(cpu_logger, "cod op %d", cod_op);
             log_error(cpu_logger, "KS desconectado o error");
+            liberar_todo();
             exit(EXIT_FAILURE);
         }
         switch (cod_op)
@@ -33,12 +33,25 @@ void *atencion_ks()
             log_debug(cpu_logger, "[RECEPTOR_KS_CPU] EL HANDSHAKE CON KS SE HA REALIZADO CORRECTAMENTE!!!");
             break;
         }
-        case -1:
+        case ALOJAR_PROCESO:
         {
-            log_error(cpu_logger, "Error de comunicación con la KS");
-            cpu_liberar_config();
-            cpu_liberar_log();
-            exit(EXIT_FAILURE);
+
+            t_paquete *paquete_alojar_proceso = recibir_paquete(conexion_ks);
+
+            int pid;
+            buffer_read(&pid, paquete_alojar_proceso->buffer, sizeof(int));
+
+            t_paquete *paquete_solicitud_contexto = crear_paquete(SOLICITUD_CONTEXTO_EJECUCION);
+            agregar_a_paquete(paquete_solicitud_contexto, &pid, sizeof(int));
+
+            enviar_paquete(paquete_solicitud_contexto, conexion_km);
+
+            eliminar_paquete(paquete_alojar_proceso);
+            eliminar_paquete(paquete_solicitud_contexto);
+            // ? no poner semaforo!
+            // ? el ks solicita alojar un proceso, hasta que cpu envia ok no deberia de mandar nada mas ks
+            // ? No poner semaforo para receptor ks porque solo taparia el error en caso de que ks
+            // ? siga enviando cosas
             break;
         }
         default:

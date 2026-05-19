@@ -6,6 +6,7 @@ void memoria_reservada()
     if (memoria_ms == NULL)
     {
         log_debug(ms_logger, "Error al hacer malloc de la memoria principal.\n");
+        liberar_todo();
         exit(EXIT_FAILURE);
     }
     log_debug(ms_logger, "Memoria de %d bytes reservada con éxito.\n", tamanio_memoria);

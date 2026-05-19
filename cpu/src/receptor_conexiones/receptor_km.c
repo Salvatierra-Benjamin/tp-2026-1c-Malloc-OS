@@ -1,4 +1,5 @@
 #include "receptor_km.h"
+
 void receptor_km()
 {
     log_debug(cpu_logger, "[RECEPTOR_KM_CPU] Conectando con KM...");
@@ -16,14 +17,14 @@ void *atencion_km()
 
     while (1)
     {
-        // pthread_mutex_lock(&mutex_conexion); <-- NO TOCAR ES PARA DESPUÉS!!!
+
         int cod_op = recibir_operacion(conexion_km);
-        // pthread_mutex_unlock(&mutex_conexion); <-- NO TOCAR ES PARA DESPUÉS!!!
 
         if (cod_op < 0)
         {
             log_error(cpu_logger, "cod op %d", cod_op);
             log_error(cpu_logger, "KM desconectado o error");
+            liberar_todo();
             exit(EXIT_FAILURE);
         }
         switch (cod_op)
@@ -31,15 +32,37 @@ void *atencion_km()
         case KM_OK_CONEXION:
         {
             log_debug(cpu_logger, "[RECEPTOR_KM_CPU] EL HANDSHAKE CON KM SE HA REALIZADO CORRECTAMENTE!!!");
+            // enviar paquete con operacion de solicitud contexto ejecucicion , con el pid que guardaste en ks
+
             break;
         }
-        case -1:
+        case CONTEXTO_EJECUCION:
         {
-            log_error(cpu_logger, "Error de comunicación con la KM");
-            cpu_liberar_config();
-            cpu_liberar_log();
-            exit(EXIT_FAILURE);
-            break;
+
+            t_paquete *paquete_contexto_de_ejecucion = recibir_paquete(conexion_km);
+
+            t_contexto_ejecucion nuevo_contexto_ejecucion;
+            buffer_read(&nuevo_contexto_ejecucion, paquete_contexto_de_ejecucion->buffer, sizeof(nuevo_contexto_ejecucion));
+
+            // No hay necesidad que sea puntero contexto_ejecucion que sea puntero, siempre sera
+            // del mismo tamaño. t_list* solo tendra un nodo tras otro, problema del nodo, no se guarda en la estructura
+            contexto_ejecucion.PID = nuevo_contexto_ejecucion.PID;
+            contexto_ejecucion.registros = nuevo_contexto_ejecucion.registros;
+            contexto_ejecucion.tabla_segmentos = nuevo_contexto_ejecucion.tabla_segmentos;
+
+            // !Poner semaforo para resguardar la conexion con ks
+            t_paquete *paquete_ok_alojo = crear_paquete(OK_ALOJAR);
+            agregar_a_paquete(paquete_ok_alojo, &contexto_ejecucion.PID, sizeof(int));
+
+            enviar_paquete(paquete_ok_alojo, conexion_ks);
+
+            eliminar_paquete(paquete_ok_alojo);
+            eliminar_paquete(paquete_contexto_de_ejecucion);
+
+            iniciar_fetch();
+            // ? el ks solicita alojar un proceso, hasta que el
+            // ? No poner semaforo para receptor ks porque solo taparia el error en caso de que ks
+            // ? siga enviando cosas
         }
         default:
         {

@@ -21,6 +21,16 @@
           "ignoreFailures": true
         }
       ]
+    },
+    {
+      "name": "C/C++ Runner: Debug Session",
+      "type": "cppvsdbg",
+      "request": "launch",
+      "args": [],
+      "stopAtEntry": false,
+      "console": "externalTerminal",
+      "cwd": "c:/Users/Alexandre/tp-2026-1c-Malloc-OS/io/src",
+      "program": "c:/Users/Alexandre/tp-2026-1c-Malloc-OS/io/src/build/Debug/outDebug"
     }
   ]
 }

@@ -37,11 +37,26 @@ typedef enum
 
     // ---------------- IO -> SCHEDULER ----------------
     IO_ENVIA_IO = 2000,
+    STDIN_IO = 2001,  // ks envia stdin
+    STDOUT_IO = 2002, // ks envia stdout
+    SLEEP_IO = 2003,  // ks envia sleep
+
+    OK_STDIN = 2004,
+    OK_STDOUT = 2005,
+    OK_SLEEP = 2006,
+
+    // PAQUETE_STDIN = 2100,
+    // PAQUETE_STDOUT = 2101,
+    // PAQUETE_STDSLEEP = 2102,
 
     // ---------------- CPU -> SCHEDULER ----------------
     CPU_IDENTIFICACION = 3000,
+
+    // ---------------- CPU -> KM ----------------
     SOLICITUD_CONTEXTO_EJECUCION = 3001, // CPU solicita contexto a KM
     ENVIO_CPU_ID = 3002,
+    SOLICITUD_INSTRUCCION = 3003, // cpu solicuta instruccion [pid, pc]
+    OK_ALOJAR = 3004,             // cpu
 
     // ---------------- SWAP -> KM ----------------
     BLOCK_SIZE = 4000,
@@ -51,6 +66,12 @@ typedef enum
 
     // ---------------- MS -> KM ----------------
     MEMORY_STICK_SIZE = 6000,
+
+    // ---------------- KS -> CPU ----------------
+    ALOJAR_PROCESO = 7000, // KS envia pid a CPU
+
+    // ---------------- KM -> CPU ----------------
+    CONTEXTO_EJECUCION = 8000 // KM envia [t_registros, t_tabla_de_segmentos]
 
 } op_code;
 
@@ -73,6 +94,32 @@ typedef struct
     op_code codigo_operacion;
     t_buffer *buffer;
 } t_paquete;
+
+typedef enum
+{
+    PC,
+    AX,
+    BX,
+    CX,
+    DX,
+    EAX,
+    EBX,
+    ECX,
+    EDX,
+    SI,
+    DI
+} reg_id;
+typedef struct
+{
+    uint32_t dir_base;
+    uint32_t tam_seg;
+} segmento_t;
+
+typedef struct
+{
+    segmento_t *tabla_segmentos;
+    uint32_t cantidad_segmentos;
+} tabla_segmentos_t;
 
 int enviar_operacion(int socket_destino, op_code codigo_operacion);
 int recibir_operacion(int);
