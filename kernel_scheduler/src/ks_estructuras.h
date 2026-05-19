@@ -9,31 +9,27 @@
 // Config
 
 // CPU
-typedef struct
-{
+typedef struct {
     uint32_t id;
     uint32_t running_qid;
     int fd;
 } t_cpu;
 
 // IO
-typedef struct
-{
+typedef struct {
     char *path;
     uint32_t prio;
     int fd;
 } t_io;
 
-typedef enum
-{
+typedef enum {
     FIFO = 1,
     RR = 2,
     CMN = 3,
     INVALIDO = 0
 } algoritmos;
 
-typedef struct
-{
+typedef struct {
     char *ip_km;
     char *puerto_km;
     char *puerto_escucha;
