@@ -96,5 +96,4 @@ void Iniciar_Fetch(t_contexto_ejecucion *contexto_actual, t_instruccion *nueva_i
     Solicitar_Instruccion(contexto_actual->PID, contexto_actual->registros.PC);
     Recibir_Instruccion(nueva_instruccion);
     Loggear_Instruccion(nueva_instruccion);
-    Destruir_Instruccion(nueva_instruccion); // SOLO PARA Recibir_Instruccion2
 }
