@@ -16,7 +16,7 @@ void creacion_conexiones_ms()
     socket_servidor_con_cpu = iniciar_servidor(ms_config.puerto_escucha_cpu);
     if (socket_servidor_con_cpu == -1)
     {
-        log_info(ms_logger, "ERROR AL CREAR CONEXION MS->KM.\n");
+        log_info(ms_logger, "ERROR AL CREAR CONEXION CPU->MS.\n");
         liberar_todo();
         exit(EXIT_FAILURE);
     }

@@ -74,11 +74,11 @@ void destruir_instruccion(t_instruccion *instruccion)
     instruccion->parametro_2 = NULL;
 }
 
-void Iniciar_Fetch(t_contexto_ejecucion *contexto_actual, t_instruccion *nueva_intruccion)
+void Iniciar_Fetch(t_contexto_ejecucion *contexto_actual, t_instruccion *nueva_instruccion)
 {
     Solicitar_Instruccion(contexto_actual->PID, contexto_actual->registros.PC);
-    Recibir_Instruccion(nueva_intruccion);
-    destruir_instruccion(nueva_intruccion);
+    Recibir_Instruccion(nueva_instruccion);
+    destruir_instruccion(nueva_instruccion);
 }
 
 // Ejemplo conceptual en KM (enviar)

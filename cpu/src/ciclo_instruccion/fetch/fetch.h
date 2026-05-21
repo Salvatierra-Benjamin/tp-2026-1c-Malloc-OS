@@ -2,6 +2,7 @@
 #define FETCH_H
 
 #include "gestor_cpu.h"
+#include "iniciador_cpu.h"
 
 t_instruccion Iniciar_Fetch(t_contexto_ejecucion *contexto_actual);
 void Solicitar_Instruccion(int PID, int PC);

@@ -21,7 +21,7 @@ void cpu_cargar_config(char *path)
     t_config *config = config_create(path);
     if (!config)
     {
-        fprintf(stderr, "ERROR AL CREAR CONFIG DE MEMORY STICK\n");
+        fprintf(stderr, "ERROR AL CREAR CONFIG DE CPU\n");
         exit(EXIT_FAILURE);
     }
     char *log_level_string = config_get_string_value(config, "LOG_LEVEL");
@@ -74,6 +74,7 @@ void inicializar_semaforos_coordinadores()
 {
     // 0: El semáforo se comparte entre hilos del mismo proceso
     // 0: Valor inicial (el semáforo empieza "cerrado")
+    sem_init(&sem_proceso_nuevo, 0, 0);
     sem_init(&semaphore, 0, 0);
 }
 
@@ -89,6 +90,7 @@ void liberar_semaforos()
     pthread_mutex_destroy(&conexiones_km);
     pthread_mutex_destroy(&conexiones_ks);
     pthread_mutex_destroy(&conexiones_ms);
+    sem_destroy(&sem_proceso_nuevo);
     sem_destroy(&semaphore);
 }
 

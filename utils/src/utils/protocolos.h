@@ -30,12 +30,15 @@ typedef enum
     HANDSHAKE_SWAP = 1002, // Swap envia HS a KM
     HANDSHAKE_KS = 1003,   // KS se envia a HS a KM
     HANDSHAKE_MS = 1004,   // MS envia HS a KM
-    HANDSHAKE_OK = 1005,   // GENERICO PARA PRUEBAS
+    HANDSHAKE_OK = 1005,   // MS,KS,KM LE ENVIA PARA CPU
 
     //  Respuesta
     KM_OK_CONEXION = 1100, // KM responde a KS, SWAP, MS
     KS_OK_CONEXION = 1101, // KM responde a KS, CPU, IO
     MS_OK_CONEXION = 1102, // MS responde a CPU
+
+    //  DEBUG
+    HANDSHAKE_DEBUG_CLIENT = 1400,
 
     // ---------------- IO -> SCHEDULER ----------------
     IO_ENVIA_IO = 2000,
@@ -141,7 +144,7 @@ typedef struct
 
 typedef struct
 {
-    segmento_t *tabla_segmentos;
+    segmento_t *segmento;
     uint32_t cantidad_segmentos;
 } tabla_segmentos_t;
 

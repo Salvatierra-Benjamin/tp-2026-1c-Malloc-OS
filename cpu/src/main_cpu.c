@@ -42,8 +42,6 @@ int main(int argc, char *argv[])
         return EXIT_FAILURE;
     }
 
-    sem_init(&sem_proceso_nuevo, 0, 0);
-
     cpu_cargar_config(path);
     inicializar_logger();
     imprimir_valores_config_cpu();
