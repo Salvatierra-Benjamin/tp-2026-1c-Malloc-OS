@@ -10,26 +10,7 @@ void Solicitar_Instruccion(int PID, int PC)
     eliminar_paquete(paquete);
 }
 
-// Esta función recibe el stream y lo convierte a tu struct t_instruccion
-void Recibir_Instruccion1(t_instruccion *nueva_intruccion)
-{
-    int respuesta = recibir_operacion(conexion_km);
-    if (respuesta == ENVIO_INSTRUCCION)
-    {
-        t_instruccion aux;
-        t_paquete *paquete = recibir_paquete(conexion_km); // Tu función de antes
-        buffer_read(&aux, paquete->buffer, sizeof(aux));
-        nueva_intruccion = aux;
-        eliminar_paquete(paquete);
-    }
-    else
-    {
-        log_error(cpu_logger, "Instruccion no recibida");
-        exit(EXIT_FAILURE);
-    }
-}
-
-void Recibir_Instruccion2(t_instruccion *nueva_intruccion)
+void Recibir_Instruccion(t_instruccion *nueva_instruccion)
 {
     int respuesta = recibir_operacion(conexion_km);
     if (respuesta == ENVIO_INSTRUCCION)
@@ -62,12 +43,48 @@ void Recibir_Instruccion2(t_instruccion *nueva_intruccion)
     }
 }
 
-void destruir_instruccion(t_instruccion *instruccion)
+void Loggear_Instruccion(t_instruccion *instruccion)
+{
+    // =========================================================================
+    //  LOGS DE CONTROL: DESERIALIZACIÓN DE INSTRUCCIÓN
+    // =========================================================================
+    log_info(cpu_logger, "================ INSTRUCCIÓN RECIBIDA ================");
+
+    // Suponiendo que 'comando' es un enum o entero, lo imprimimos como %d o %u
+    log_info(cpu_logger, "ID Comando: %d | PID Asociado: %d",
+             instruccion->comando, instruccion->PID);
+
+    // Verificamos e imprimimos el Parámetro 1 (Dinámico)
+    if (instruccion->parametro_1 != NULL)
+    {
+        log_info(cpu_logger, "Parámetro 1 [Dirección: %p]: \"%s\"",
+                 (void *)instruccion->parametro_1, instruccion->parametro_1);
+    }
+    else
+    {
+        log_warning(cpu_logger, "Parámetro 1 es NULL");
+    }
+
+    // Verificamos e imprimimos el Parámetro 2 (Dinámico)
+    if (instruccion->parametro_2 != NULL)
+    {
+        log_info(cpu_logger, "Parámetro 2 [Dirección: %p]: \"%s\"",
+                 (void *)instruccion->parametro_2, instruccion->parametro_2);
+    }
+    else
+    {
+        log_warning(cpu_logger, "Parámetro 2 es NULL");
+    }
+
+    log_info(cpu_logger, "======================================================");
+}
+
+void Destruir_Instruccion(t_instruccion *instruccion)
 {
     if (instruccion->parametro_1 != NULL)
-        free(instruccion->parametro_1);
+        free(instruccion->parametro_1); // ¡OBLIGATORIO!
     if (instruccion->parametro_2 != NULL)
-        free(instruccion->parametro_2);
+        free(instruccion->parametro_2); // ¡OBLIGATORIO!
 
     // Opcional: limpiar los punteros para no dejar basura
     instruccion->parametro_1 = NULL;
@@ -78,10 +95,6 @@ void Iniciar_Fetch(t_contexto_ejecucion *contexto_actual, t_instruccion *nueva_i
 {
     Solicitar_Instruccion(contexto_actual->PID, contexto_actual->registros.PC);
     Recibir_Instruccion(nueva_instruccion);
-    destruir_instruccion(nueva_instruccion);
+    Loggear_Instruccion(nueva_instruccion);
+    Destruir_Instruccion(nueva_instruccion); // SOLO PARA Recibir_Instruccion2
 }
-
-// Ejemplo conceptual en KM (enviar)
-// int len1 = strlen(instr.parametro_1) + 1; // +1 para el '\0'
-// agregar_a_paquete(paquete, &len1, sizeof(int));
-// agregar_a_paquete(paquete, instr.parametro_1, len1);
