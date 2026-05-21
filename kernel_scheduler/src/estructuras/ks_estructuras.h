@@ -3,10 +3,11 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include <pthread.h>
+
 #include <commons/log.h>
 #include <commons/collections/list.h>
-
-// Config
+#include <commons/collections/queue.h>
 
 // CPU
 typedef struct {
@@ -30,27 +31,46 @@ typedef enum {
     INVALIDO = 0
 } algoritmos;
 
-// STRUCT QUE VA EN EL ARRAY DE ALGORITMOS
+// ARRAY DE ALGORITMOS
 typedef struct {
+
     algoritmos alg;
+
     t_queue* queue_ready;
+    pthread_mutex_t mutex_ready;
+
+    t_queue* queue_block;
+    pthread_mutex_t mutex_block;
+
+    t_queue* queue_susp_block;
+    pthread_mutex_t mutex_susp_block;
+
+    t_queue* queue_susp_ready;
+    pthread_mutex_t mutex_susp_ready;
+
 } t_elemento_array_algoritmos;
 
 // CONFIG
 typedef struct {
+
     char *ip_km;
     char *puerto_km;
     char *puerto_escucha;
-    algoritmos algoritmo;     // FIFO, RR, CMN
-    // t_list *algoritmo_queues; // lista entre FIFO, RR // LO COMENTAMOS PARA VER COMO ANDABA EQUIPO CPU
+
+    algoritmos algoritmo;
+
     bool queue_preemption;
-    // char* queue_preemption; // convertir.a bool
+
     int rr_quantum;
     int suspension_timeout;
+
     char* path_proceso_inicial;
+
     t_log_level log_level;
+
 } t_ks_config;
 
+// ESTADOS
 typedef enum {
     NEW = 0,
     READY = 1,
@@ -61,41 +81,47 @@ typedef enum {
     EXIT = 6
 } estados;
 
-/* //! Pongo el enum para despues hacer:
-algoritmos alg = (algoritmos)(intptr_t)list_get(ks_config.algoritmo_queues, i);
-
-switch (alg) {
-    case FIFO: ...
-    case RR: ...
-}
-*/
-
-// PROCESO
+// PCB
 typedef struct {
+
     int pid;
     char* path;
+
     int prioridad;
-    int cpu_fd; // socket del CPU al que se le asignó el proceso (EXEC), o -1 si no está asignado
-    int io_fd; // socket del IO, o -1 si no está asignado
+
+    int cpu_fd;
+    int io_fd;
+
     estados estado;
+
 } t_pcb;
 
-
-// Variables globales
+// VARIABLES GLOBALES
 extern t_log *ks_logger;
 extern t_ks_config ks_config;
+
+extern int ks_server_fd;
+
 extern t_elemento_array_algoritmos* array_queues;
 extern int cantidad_algoritmos;
 
-// LISTAS DE CONEXIONES
-extern t_list* cpus = NULL;
-extern t_list* ios = NULL;
+// LISTAS
+extern t_list* cpus;
+extern t_list* ios;
 
-// LISTAS DE ESTADOS
-extern t_list* procs_exec = NULL;
-extern t_list* procs_block = NULL;
-extern t_list* procs_susp_block = NULL;
-extern t_list* procs_susp_ready = NULL;
-extern t_list* procs_exit = NULL;
+extern t_list* procs_exec;
+extern t_list* procs_block;
+extern t_list* procs_susp_block;
+extern t_list* procs_susp_ready;
+extern t_list* procs_exit;
+
+// MUTEX
+extern pthread_mutex_t mutex_cpus;
+extern pthread_mutex_t mutex_ios;
+
+extern pthread_mutex_t mutex_exec;
+extern pthread_mutex_t mutex_exit;
+
+extern pthread_mutex_t mutex_array_queues;
 
 #endif

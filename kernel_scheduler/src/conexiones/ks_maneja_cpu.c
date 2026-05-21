@@ -1,5 +1,8 @@
 #include "ks_maneja_cpu.h"
 
+#include "../main/ks_main.h"
+#include "../logs/ks_logs.h"
+
 void* ks_maneja_cpu(void* arg) {
     int fd = *(int*)arg;
     free(arg);

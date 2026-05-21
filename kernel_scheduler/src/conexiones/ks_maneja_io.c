@@ -1,5 +1,8 @@
 #include "ks_maneja_io.h"
 
+#include "../main/ks_main.h"
+#include "../logs/ks_logs.h"
+
 void *ks_maneja_io(void *arg) {
     int fd = *(int*)arg;
     free(arg);
