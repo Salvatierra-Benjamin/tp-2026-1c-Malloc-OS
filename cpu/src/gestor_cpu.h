@@ -39,9 +39,10 @@ extern int conexion_km;
 extern int conexion_ks;
 extern int conexion_ms;
 extern int identificador_cpu;
-extern t_contexto_ejecucion contexto_ejecucion;
-extern reg_id reg;
-// Semaforos:
+extern sem_t sem_proceso_nuevo;
+extern int PID_a_ejecutar;
+
+//  Semaforos:
 extern pthread_mutex_t conexiones_km; // MUTEX
 extern pthread_mutex_t conexiones_ks; // MUTEX
 extern pthread_mutex_t conexiones_ms; // MUTEX

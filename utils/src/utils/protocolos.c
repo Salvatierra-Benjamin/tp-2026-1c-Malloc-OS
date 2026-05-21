@@ -1,8 +1,6 @@
 #include "protocolos.h"
 #include <netdb.h>
 
-
-
 t_paquete *crear_paquete(op_code codigo_operacion)
 {
 	t_paquete *paquete = malloc(sizeof(t_paquete));
@@ -85,7 +83,6 @@ int recibir_operacion(int cliente_fd)
 	}
 	return codigo_operacion;
 }
-
 
 // static void add_cstring(t_paquete* p, const char* s){
 //     int len = s ? (int)strlen(s) + 1 : 1;

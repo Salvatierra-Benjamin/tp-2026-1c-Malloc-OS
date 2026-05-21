@@ -6,9 +6,10 @@ int conexion_km;
 int conexion_ks;
 int conexion_ms;
 int identificador_cpu;
-t_contexto_ejecucion contexto_ejecucion;
-reg_id reg;
-// Semaforos:
+sem_t sem_proceso_nuevo;
+int PID_a_ejecutar = -1;
+
+//  Semaforos:
 pthread_mutex_t conexiones_km = PTHREAD_MUTEX_INITIALIZER; // MUTEX
 pthread_mutex_t conexiones_ks = PTHREAD_MUTEX_INITIALIZER; // MUTEX
 pthread_mutex_t conexiones_ms = PTHREAD_MUTEX_INITIALIZER; // MUTEX

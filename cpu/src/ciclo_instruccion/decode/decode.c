@@ -74,7 +74,7 @@ void Decode_Instruccion(t_instruccion nueva_instruccion)
         // ... otros cases ...
 
     case SET:
-    {
+    { // SET EAX 100
         requiere_traduccion = false;
 
         /* ACA ESTA EL DECODE FÍSICO:

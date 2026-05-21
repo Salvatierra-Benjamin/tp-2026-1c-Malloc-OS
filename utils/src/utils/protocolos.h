@@ -24,13 +24,15 @@ typedef enum
 {
     // ---------------- Handshakes ----------------
     // Solicitud
+
     HANDSHAKE_IO = 1000,   // se recibe al IO (io es quien lo manda)
     HANDSHAKE_CPU = 1001,  // CPU envia HS a MS
     HANDSHAKE_SWAP = 1002, // Swap envia HS a KM
     HANDSHAKE_KS = 1003,   // KS se envia a HS a KM
     HANDSHAKE_MS = 1004,   // MS envia HS a KM
+    HANDSHAKE_OK = 1005,   // GENERICO PARA PRUEBAS
 
-    // Respuesta
+    //  Respuesta
     KM_OK_CONEXION = 1100, // KM responde a KS, SWAP, MS
     KS_OK_CONEXION = 1101, // KM responde a KS, CPU, IO
     MS_OK_CONEXION = 1102, // MS responde a CPU
@@ -69,7 +71,7 @@ typedef enum
 
     // ---------------- KS -> CPU ----------------
     ALOJAR_PROCESO = 7000, // KS envia pid a CPU
-
+    INTERRUPCION = 7453,
     // ---------------- KM -> CPU ----------------
     CONTEXTO_EJECUCION = 8000, // KM envia [t_registros, t_tabla_de_segmentos]
     ENVIO_INSTRUCCION = 80001

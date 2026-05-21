@@ -1,5 +1,5 @@
-#ifndef INSTRUCCION_H
-#define INSTRUCCION_H
+#ifndef EXECUTE_H
+#define EXECUTE_H
 
 #include "gestor_cpu.h"
 #include "iniciador_cpu.h"
