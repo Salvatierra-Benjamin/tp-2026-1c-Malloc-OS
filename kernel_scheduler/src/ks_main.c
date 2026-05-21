@@ -48,7 +48,7 @@ void *ks_parsear_algoritmos(char *raw)
         array_queues[i].alg = ks_algoritmo_from_string(tokens[i]);
 
         // crear queue vacía asociada
-        array_queues[i].queue = list_create();
+        array_queues[i].queue = queue_create();
     }
 
     // liberar auxiliares
@@ -123,11 +123,34 @@ void ks_liberar_array_queues(void)
     {
         for (int i = 0; i < cantidad_algoritmos; i++)
         {
-            list_destroy(array_queues[i].queue);
+            queue_destroy(array_queues[i].queue);
         }
-        
+
         free(array_queues);
     }
+}
+t_person* find_by_name_contains(t_list* people, char* substring) {
+    bool _name_contains(void* ptr) {
+        t_person* person = (t_person*) ptr;
+        return string_contains(person->name, substring);
+    }
+    return list_find(people, _name_contains);
+}
+t_pcb* buscar_pcb_por_pid(int pid) {
+    for (int i = 0; i < cantidad_algoritmos; i++) {
+
+        bool _pcb_tiene_pid(void* ptr) {
+            t_pcb* pcb = (t_pcb*) ptr;
+            return pcb->id == pid;
+        }
+
+        t_pcb* encontrado = list_find(array_queues[i].queue, _pcb_tiene_pid);
+
+        if (encontrado != NULL) {
+            return encontrado;
+        }
+    }
+    return NULL; // No se encontró el PCB con el PID dado
 }
 
 void *ks_conexion_loop(void *_arg)
