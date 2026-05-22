@@ -3,11 +3,11 @@ void NOOP()
 {
     contexto_ejecucion.registros.PC += 1;
 }
-typedef struct
-{
-    void *ptr;
-    size_t tam;
-} t_registro_info;
+// typedef struct
+// {
+//     void *ptr;
+//     size_t tam;
+// } t_registro_info;
 
 // static t_registro_info tabla_registros[] =
 //     {

@@ -4,6 +4,12 @@
 #include "gestor_cpu.h"
 #include "iniciador_cpu.h"
 
+typedef struct
+{
+    void *puntero;
+    size_t tamanio;
+} t_info_registro;
+
 void NOOP();
 void *obtener_reg_puntero(reg_id reg, size_t *size);
 void SET(reg_id reg, uint32_t valor);

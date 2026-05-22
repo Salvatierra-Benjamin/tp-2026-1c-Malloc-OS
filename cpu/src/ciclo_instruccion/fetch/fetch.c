@@ -96,4 +96,11 @@ void Iniciar_Fetch(t_contexto_ejecucion *contexto_actual, t_instruccion *nueva_i
     Solicitar_Instruccion(contexto_actual->PID, contexto_actual->registros.PC);
     Recibir_Instruccion(nueva_instruccion);
     Loggear_Instruccion(nueva_instruccion);
+    contexto_actual->registros.PC ++;
 }
+/*
+* Sumo aca el PC. En la proxima vuelta del while(1) buscara la siguientes instruccion. 
+* En caso de que se ejecute el JNZ, este PC++ será pisado por el nuevo PC
+
+* De paso me ahorro repetir PC++ en las todos los execute_
+*/
