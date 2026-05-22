@@ -40,6 +40,26 @@ void *manejador_cpu(void *arg)
 
             t_instruccion *instruccion = solicitar_instruccion(pid, pc);
             //si instruccion == NULL (PID inexistente o pc fuera de rango), responder a CPU con opcode de error en vez de descartar silenciosamente
+            if(instruccion == NULL)
+            {
+                enviar_operacion(socket_cpu, ERROR_ENVIO_INSTRUCCION);
+                log_error(logger, "[CPU] instruccion solicitada en NULL");
+                break;
+            }
+
+            t_paquete *p_ins = crear_paquete(ENVIO_INSTRUCCION);
+            agregar_a_paquete(p_ins, instruccion->comando, sizeof(t_palabra_reservada));
+            agregar_a_paquete(p_ins, instruccion->PID, sizeof(int));
+
+            int parametro_1_size = strlen(instruccion->parametro_1)+1;
+            int parametro_2_size = strlen(instruccion->parametro_2)+1;
+
+            agregar_a_paquete(p_ins, &parametro_1_size, sizeof(int));
+            agregar_a_paquete(p_ins, instruccion->parametro_1, parametro_1_size);
+            agregar_a_paquete(p_ins, &parametro_2_size, sizeof(int));
+            agregar_a_paquete(p_ins, instruccion->parametro_2, parametro_2_size);
+
+            enviar_paquete(p_ins, socket_cpu);
 
             eliminar_paquete(paquete_pid_pc);
             break;
