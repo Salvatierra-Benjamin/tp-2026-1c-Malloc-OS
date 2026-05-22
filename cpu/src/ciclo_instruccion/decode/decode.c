@@ -1,111 +1,89 @@
 #include "decode.h"
 
-void Decode_Instruccion(t_instruccion nueva_instruccion)
+void Iniciar_Decode(t_contexto_ejecucion *contexto_actual, t_instruccion instruccion)
 {
-    // /* info: La etapa decode interpreta la instruccion y evalua traduccion de memoria. */
-    // bool requiere_traduccion = false;
+    t_palabra_reservada comando = instruccion.comando;
+    char *parametro_1 = instruccion.parametro_1;
+    char *parametro_2 = instruccion.parametro_2;
 
-    // /* info: Log minimo y obligatorio de ejecucion de instruccion. */
-    // log_info(cpu_logger, "## PID: %d - Ejecutando: %d - %s %s (139)",
-    //          nueva_instruccion.PID,
-    //          nueva_instruccion.comando,
-    //          nueva_instruccion.parametro_1,
-    //          nueva_instruccion.parametro_2);
-
-    // switch (nueva_instruccion.comando)
-    // {
-    // case MOV_IN:
-    // case MOV_OUT:
-    // case COPY_MEM:
-    // case STDIN:
-    // case STDOUT:
-    //     /* info: Estas instrucciones interactuan con memoria y usan mmu. */
-    //     requiere_traduccion = true;
-    //     break;
-
-    // case NOOP:
-    // case SET:
-    // case SUM:
-    // case SUB:
-    // case JNZ:
-    // case MUTEX_CREATE:
-    // case MUTEX_LOCK:
-    // case MUTEX_UNLOCK:
-    // case MEM_ALLOC:
-    // case MEM_FREE:
-    // case SLEEP:
-    // case INIT_PROC:
-    // case EXIT:
-    //     /* info: Operaciones de cpu o syscalls que no requieren traduccion en decode. */
-    //     requiere_traduccion = false;
-    //     break;
-
-    // default:
-    //     /* info: Manejo de instruccion desconocida o error. */
-    //     log_error(cpu_logger, "Instruccion no reconocida.");
-    //     return;
-    // }
-
-    // if (requiere_traduccion)
-    // {
-    //     /* info: Logica para interactuar con la mmu simulada antes de ejecutar. */
-    //     // DIreccion Lógica:
-    //     // INICIO contexto_ejecucion.registros.SI
-    //     // FIN contexto_ejecucion.registros.DI
-
-    //     uint32_t dir_fisica;
-    //     MMU_TRADUCCION_FISICA(nueva_instruccion);
-    // }
-
-    // /* info: Una vez decodificada y con direcciones listas se avanza a execute. */
-    // Execute_Instruccion(nueva_instruccion);
-}
-// #include "decode.h"
-// #include <stdlib.h> // Para atoi
-
-void Decode_Instruccion(t_instruccion nueva_instruccion)
-{
-    bool requiere_traduccion = false;
-
-    // ... (tu log_info) ...
-
-    switch (nueva_instruccion.comando)
+    switch (comando)
     {
-        // ... otros cases ...
+    case NOOP:
+        execute_NOOP(contexto_actual);
+        break;
 
     case SET:
-    { // SET EAX 100
-        requiere_traduccion = false;
-
-        /* ACA ESTA EL DECODE FÍSICO:
-           Dejamos de hablar en "strings" y pasamos a punteros y enteros */
-
-        void *puntero_reg = obtener_registro(nueva_instruccion.parametro_1);
-        int tamanio_reg = obtener_tamanio_registro(nueva_instruccion.parametro_1);
-        uint32_t valor_num = (uint32_t)atoi(nueva_instruccion.parametro_2);
-
-        // Una vez decodificado, le pasamos la posta a la etapa Execute
-        ejecutar_SET(puntero_reg, tamanio_reg, valor_num);
+        execute_SET(contexto_actual, parametro_1, parametro_2);
         break;
-    }
 
     case MOV_IN:
-    {
-        requiere_traduccion = true;
-
-        // Decode del registro destino
-        void *puntero_reg = obtener_registro(nueva_instruccion.parametro_1);
-        int tamanio_reg = obtener_tamanio_registro(nueva_instruccion.parametro_1);
-
-        // Decode de la dirección (La MMU actúa acá)
-        uint32_t dir_logica = contexto.registros.SI;
-        uint32_t dir_fisica = mmu_traducir_direccion(dir_logica); // Tu función de MMU
-
-        // Pasamos al Execute todo resuelto
-        ejecutar_MOV_IN(puntero_reg, tamanio_reg, dir_fisica);
+        execute_MOV_IN(contexto_actual, parametro_1);
         break;
-    }
 
-        // ...
+    case MOV_OUT:
+        execute_MOV_OUT(contexto_actual, parametro_1);
+        break;
+
+    case SUM:
+        execute_SUM(contexto_actual, parametro_1, parametro_2);
+        break;
+
+    case SUB:
+        execute_SUB(contexto_actual, parametro_1, parametro_2);
+        break;
+
+    case JNZ:
+        execute_JNZ(contexto_actual, parametro_1, parametro_2);
+        break;
+
+    case COPY_MEM:
+        execute_COPY_MEM(contexto_actual, parametro_1);
+        break;
+
+        // SYCALLS
+    case MUTEX_CREATE:
+        execute_MUTEX_CREATE(contexto_actual, parametro_1);
+        break;
+
+    case MUTEX_LOCK:
+        execute_MUTEX_LOCK(contexto_actual, parametro_1);
+        break;
+
+    case MUTEX_UNLOCK:
+        execute_MUTEX_UNLOCK(contexto_actual, parametro_1);
+        break;
+
+    case MEM_ALLOC:
+        execute_MEM_ALLOC(contexto_actual, parametro_1, parametro_2);
+        break;
+
+    case MEM_FREE:
+        execute_MEM_FREE(contexto_actual, parametro_1);
+        break;
+
+    case SLEEP:
+        execute_SLEEP(contexto_actual, parametro_1);
+        break;
+
+    case STDOUT:
+        execute_STDOUT(contexto_actual, parametro_1, parametro_2);
+        break;
+
+    case STDIN:
+        execute_STDIN(contexto_actual, parametro_1, parametro_2);
+        break;
+
+    case INIT_PROC:
+        execute_INIT_PROC(contexto_actual, parametro_1, parametro_2);
+        break;
+
+    case EXIT:
+        execute_EXIT(contexto_actual);
+        break;
+
+    default:
+        log_error(cpu_logger, "Error: Instruccion recibida no recibida.");
+        log_error(cpu_logger, "Codigo de instruccion recibida: %d", comando);
+        break;
     }
 }
