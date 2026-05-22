@@ -48,7 +48,7 @@ void *manejador_cpu(void *arg)
             }
 
             t_paquete *p_ins = crear_paquete(ENVIO_INSTRUCCION);
-            agregar_a_paquete(p_ins, instruccion->comando, sizeof(t_palabra_reservada));
+            agregar_a_paquete(p_ins, (int)instruccion->comando, sizeof(int));
             agregar_a_paquete(p_ins, instruccion->PID, sizeof(int));
 
             int parametro_1_size = strlen(instruccion->parametro_1)+1;
