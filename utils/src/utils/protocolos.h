@@ -79,7 +79,8 @@ typedef enum
     CONTEXTO_EJECUCION = 8000, // KM envia [t_registros, t_tabla_de_segmentos]
     ENVIO_INSTRUCCION = 80001,
     // ---------------- CODIGOS DE ERROR -----------
-    ERROR_ENVIO_INSTRUCCION = 9001
+    ERROR_ENVIO_INSTRUCCION = 9001,
+    ERROR_ENVIO_CONTEXTO = 9002
 
 } op_code;
 typedef enum
