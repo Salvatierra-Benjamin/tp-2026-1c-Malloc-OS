@@ -1,18 +1,29 @@
 #include "protocolos.h"
 #include <netdb.h>
 
-
+// ANTIGUO crear_paquete:
+// t_paquete *crear_paquete(op_code codigo_operacion)
+// {
+// 	t_paquete *paquete = malloc(sizeof(t_paquete));
+// 	paquete->codigo_operacion = codigo_operacion;
+// 	paquete->buffer = malloc(sizeof(t_buffer));
+// 	paquete->buffer->size = 0;
+// 	paquete->buffer->stream = NULL;
+// 	return paquete;
+// }
 
 t_paquete *crear_paquete(op_code codigo_operacion)
 {
 	t_paquete *paquete = malloc(sizeof(t_paquete));
 	paquete->codigo_operacion = codigo_operacion;
+
 	paquete->buffer = malloc(sizeof(t_buffer));
 	paquete->buffer->size = 0;
+	paquete->buffer->offset = 0; // <--- AGREGAR ESTO ACÁ TAMBIÉN
 	paquete->buffer->stream = NULL;
+
 	return paquete;
 }
-
 void agregar_a_paquete(t_paquete *paquete, void *valor, int tamanio)
 {
 	paquete->buffer->stream = realloc(paquete->buffer->stream, paquete->buffer->size + tamanio);
@@ -58,13 +69,31 @@ t_paquete *recibir_paquete(int socket)
 {
 	t_paquete *paquete = malloc(sizeof(t_paquete));
 	paquete->buffer = malloc(sizeof(t_buffer));
+
+	// LINEA QUE FALTABA
+	paquete->buffer->offset = 0;
+
 	// Recibir el tamaño del buffer
 	recv(socket, &paquete->buffer->size, sizeof(int), 0);
+
 	// Recibir el buffer
 	paquete->buffer->stream = malloc(paquete->buffer->size);
 	recv(socket, paquete->buffer->stream, paquete->buffer->size, 0);
+
 	return paquete;
 }
+// Antiguo recibir_paquete:
+// t_paquete *recibir_paquete(int socket)
+// {
+// 	t_paquete *paquete = malloc(sizeof(t_paquete));
+// 	paquete->buffer = malloc(sizeof(t_buffer));
+// 	// Recibir el tamaño del buffer
+// 	recv(socket, &paquete->buffer->size, sizeof(int), 0);
+// 	// Recibir el buffer
+// 	paquete->buffer->stream = malloc(paquete->buffer->size);
+// 	recv(socket, paquete->buffer->stream, paquete->buffer->size, 0);
+// 	return paquete;
+// }
 int enviar_operacion(int socket_destino, op_code codigo_operacion)
 {
 	// Envia SOLO el opcode (sin size, sin payload)
@@ -85,7 +114,6 @@ int recibir_operacion(int cliente_fd)
 	}
 	return codigo_operacion;
 }
-
 
 // static void add_cstring(t_paquete* p, const char* s){
 //     int len = s ? (int)strlen(s) + 1 : 1;

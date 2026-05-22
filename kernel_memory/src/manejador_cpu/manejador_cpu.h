@@ -6,6 +6,6 @@
 void *manejador_cpu(void *arg);
 void conexion_cpu(int cpu_id);
 void solicitar_contexto(int pid);
-t_instruccion *solicitar_instruccion(int pid, int pc);
+t_instruccion *solicitar_instruccion(int pid, uint32_t pc);
 
 #endif

@@ -43,7 +43,7 @@ void *atencion_cpus(void *socket_cliente_puntero)
             buffer_read(&cpu_id, paquete_handshake_ms->buffer, sizeof(int));
             eliminar_paquete(paquete_handshake_ms);
             log_debug(ms_logger, "[RECEPTOR_CPUS]Recibido el cpu_id número: %d", cpu_id);
-            enviar_operacion(socket_cliente, MS_OK_CONEXION);
+            enviar_operacion(socket_cliente, HANDSHAKE_OK);
 
             break;
         }

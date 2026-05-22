@@ -1,93 +1,92 @@
-#include "intrucciones.h"
+#include "execute.h"
 void NOOP()
 {
     contexto_ejecucion.registros.PC += 1;
 }
-// typedef struct
-// {
-//     void *ptr;
-//     size_t tam;
-// } t_registro_info;
+typedef struct
+{
+    void *ptr;
+    size_t tam;
+} t_registro_info;
 
 // static t_registro_info tabla_registros[] =
-// {
-//     [AX]  = { &contexto_ejecucion.registros.AX,  sizeof(uint8_t)  },
-//     [BX]  = { &contexto_ejecucion.registros.BX,  sizeof(uint8_t)  },
-//     [CX]  = { &contexto_ejecucion.registros.CX,  sizeof(uint8_t)  },
-//     [DX]  = { &contexto_ejecucion.registros.DX,  sizeof(uint8_t)  },
-
-//     [EAX] = { &contexto_ejecucion.registros.EAX, sizeof(uint32_t) },
-//     [EBX] = { &contexto_ejecucion.registros.EBX, sizeof(uint32_t) },
-//     [ECX] = { &contexto_ejecucion.registros.ECX, sizeof(uint32_t) },
-//     [EDX] = { &contexto_ejecucion.registros.EDX, sizeof(uint32_t) },
-
-//     [SI]  = { &contexto_ejecucion.registros.SI,  sizeof(uint32_t) },
-//     [DI]  = { &contexto_ejecucion.registros.DI,  sizeof(uint32_t) },
-
-//     [PC]  = { &contexto_ejecucion.registros.PC,  sizeof(uint32_t) }
-// };
-
-// void *obtener_reg_puntero(reg_id reg, size_t *tam)
-// {
-//     if (reg < 0 || reg >= (sizeof(tabla_registros) / sizeof(tabla_registros[0])))
 //     {
-//         *tam = 0;
-//         return NULL;
-//     }
+//         [AX] = {&contexto_ejecucion.registros.AX, sizeof(uint8_t)},
+//         [BX] = {&contexto_ejecucion.registros.BX, sizeof(uint8_t)},
+//         [CX] = {&contexto_ejecucion.registros.CX, sizeof(uint8_t)},
+//         [DX] = {&contexto_ejecucion.registros.DX, sizeof(uint8_t)},
 
-//     if (tabla_registros[reg].ptr == NULL)
-//     {
-//         *tam = 0;
-//         return NULL;
-//     }
+//         [EAX] = {&contexto_ejecucion.registros.EAX, sizeof(uint32_t)},
+//         [EBX] = {&contexto_ejecucion.registros.EBX, sizeof(uint32_t)},
+//         [ECX] = {&contexto_ejecucion.registros.ECX, sizeof(uint32_t)},
+//         [EDX] = {&contexto_ejecucion.registros.EDX, sizeof(uint32_t)},
 
-//     *tam = tabla_registros[reg].tam;
-//     return tabla_registros[reg].ptr;
-// }
+//         [SI] = {&contexto_ejecucion.registros.SI, sizeof(uint32_t)},
+//         [DI] = {&contexto_ejecucion.registros.DI, sizeof(uint32_t)},
+
+//         [PC] = {&contexto_ejecucion.registros.PC, sizeof(uint32_t)}};
+
 void *obtener_reg_puntero(reg_id reg, size_t *tam)
 {
-    switch (reg)
+    if (reg < 0 || reg >= (sizeof(tabla_registros) / sizeof(tabla_registros[0])))
     {
-    case AX:
-        *tam = sizeof(uint8_t);
-        return &contexto_ejecucion.registros.AX;
-    case BX:
-        *tam = sizeof(uint8_t);
-        return &contexto_ejecucion.registros.BX;
-    case CX:
-        *tam = sizeof(uint8_t);
-        return &contexto_ejecucion.registros.CX;
-    case DX:
-        *tam = sizeof(uint8_t);
-        return &contexto_ejecucion.registros.DX;
-
-    case EAX:
-        *tam = sizeof(uint32_t);
-        return &contexto_ejecucion.registros.EAX;
-    case EBX:
-        *tam = sizeof(uint32_t);
-        return &contexto_ejecucion.registros.EBX;
-    case ECX:
-        *tam = sizeof(uint32_t);
-        return &contexto_ejecucion.registros.ECX;
-    case EDX:
-        *tam = sizeof(uint32_t);
-        return &contexto_ejecucion.registros.EDX;
-
-    case SI:
-        *tam = sizeof(uint32_t);
-        return &contexto_ejecucion.registros.SI;
-    case DI:
-        *tam = sizeof(uint32_t);
-        return &contexto_ejecucion.registros.DI;
-    case PC:
-        *tam = sizeof(uint32_t);
-        return &contexto_ejecucion.registros.PC;
-    default:
         *tam = 0;
         return NULL;
     }
+
+    if (tabla_registros[reg].ptr == NULL)
+    {
+        *tam = 0;
+        return NULL;
+    }
+
+    *tam = tabla_registros[reg].tam;
+    return tabla_registros[reg].ptr;
 }
+// void *obtener_reg_puntero(reg_id reg, size_t *tam)
+// {
+//     switch (reg)
+//     {
+//     case AX:
+//         *tam = sizeof(uint8_t);
+//         return &contexto_ejecucion.registros.AX;
+//     case BX:
+//         *tam = sizeof(uint8_t);
+//         return &contexto_ejecucion.registros.BX;
+//     case CX:
+//         *tam = sizeof(uint8_t);
+//         return &contexto_ejecucion.registros.CX;
+//     case DX:
+//         *tam = sizeof(uint8_t);
+//         return &contexto_ejecucion.registros.DX;
+
+//     case EAX:
+//         *tam = sizeof(uint32_t);
+//         return &contexto_ejecucion.registros.EAX;
+//     case EBX:
+//         *tam = sizeof(uint32_t);
+//         return &contexto_ejecucion.registros.EBX;
+//     case ECX:
+//         *tam = sizeof(uint32_t);
+//         return &contexto_ejecucion.registros.ECX;
+//     case EDX:
+//         *tam = sizeof(uint32_t);
+//         return &contexto_ejecucion.registros.EDX;
+
+//     case SI:
+//         *tam = sizeof(uint32_t);
+//         return &contexto_ejecucion.registros.SI;
+//     case DI:
+//         *tam = sizeof(uint32_t);
+//         return &contexto_ejecucion.registros.DI;
+//     case PC:
+//         *tam = sizeof(uint32_t);
+//         return &contexto_ejecucion.registros.PC;
+//     default:
+//         *tam = 0;
+//         return NULL;
+//     }
+// }
 void SET(reg_id reg, uint32_t valor)
 {
     size_t tam;
@@ -199,7 +198,7 @@ void MOV_IN(reg_id reg)
     void *ptr = obtener_reg_puntero(reg, &tam);
 
     // 2. Origen lógico
-    uint32_t dir_logica = contexto_ejecucion.registros.SI;
+    uint32_t dir_logica = contexto_ejecucion.registros.SI; // DI
 
     uint32_t restante = tam;
     uint32_t actual = dir_logica;

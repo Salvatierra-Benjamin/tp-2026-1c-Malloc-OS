@@ -1,9 +1,9 @@
-#ifndef FETCH_H
-#define FETCH_H
+#ifndef DECODE_H
+#define DECODE_H
 
 #include "gestor_cpu.h"
 #include "../../contexto_ejecucion/contexto_ejecucion.h"
 
-void iniciar_fetch();
+void Decode_Instruccion();
 
 #endif

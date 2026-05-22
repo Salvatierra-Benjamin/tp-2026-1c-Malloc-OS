@@ -5,12 +5,11 @@ cpu_struct_config cpu_config;
 int conexion_km;
 int conexion_ks;
 int conexion_ms;
-t_contexto_ejecucion contexto_ejecucion;
-reg_id reg;
-int identificador;
-uint32_t tam_max_segmentos;
-tabla_segmentos_t tab;
-// Semaforos:
+int identificador_cpu;
+sem_t sem_proceso_nuevo;
+int PID_a_ejecutar = -1;
+
+//  Semaforos:
 pthread_mutex_t conexiones_km = PTHREAD_MUTEX_INITIALIZER; // MUTEX
 pthread_mutex_t conexiones_ks = PTHREAD_MUTEX_INITIALIZER; // MUTEX
 pthread_mutex_t conexiones_ms = PTHREAD_MUTEX_INITIALIZER; // MUTEX
@@ -22,7 +21,7 @@ void cpu_cargar_config(char *path)
     t_config *config = config_create(path);
     if (!config)
     {
-        fprintf(stderr, "ERROR AL CREAR CONFIG DE MEMORY STICK\n");
+        fprintf(stderr, "ERROR AL CREAR CONFIG DE CPU\n");
         exit(EXIT_FAILURE);
     }
     char *log_level_string = config_get_string_value(config, "LOG_LEVEL");
@@ -40,7 +39,7 @@ void cpu_cargar_config(char *path)
 void inicializar_logger()
 {
 
-    char *ruta_con_cpu_id = string_from_format("cpu_%d_.log", identificador);
+    char *ruta_con_cpu_id = string_from_format("cpu_%d_.log", identificador_cpu);
 
     cpu_logger = log_create(ruta_con_cpu_id, "CPU", 1, cpu_config.log_level);
 
@@ -75,6 +74,7 @@ void inicializar_semaforos_coordinadores()
 {
     // 0: El semáforo se comparte entre hilos del mismo proceso
     // 0: Valor inicial (el semáforo empieza "cerrado")
+    sem_init(&sem_proceso_nuevo, 0, 0);
     sem_init(&semaphore, 0, 0);
 }
 
@@ -90,6 +90,7 @@ void liberar_semaforos()
     pthread_mutex_destroy(&conexiones_km);
     pthread_mutex_destroy(&conexiones_ks);
     pthread_mutex_destroy(&conexiones_ms);
+    sem_destroy(&sem_proceso_nuevo);
     sem_destroy(&semaphore);
 }
 

@@ -64,7 +64,7 @@ void creacion_proceso(int pid, char *path)
     // contexto_ejecucion = crear_contexto_ejecucion()
     t_procesos_memoria *proceso = malloc(sizeof(t_procesos_memoria));
     proceso->instrucciones = instrucciones;
-    proceso->contexto = crear_contexto_ejecucion();
+    proceso->contexto = crear_contexto_ejecucion(pid);
 
     // crear proceso_memoria y añadir al diccionario (vinculado a pid) (NO OLVIDAD MUTEX)
     char *key = string_itoa(pid);
@@ -180,9 +180,11 @@ t_palabra_reservada string_a_palabra_reservada(char *str)
     return -1;
 }
 
-t_contexto_ejecucion *crear_contexto_ejecucion()
+t_contexto_ejecucion *crear_contexto_ejecucion(int pid)
 {
     t_contexto_ejecucion *contexto = calloc(1, sizeof(t_contexto_ejecucion));
-    contexto->tabla_segmentos = list_create();
+    contexto->PID = pid;
+    contexto->tabla_segmentos.segmento = NULL;
+    contexto->tabla_segmentos.cantidad_segmentos = 0;
     return contexto;
 }

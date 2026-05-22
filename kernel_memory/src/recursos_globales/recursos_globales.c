@@ -34,7 +34,7 @@ void destruir_instruccion(void *elem)
 
 void destruir_contexto(t_contexto_ejecucion *ctx)
 {
-    list_destroy_and_destroy_elements(ctx->tabla_segmentos, free);
+    free(ctx->tabla_segmentos.segmento);
     free(ctx);
 }
 
