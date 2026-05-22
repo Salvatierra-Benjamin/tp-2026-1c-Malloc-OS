@@ -77,7 +77,9 @@ typedef enum
     INTERRUPCION = 7453,
     // ---------------- KM -> CPU ----------------
     CONTEXTO_EJECUCION = 8000, // KM envia [t_registros, t_tabla_de_segmentos]
-    ENVIO_INSTRUCCION = 80001
+    ENVIO_INSTRUCCION = 80001,
+    // ---------------- CODIGOS DE ERROR -----------
+    ERROR_ENVIO_INSTRUCCION = 9001
 
 } op_code;
 typedef enum

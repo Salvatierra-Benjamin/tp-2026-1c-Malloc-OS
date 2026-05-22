@@ -19,21 +19,6 @@ typedef struct
     char *scripts_basepath;
 } km_config;
 
-// Esta repetido el t_registros_cpu, borra este y quedate con el de protocolos.h
-typedef struct
-{
-    uint32_t pc;
-    uint8_t ax, bx, cx, dx;
-    uint32_t eax, ebx, ecx, edx;
-    uint32_t si, di;
-} t_registros_cpu;
-// Esta repetido el T_CONTEXTO_EJECUCION, borra este y quedate con el de protocolos.h
-typedef struct
-{
-    t_registros_cpu registros;
-    t_list *tabla_segmentos;
-} t_contexto_ejecucion;
-
 typedef struct
 {
     t_list *instrucciones; // t_instruccion []
