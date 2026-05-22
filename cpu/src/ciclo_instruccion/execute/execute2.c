@@ -131,66 +131,66 @@ void execute_JNZ(t_contexto_ejecucion *contexto, char *registro, char *instrucci
 // INSTRUCCIONES DE MEMORIA (MMU) - TODO
 // =========================================================
 
-void execute_MOV_IN(t_contexto_ejecucion *contexto, char *registro_datos)
-{
-    log_info(cpu_logger, "PID: %d - Ejecutando: MOV_IN - %s", contexto->PID, registro_datos);
-    // TODO: Implementar lógica de MMU (Traducción + Lectura de Memoria)
-}
+// void execute_MOV_IN(t_contexto_ejecucion *contexto, char *registro_datos)
+// {
+//     log_info(cpu_logger, "PID: %d - Ejecutando: MOV_IN - %s", contexto->PID, registro_datos);
+//     // TODO: Implementar lógica de MMU (Traducción + Lectura de Memoria)
+// }
 
-void execute_MOV_OUT(t_contexto_ejecucion *contexto, char *registro_datos)
-{
-    log_info(cpu_logger, "PID: %d - Ejecutando: MOV_OUT - %s", contexto->PID, registro_datos);
-    // TODO: Implementar lógica de MMU (Traducción + Escritura en Memoria)
-}
+// void execute_MOV_OUT(t_contexto_ejecucion *contexto, char *registro_datos)
+// {
+//     log_info(cpu_logger, "PID: %d - Ejecutando: MOV_OUT - %s", contexto->PID, registro_datos);
+//     // TODO: Implementar lógica de MMU (Traducción + Escritura en Memoria)
+// }
 
-void execute_COPY_MEM(t_contexto_ejecucion *contexto, char *tamano_str)
-{
-    log_info(cpu_logger, "PID: %d - Ejecutando: COPY_MEM - %s", contexto->PID, tamano_str);
-    // TODO: Implementar lógica de MMU (Doble traducción: origen en SI y destino en DI)
-}
+// void execute_COPY_MEM(t_contexto_ejecucion *contexto, char *tamano_str)
+// {
+//     log_info(cpu_logger, "PID: %d - Ejecutando: COPY_MEM - %s", contexto->PID, tamano_str);
+//     // TODO: Implementar lógica de MMU (Doble traducción: origen en SI y destino en DI)
+// }
 
 
-// =========================================================
-// SYSCALLS - TODO
-// =========================================================
+// // =========================================================
+// // SYSCALLS - TODO
+// // =========================================================
 
-void execute_MUTEX_CREATE(t_contexto_ejecucion *contexto, char *recurso) {
-    log_info(cpu_logger, "PID: %d - Ejecutando: MUTEX_CREATE - %s", contexto->PID, recurso);
-}
+// void execute_MUTEX_CREATE(t_contexto_ejecucion *contexto, char *recurso) {
+//     log_info(cpu_logger, "PID: %d - Ejecutando: MUTEX_CREATE - %s", contexto->PID, recurso);
+// }
 
-void execute_MUTEX_LOCK(t_contexto_ejecucion *contexto, char *recurso) {
-    log_info(cpu_logger, "PID: %d - Ejecutando: MUTEX_LOCK - %s", contexto->PID, recurso);
-}
+// void execute_MUTEX_LOCK(t_contexto_ejecucion *contexto, char *recurso) {
+//     log_info(cpu_logger, "PID: %d - Ejecutando: MUTEX_LOCK - %s", contexto->PID, recurso);
+// }
 
-void execute_MUTEX_UNLOCK(t_contexto_ejecucion *contexto, char *recurso) {
-    log_info(cpu_logger, "PID: %d - Ejecutando: MUTEX_UNLOCK - %s", contexto->PID, recurso);
-}
+// void execute_MUTEX_UNLOCK(t_contexto_ejecucion *contexto, char *recurso) {
+//     log_info(cpu_logger, "PID: %d - Ejecutando: MUTEX_UNLOCK - %s", contexto->PID, recurso);
+// }
 
-void execute_MEM_ALLOC(t_contexto_ejecucion *contexto, char *tamano_str, char *registro_direccion) {
-    log_info(cpu_logger, "PID: %d - Ejecutando: MEM_ALLOC - %s bytes", contexto->PID, tamano_str);
-}
+// void execute_MEM_ALLOC(t_contexto_ejecucion *contexto, char *tamano_str, char *registro_direccion) {
+//     log_info(cpu_logger, "PID: %d - Ejecutando: MEM_ALLOC - %s bytes", contexto->PID, tamano_str);
+// }
 
-void execute_MEM_FREE(t_contexto_ejecucion *contexto, char *registro_direccion) {
-    log_info(cpu_logger, "PID: %d - Ejecutando: MEM_FREE", contexto->PID);
-}
+// void execute_MEM_FREE(t_contexto_ejecucion *contexto, char *registro_direccion) {
+//     log_info(cpu_logger, "PID: %d - Ejecutando: MEM_FREE", contexto->PID);
+// }
 
-void execute_SLEEP(t_contexto_ejecucion *contexto, char *tiempo_str) {
-    log_info(cpu_logger, "PID: %d - Ejecutando: SLEEP - %s", contexto->PID, tiempo_str);
-}
+// void execute_SLEEP(t_contexto_ejecucion *contexto, char *tiempo_str) {
+//     log_info(cpu_logger, "PID: %d - Ejecutando: SLEEP - %s", contexto->PID, tiempo_str);
+// }
 
-void execute_STDOUT(t_contexto_ejecucion *contexto, char *registro_direccion, char *registro_tamano) {
-    log_info(cpu_logger, "PID: %d - Ejecutando: STDOUT", contexto->PID);
-}
+// void execute_STDOUT(t_contexto_ejecucion *contexto, char *registro_direccion, char *registro_tamano) {
+//     log_info(cpu_logger, "PID: %d - Ejecutando: STDOUT", contexto->PID);
+// }
 
-void execute_STDIN(t_contexto_ejecucion *contexto, char *registro_direccion, char *registro_tamano) {
-    log_info(cpu_logger, "PID: %d - Ejecutando: STDIN", contexto->PID);
-}
+// void execute_STDIN(t_contexto_ejecucion *contexto, char *registro_direccion, char *registro_tamano) {
+//     log_info(cpu_logger, "PID: %d - Ejecutando: STDIN", contexto->PID);
+// }
 
-void execute_INIT_PROC(t_contexto_ejecucion *contexto, char *path, char *prioridad_str) {
-    log_info(cpu_logger, "PID: %d - Ejecutando: INIT_PROC - %s", contexto->PID, path);
-}
+// void execute_INIT_PROC(t_contexto_ejecucion *contexto, char *path, char *prioridad_str) {
+//     log_info(cpu_logger, "PID: %d - Ejecutando: INIT_PROC - %s", contexto->PID, path);
+// }
 
-void execute_EXIT(t_contexto_ejecucion *contexto) {
-    log_info(cpu_logger, "PID: %d - Ejecutando: EXIT", contexto->PID);
-}
+// void execute_EXIT(t_contexto_ejecucion *contexto) {
+//     log_info(cpu_logger, "PID: %d - Ejecutando: EXIT", contexto->PID);
+// }
 
