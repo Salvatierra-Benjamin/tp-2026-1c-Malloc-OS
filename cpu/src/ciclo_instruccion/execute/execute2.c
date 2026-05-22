@@ -71,7 +71,7 @@ void escribir_registro(t_contexto_ejecucion *contexto, char *registro, uint32_t 
 // INSTRUCCIONES DE CPU PURA (Matematica y Control)
 // =========================================================
 
-void execute_NOOP(t_contexto_ejecucion *contexto)
+void execute_NOOP(t_contexto_ejecucion *contexto, char *P1, char *P2)
 {
     log_info(cpu_logger, "PID: %d - Ejecutando: NOOP", contexto->PID);
 }
@@ -131,19 +131,19 @@ void execute_JNZ(t_contexto_ejecucion *contexto, char *registro, char *instrucci
 // INSTRUCCIONES DE MEMORIA (MMU) - TODO
 // =========================================================
 
-void execute_MOV_IN(t_contexto_ejecucion *contexto, char *registro_datos)
+void execute_MOV_IN(t_contexto_ejecucion *contexto, char *registro_datos, char *P2)
 {
     log_info(cpu_logger, "PID: %d - Ejecutando: MOV_IN - %s", contexto->PID, registro_datos);
     // TODO: Implementar lógica de MMU (Traducción + Lectura de Memoria)
 }
 
-void execute_MOV_OUT(t_contexto_ejecucion *contexto, char *registro_datos)
+void execute_MOV_OUT(t_contexto_ejecucion *contexto, char *registro_datos, char *P2)
 {
     log_info(cpu_logger, "PID: %d - Ejecutando: MOV_OUT - %s", contexto->PID, registro_datos);
     // TODO: Implementar lógica de MMU (Traducción + Escritura en Memoria)
 }
 
-void execute_COPY_MEM(t_contexto_ejecucion *contexto, char *tamano_str)
+void execute_COPY_MEM(t_contexto_ejecucion *contexto, char *tamano_str, char *P2)
 {
     log_info(cpu_logger, "PID: %d - Ejecutando: COPY_MEM - %s", contexto->PID, tamano_str);
     // TODO: Implementar lógica de MMU (Doble traducción: origen en SI y destino en DI)
@@ -154,15 +154,15 @@ void execute_COPY_MEM(t_contexto_ejecucion *contexto, char *tamano_str)
 // SYSCALLS - TODO
 // =========================================================
 
-void execute_MUTEX_CREATE(t_contexto_ejecucion *contexto, char *recurso) {
+void execute_MUTEX_CREATE(t_contexto_ejecucion *contexto, char *recurso, char *P2) {
     log_info(cpu_logger, "PID: %d - Ejecutando: MUTEX_CREATE - %s", contexto->PID, recurso);
 }
 
-void execute_MUTEX_LOCK(t_contexto_ejecucion *contexto, char *recurso) {
+void execute_MUTEX_LOCK(t_contexto_ejecucion *contexto, char *recurso, char *P2) {
     log_info(cpu_logger, "PID: %d - Ejecutando: MUTEX_LOCK - %s", contexto->PID, recurso);
 }
 
-void execute_MUTEX_UNLOCK(t_contexto_ejecucion *contexto, char *recurso) {
+void execute_MUTEX_UNLOCK(t_contexto_ejecucion *contexto, char *recurso, char *P2) {
     log_info(cpu_logger, "PID: %d - Ejecutando: MUTEX_UNLOCK - %s", contexto->PID, recurso);
 }
 
@@ -170,11 +170,11 @@ void execute_MEM_ALLOC(t_contexto_ejecucion *contexto, char *tamano_str, char *r
     log_info(cpu_logger, "PID: %d - Ejecutando: MEM_ALLOC - %s bytes", contexto->PID, tamano_str);
 }
 
-void execute_MEM_FREE(t_contexto_ejecucion *contexto, char *registro_direccion) {
+void execute_MEM_FREE(t_contexto_ejecucion *contexto, char *registro_direccion, char *P2) {
     log_info(cpu_logger, "PID: %d - Ejecutando: MEM_FREE", contexto->PID);
 }
 
-void execute_SLEEP(t_contexto_ejecucion *contexto, char *tiempo_str) {
+void execute_SLEEP(t_contexto_ejecucion *contexto, char *tiempo_str, char *P2) {
     log_info(cpu_logger, "PID: %d - Ejecutando: SLEEP - %s", contexto->PID, tiempo_str);
 }
 
@@ -190,7 +190,7 @@ void execute_INIT_PROC(t_contexto_ejecucion *contexto, char *path, char *priorid
     log_info(cpu_logger, "PID: %d - Ejecutando: INIT_PROC - %s", contexto->PID, path);
 }
 
-void execute_EXIT(t_contexto_ejecucion *contexto) {
+void execute_EXIT(t_contexto_ejecucion *contexto, char *P1, char *P2) {
     log_info(cpu_logger, "PID: %d - Ejecutando: EXIT", contexto->PID);
 }
 
