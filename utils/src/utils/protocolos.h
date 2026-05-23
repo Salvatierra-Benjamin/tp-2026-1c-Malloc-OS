@@ -74,10 +74,10 @@ typedef enum
 
     // ---------------- KS -> CPU ----------------
     ALOJAR_PROCESO = 7000, // KS envia pid a CPU
-    INTERRUPCION = 7453,
+    INTERRUPCION = 7001,
     // ---------------- KM -> CPU ----------------
     CONTEXTO_EJECUCION = 8000, // KM envia [t_registros, t_tabla_de_segmentos]
-    ENVIO_INSTRUCCION = 80001,
+    ENVIO_INSTRUCCION = 8001,
     // ---------------- CODIGOS DE ERROR -----------
     ERROR_ENVIO_INSTRUCCION = 9001,
     ERROR_ENVIO_CONTEXTO = 9002
