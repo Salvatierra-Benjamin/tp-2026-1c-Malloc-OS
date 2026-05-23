@@ -24,6 +24,7 @@ void Recibir_Instruccion(t_instruccion *nueva_instruccion)
 
         // 2. Deserializar parametro_1 (Dinámico)
         int len1;
+        // TODO Si la instruccion no utiliza parametro, no hacer malloc y hacer que apunte a NULL
         buffer_read(&len1, paquete->buffer, sizeof(int));                   // Leemos cuánto mide
         nueva_instruccion->parametro_1 = malloc(len1);                      // Pedimos el espacio justo
         buffer_read(nueva_instruccion->parametro_1, paquete->buffer, len1); // Copiamos el contenido
@@ -96,10 +97,10 @@ void Iniciar_Fetch(t_contexto_ejecucion *contexto_actual, t_instruccion *nueva_i
     Solicitar_Instruccion(contexto_actual->PID, contexto_actual->registros.PC);
     Recibir_Instruccion(nueva_instruccion);
     Loggear_Instruccion(nueva_instruccion);
-    contexto_actual->registros.PC ++;
+    contexto_actual->registros.PC++;
 }
 /*
-* Sumo aca el PC. En la proxima vuelta del while(1) buscara la siguientes instruccion. 
+* Sumo aca el PC. En la proxima vuelta del while(1) buscara la siguientes instruccion.
 * En caso de que se ejecute el JNZ, este PC++ será pisado por el nuevo PC
 
 * De paso me ahorro repetir PC++ en las todos los execute_

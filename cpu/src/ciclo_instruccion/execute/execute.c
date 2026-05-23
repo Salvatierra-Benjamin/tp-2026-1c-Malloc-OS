@@ -1,346 +1,208 @@
-// #include "execute.h"
-// void NOOP()
-// {
-//     contexto_ejecucion.registros.PC += 1;
-// }
-// // typedef struct
-// // {
-// //     void *ptr;
-// //     size_t tam;
-// // } t_registro_info;
+#include "execute.h"
 
-// // static t_registro_info tabla_registros[] =
-// //     {
-// //         [AX] = {&contexto_ejecucion.registros.AX, sizeof(uint8_t)},
-// //         [BX] = {&contexto_ejecucion.registros.BX, sizeof(uint8_t)},
-// //         [CX] = {&contexto_ejecucion.registros.CX, sizeof(uint8_t)},
-// //         [DX] = {&contexto_ejecucion.registros.DX, sizeof(uint8_t)},
+/* 
+===============================================
+    FUNCIONES AUXILIARES
+===============================================
 
-// //         [EAX] = {&contexto_ejecucion.registros.EAX, sizeof(uint32_t)},
-// //         [EBX] = {&contexto_ejecucion.registros.EBX, sizeof(uint32_t)},
-// //         [ECX] = {&contexto_ejecucion.registros.ECX, sizeof(uint32_t)},
-// //         [EDX] = {&contexto_ejecucion.registros.EDX, sizeof(uint32_t)},
+Para obtener valores y su tamaño. 
+Devolver solo el puntero crudo del registro puede causar seg. fault ya que los int son 4 bytes.
+*/
 
-// //         [SI] = {&contexto_ejecucion.registros.SI, sizeof(uint32_t)},
-// //         [DI] = {&contexto_ejecucion.registros.DI, sizeof(uint32_t)},
+t_info_registro obtener_info_registro(t_contexto_ejecucion *contexto, char *nombre_registro)
+{
+    t_info_registro info = {NULL, 0};
 
-// //         [PC] = {&contexto_ejecucion.registros.PC, sizeof(uint32_t)}};
+    // Registros de 8 bits (1 byte)
+    if (strcmp(nombre_registro, "AX") == 0)      { info.puntero = &(contexto->registros.AX);  info.tamanio = sizeof(uint8_t); }
+    else if (strcmp(nombre_registro, "BX") == 0) { info.puntero = &(contexto->registros.BX);  info.tamanio = sizeof(uint8_t); }
+    else if (strcmp(nombre_registro, "CX") == 0) { info.puntero = &(contexto->registros.CX);  info.tamanio = sizeof(uint8_t); }
+    else if (strcmp(nombre_registro, "DX") == 0) { info.puntero = &(contexto->registros.DX);  info.tamanio = sizeof(uint8_t); }
+    
+    // Registros de 32 bits (4 bytes)
+    else if (strcmp(nombre_registro, "EAX") == 0) { info.puntero = &(contexto->registros.EAX); info.tamanio = sizeof(uint32_t); }
+    else if (strcmp(nombre_registro, "EBX") == 0) { info.puntero = &(contexto->registros.EBX); info.tamanio = sizeof(uint32_t); }
+    else if (strcmp(nombre_registro, "ECX") == 0) { info.puntero = &(contexto->registros.ECX); info.tamanio = sizeof(uint32_t); }
+    else if (strcmp(nombre_registro, "EDX") == 0) { info.puntero = &(contexto->registros.EDX); info.tamanio = sizeof(uint32_t); }
+    else if (strcmp(nombre_registro, "SI") == 0)  { info.puntero = &(contexto->registros.SI);  info.tamanio = sizeof(uint32_t); }
+    else if (strcmp(nombre_registro, "DI") == 0)  { info.puntero = &(contexto->registros.DI);  info.tamanio = sizeof(uint32_t); }
+    else if (strcmp(nombre_registro, "PC") == 0)  { info.puntero = &(contexto->registros.PC);  info.tamanio = sizeof(uint32_t); }
+    else {
+        log_error(cpu_logger, "Registro desconocido: %s", nombre_registro);
+    }
 
-// void *obtener_reg_puntero(reg_id reg, size_t *tam)
-// {
-//     if (reg < 0 || reg >= (sizeof(tabla_registros) / sizeof(tabla_registros[0])))
-//     {
-//         *tam = 0;
-//         return NULL;
-//     }
+    return info;
+}
 
-//     if (tabla_registros[reg].ptr == NULL)
-//     {
-//         *tam = 0;
-//         return NULL;
-//     }
 
-//     *tam = tabla_registros[reg].tam;
-//     return tabla_registros[reg].ptr;
-// }
-// // void *obtener_reg_puntero(reg_id reg, size_t *tam)
-// // {
-// //     switch (reg)
-// //     {
-// //     case AX:
-// //         *tam = sizeof(uint8_t);
-// //         return &contexto_ejecucion.registros.AX;
-// //     case BX:
-// //         *tam = sizeof(uint8_t);
-// //         return &contexto_ejecucion.registros.BX;
-// //     case CX:
-// //         *tam = sizeof(uint8_t);
-// //         return &contexto_ejecucion.registros.CX;
-// //     case DX:
-// //         *tam = sizeof(uint8_t);
-// //         return &contexto_ejecucion.registros.DX;
+uint32_t leer_registro(t_contexto_ejecucion *contexto, char *registro)
+{
+    t_info_registro info = obtener_info_registro(contexto, registro);
+    
+    if (info.puntero == NULL) return 0; // Error
 
-// //     case EAX:
-// //         *tam = sizeof(uint32_t);
-// //         return &contexto_ejecucion.registros.EAX;
-// //     case EBX:
-// //         *tam = sizeof(uint32_t);
-// //         return &contexto_ejecucion.registros.EBX;
-// //     case ECX:
-// //         *tam = sizeof(uint32_t);
-// //         return &contexto_ejecucion.registros.ECX;
-// //     case EDX:
-// //         *tam = sizeof(uint32_t);
-// //         return &contexto_ejecucion.registros.EDX;
+    if (info.tamanio == sizeof(uint8_t)) {
+        return (uint32_t) (*(uint8_t*)info.puntero); // Leo 1 byte
+    } else {
+        return *(uint32_t*)info.puntero;             // Leo 4 bytes
+    }
+}
 
-// //     case SI:
-// //         *tam = sizeof(uint32_t);
-// //         return &contexto_ejecucion.registros.SI;
-// //     case DI:
-// //         *tam = sizeof(uint32_t);
-// //         return &contexto_ejecucion.registros.DI;
-// //     case PC:
-// //         *tam = sizeof(uint32_t);
-// //         return &contexto_ejecucion.registros.PC;
-// //     default:
-// //         *tam = 0;
-// //         return NULL;
-// //     }
-// // }
-// void SET(reg_id reg, uint32_t valor)
-// {
-//     size_t tam;
-//     void *ptr = obtener_reg_puntero(reg, &tam);
+void escribir_registro(t_contexto_ejecucion *contexto, char *registro, uint32_t valor)
+{
+    t_info_registro info = obtener_info_registro(contexto, registro);
+    
+    if (info.puntero == NULL) return; // Error
 
-//     if (!ptr)
-//         return;
+    if (info.tamanio == sizeof(uint8_t)) {
+        *(uint8_t*)info.puntero = (uint8_t)valor;    // Escribo solo 1 byte (trunca si es mayor)
+    } else {
+        *(uint32_t*)info.puntero = valor;            // Escribo 4 bytes
+    }
+}
+/* 
+===============================================
+    FIN FUNCIONES AUXILIARES
+===============================================
+*/
 
-//     if (tam == sizeof(uint8_t))
-//     {
-//         *(uint8_t *)ptr = (uint8_t)valor; // truncamiento
-//     }
-//     else
-//     {
-//         *(uint32_t *)ptr = valor;
-//     }
-// }
-// uint32_t leer_reg(reg_id reg)
-// {
-//     size_t tam;
-//     void *ptr = obtener_reg_puntero(reg, &tam);
-//     if (!ptr)
-//     {
-//         log_debug(cpu_logger, "Error en la funcion leer_reg");
-//         exit(EXIT_FAILURE);
-//     }
-//     if (tam == sizeof(uint8_t))
-//     {
-//         (uint8_t)ptr;
-//     }
-//     else
-//     {
-//         (uint32_t)ptr;
-//     }
-// }
-// void escribir_reg(reg_id reg, uint32_t valor)
-// {
-//     size_t tam;
-//     void *ptr = obtener_reg_puntero(reg, &tam);
-//     if (!ptr)
-//     {
-//         log_debug(cpu_logger, "Error en la funcion escribir_reg");
-//         exit(EXIT_FAILURE);
-//     }
-//     if (tam == sizeof(uint8_t))
-//     {
-//         (uint8_t)ptr = (uint8_t)valor;
-//     }
-//     else
-//     {
-//         (uint32_t)ptr = valor;
-//     }
-// }
 
-// void leer_memoria(uint32_t dir_fisica, void *buffer_destino, uint32_t tamanio)
-// {
-//     // =========================================================
-//     // 1. ARMAR LA PETICIÓN
-//     // =========================================================
-//     // Usá el op_code que hayan definido en su protocolos.h
-//     t_paquete *paquete_peticion = crear_paquete(LEER_MEMORIA_STICK);
+// =========================================================
+// INSTRUCCIONES DE CPU PURA (Matematica y Control)
+// =========================================================
 
-//     // Le decimos a partir de dónde leer
-//     agregar_a_paquete(paquete_peticion, &dir_fisica, sizeof(uint32_t));
+void execute_NOOP(t_contexto_ejecucion *contexto, char* param1, char* param2)
+{
+    (void) param1;
+    (void) param2;
+    log_info(cpu_logger, "PID: %d - Ejecutando: NOOP", contexto->PID);
+}
 
-//     // Le decimos cuántos bytes queremos que nos devuelva
-//     agregar_a_paquete(paquete_peticion, &tamanio, sizeof(uint32_t));
+void execute_SET(t_contexto_ejecucion *contexto, char *registro, char *valor_str)
+{    
+    log_debug(cpu_logger, "El valor de parametro en STRING: %s", valor_str);
+    uint32_t valor = (uint32_t) atoi(valor_str);
+    log_debug(cpu_logger, "El nuevo del parametro en DECIMAL: %d", valor);
+    
+    escribir_registro(contexto, registro, valor);
+    
+    log_info(cpu_logger, "PID: %d - Ejecutando: SET - %s - %s", contexto->PID, registro, valor_str);
+}
 
-//     // =========================================================
-//     // 2. ENVIAR POR RED
-//     // =========================================================
-//     enviar_paquete(paquete_peticion, conexion_ms);
-//     eliminar_paquete(paquete_peticion); // Siempre liberar la memoria del paquete enviado
+void execute_SUM(t_contexto_ejecucion *contexto, char *registro_destino, char *registro_origen)
+{
+    uint32_t valor_destino = leer_registro(contexto, registro_destino);
+    uint32_t valor_origen = leer_registro(contexto, registro_origen);
+    
+    uint32_t resultado = valor_destino + valor_origen;
+    
+    escribir_registro(contexto, registro_destino, resultado);
+    
+    log_info(cpu_logger, "PID: %d - Ejecutando: SUM - %s - %s", contexto->PID, registro_destino, registro_origen);
+}
 
-//     // =========================================================
-//     // 3. RECIBIR LA RESPUESTA (Queda bloqueado esperando)
-//     // =========================================================
-//     // Ojo: dependiendo de cómo sea tu red, quizás primero hacés un recv del OP_CODE
-//     // int op_code_respuesta = recibir_operacion(conexion_ms;
+void execute_SUB(t_contexto_ejecucion *contexto, char *registro_destino, char *registro_origen)
+{
+    uint32_t valor_destino = leer_registro(contexto, registro_destino);
+    uint32_t valor_origen = leer_registro(contexto, registro_origen);
+    
+    uint32_t resultado = valor_destino - valor_origen;
+    
+    escribir_registro(contexto, registro_destino, resultado);
+    
+    log_info(cpu_logger, "PID: %d - Ejecutando: SUB - %s - %s", contexto->PID, registro_destino, registro_origen);
+}
 
-//     t_paquete *paquete_respuesta = recibir_paquete(conexion_ms);
+void execute_JNZ(t_contexto_ejecucion *contexto, char *registro, char *instruccion_str)
+{
+    uint32_t valor_registro = leer_registro(contexto, registro);
+    
+    log_debug(cpu_logger, "El nuevo PC en STRING: %s", instruccion_str);
+    uint32_t nueva_instruccion = (uint32_t) atoi(instruccion_str);
+    log_debug(cpu_logger, "El nuevo PC en DECIMAL: %d", nueva_instruccion);
+    
+    if (valor_registro != 0) {
+        contexto->registros.PC = nueva_instruccion;
+    }
+    
+    log_info(cpu_logger, "PID: %d - Ejecutando: JNZ - %s - %s", contexto->PID, registro, instruccion_str);
+}
 
-//     // Verificamos que todo haya salido bien del otro lado
-//     if (paquete_respuesta->codigo_operacion == RESPUESTA_OK_LEER_MEMORIA)
-//     {
-//         // =========================================================
-//         // 4. PEGAR LOS DATOS EN EL BUFFER DE LA CPU
-//         // =========================================================
-//         // Usamos tu función buffer_read para sacar los datos serializados
-//         // y pegarlos directamente en el puntero que nos pasaron por parámetro.
-//         buffer_read(buffer_destino, paquete_respuesta->buffer, tamanio);
-//     }
-//     else
-//     {
-//         // Manejo de error si el Memory Stick falló o se desconectó
-//         log_error(cpu_logger, "Error: El Memory Stick no devolvió los datos esperados.");
-//     }
 
-//     // =========================================================
-//     // 5. LIMPIEZA
-//     // =========================================================
-//     eliminar_paquete(paquete_respuesta);
-// }
+// =========================================================
+// INSTRUCCIONES DE MEMORIA (MMU) - TODO
+// =========================================================
 
-// void MOV_IN(reg_id reg)
-// {
-//     size_t tam;
-//     // 1. Obtenemos el puntero directo al registro
-//     void *ptr = obtener_reg_puntero(reg, &tam);
+void execute_MOV_IN(t_contexto_ejecucion *contexto, char *registro_datos, char* param2)
+{
+    (void) param2;
+    log_info(cpu_logger, "PID: %d - Ejecutando: MOV_IN - %s", contexto->PID, registro_datos);
+    // TODO: Implementar lógica de MMU (Traducción + Lectura de Memoria)
+}
 
-//     // 2. Origen lógico
-//     uint32_t dir_logica = contexto_ejecucion.registros.SI; // DI
+void execute_MOV_OUT(t_contexto_ejecucion *contexto, char *registro_datos, char* param2)
+{
+    (void) param2;
+    log_info(cpu_logger, "PID: %d - Ejecutando: MOV_OUT - %s", contexto->PID, registro_datos);
+    // TODO: Implementar lógica de MMU (Traducción + Escritura en Memoria)
+}
 
-//     uint32_t restante = tam;
-//     uint32_t actual = dir_logica;
+void execute_COPY_MEM(t_contexto_ejecucion *contexto, char *tamano_str, char* param2)
+{
+    (void) param2;
+    log_info(cpu_logger, "PID: %d - Ejecutando: COPY_MEM - %s", contexto->PID, tamano_str);
+    // TODO: Implementar lógica de MMU (Doble traducción: origen en SI y destino en DI)
+}
 
-//     // 3. Buffer temporal para unificar todo
-//     uint8_t *buffer = malloc(tam);
-//     uint32_t offset = 0;
 
-//     // 4. Bucle para lidiar con fragmentación entre Memory Sticks
-//     while (restante > 0)
-//     {
-//         uint32_t dir_fisica;
-//         uint32_t bytes_validos;
+// =========================================================
+// SYSCALLS - TODO
+// =========================================================
 
-//         // OJO: Le pasamos 'restante', no 'tam'
-//         int res = MMU_TRADUCCION_FISICA(actual, restante, &dir_fisica, &bytes_validos);
+void execute_MUTEX_CREATE(t_contexto_ejecucion *contexto, char *recurso, char* param2) {
+    (void) param2;
+    log_info(cpu_logger, "PID: %d - Ejecutando: MUTEX_CREATE - %s", contexto->PID, recurso);
+}
 
-//         if (res < 0) // Si la MMU detecta SEG_FAULT
-//         {
-//             log_debug(cpu_logger, "SEG_FAULT en MOV_IN");
-//             free(buffer);
-//             // Acá además deberías devolver el PID al Scheduler por SegFault
-//             return;
-//         }
+void execute_MUTEX_LOCK(t_contexto_ejecucion *contexto, char *recurso, char* param2) {
+    (void) param2;
+    log_info(cpu_logger, "PID: %d - Ejecutando: MUTEX_LOCK - %s", contexto->PID, recurso);
+}
 
-//         // 5. Leer directo de la red hacia el offset de nuestro buffer
-//         leer_memoria(dir_fisica, buffer + offset, bytes_validos);
+void execute_MUTEX_UNLOCK(t_contexto_ejecucion *contexto, char *recurso, char* param2) {
+    (void) param2;
+    log_info(cpu_logger, "PID: %d - Ejecutando: MUTEX_UNLOCK - %s", contexto->PID, recurso);
+}
 
-//         // 6. Actualizar contadores
-//         offset += bytes_validos;
-//         restante -= bytes_validos;
-//         actual += bytes_validos;
-//     }
+void execute_MEM_ALLOC(t_contexto_ejecucion *contexto, char *tamano_str, char *registro_direccion) {
+    log_info(cpu_logger, "PID: %d - Ejecutando: MEM_ALLOC - %s bytes", contexto->PID, tamano_str);
+}
 
-//     // 7. Pegar todo el buffer armado directo en el registro original
-//     memcpy(ptr, buffer, tam);
+void execute_MEM_FREE(t_contexto_ejecucion *contexto, char *registro_direccion, char* param2) {
+    (void) param2;
+    log_info(cpu_logger, "PID: %d - Ejecutando: MEM_FREE", contexto->PID);
+}
 
-//     // 8. Limpiar
-//     free(buffer);
-// }
+void execute_SLEEP(t_contexto_ejecucion *contexto, char *tiempo_str, char* param2) {
+    (void) param2;
+    log_info(cpu_logger, "PID: %d - Ejecutando: SLEEP - %s", contexto->PID, tiempo_str);
+}
 
-// // TODO leer_memoria(dir_fisica, buffer + offset, bytes_validos);
+void execute_STDOUT(t_contexto_ejecucion *contexto, char *registro_direccion, char *registro_tamano) {
+    log_info(cpu_logger, "PID: %d - Ejecutando: STDOUT", contexto->PID);
+}
 
-// void MOV_OUT()
-// {
-// }
+void execute_STDIN(t_contexto_ejecucion *contexto, char *registro_direccion, char *registro_tamano) {
+    log_info(cpu_logger, "PID: %d - Ejecutando: STDIN", contexto->PID);
+}
 
-// void SUM(reg_id dest, reg_id orig)
-// {
-//     size_t tam_dest, tam_orig;
+void execute_INIT_PROC(t_contexto_ejecucion *contexto, char *path, char *prioridad_str) {
+    log_info(cpu_logger, "PID: %d - Ejecutando: INIT_PROC - %s", contexto->PID, path);
+}
 
-//     void *ptr_dest = obtener_reg_puntero(dest, &tam_dest);
-//     void *ptr_orig = obtener_reg_puntero(orig, &tam_orig);
+void execute_EXIT(t_contexto_ejecucion *contexto, char* param1, char* param2) {
+    (void) param1;
+    (void) param2;
+    log_info(cpu_logger, "PID: %d - Ejecutando: EXIT", contexto->PID);
+}
 
-//     if (!ptr_dest || !ptr_orig)
-//         return;
-
-//     // DESTINO 8 bits
-//     if (tam_dest == sizeof(uint8_t))
-//     {
-//         uint8_t *d = (uint8_t *)ptr_dest;
-
-//         if (tam_orig == sizeof(uint8_t))
-//             *d += *(uint8_t *)ptr_orig;
-//         else
-//             *d += (uint8_t)(*(uint32_t *)ptr_orig); // truncamiento
-//     }
-//     // DESTINO 32 bits
-//     else
-//     {
-//         uint32_t *d = (uint32_t *)ptr_dest;
-
-//         if (tam_orig == sizeof(uint8_t))
-//             *d += *(uint8_t *)ptr_orig;
-//         else
-//             *d += *(uint32_t *)ptr_orig;
-//     }
-// }
-
-// void SUB(reg_id orig, reg_id dest)
-// {
-//     size_t tam_dest, tam_orig;
-
-//     void *ptr_dest = obtener_reg_puntero(dest, &tam_dest);
-//     void *ptr_orig = obtener_reg_puntero(orig, &tam_orig);
-
-//     if (!ptr_dest || !ptr_orig)
-//         return;
-
-//     // DESTINO 8 bits
-//     if (tam_dest == sizeof(uint8_t))
-//     {
-//         uint8_t *d = (uint8_t *)ptr_dest;
-
-//         if (tam_orig == sizeof(uint8_t))
-//             *d -= *(uint8_t *)ptr_orig;
-//         else
-//             *d -= (uint8_t)(*(uint32_t *)ptr_orig); // truncamiento
-//     }
-//     // DESTINO 32 bits
-//     else
-//     {
-//         uint32_t *d = (uint32_t *)ptr_dest;
-
-//         if (tam_orig == sizeof(uint8_t))
-//             *d -= *(uint8_t *)ptr_orig;
-//         else
-//             *d -= *(uint32_t *)ptr_orig;
-//     }
-// }
-// void JNZ(reg_id registro, uint32_t instruccion)
-// {
-//     size_t tam;
-//     void *ptr = obtener_reg_puntero(registro, &tam);
-
-//     if (!ptr)
-//     {
-//         log_debug(cpu_logger, "instruccion incorrecta en jnz");
-//         return;
-//     }
-
-//     int es_cero = 0;
-
-//     if (tam == sizeof(uint8_t))
-//     {
-//         es_cero = (*(uint8_t *)ptr == 0);
-//     }
-//     else
-//     {
-//         es_cero = (*(uint32_t *)ptr == 0);
-//     }
-
-//     if (!es_cero)
-//     {
-//         contexto_ejecucion.registros.PC = instruccion;
-//     }
-// }
-// // TODO COPY_MEM
-// // void COPY_MEM(reg_id reg)
-// // {
-// //     uint32_t dir = contexto_ejecucion.registros.SI;
-
-// //     COPY_MEM(Registro Tamaño) : Toma la dirección apuntada por el registro SI y copia la cantidad de bytes
-// //                                     indicadas en el registro tamaño a la posición de memoria apuntada por el registro DI.
-// // }

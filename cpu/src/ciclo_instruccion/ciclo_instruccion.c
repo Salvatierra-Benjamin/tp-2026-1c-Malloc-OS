@@ -9,7 +9,7 @@ void Ejecutar_Ciclo_de_Instruccion(t_contexto_ejecucion *contexto_actual)
     Iniciar_Fetch(contexto_actual, &nueva_instruccion);
     Iniciar_Decode(contexto_actual, nueva_instruccion);
     // Iniciar_Execute(contexto_actual); El execute se hará dentro de cada case del Decode
-    // Destruir_Instruccion(nueva_instruccion);
+    Destruir_Instruccion(&nueva_instruccion);
     // TODO check_interrupt;
     //  check_interrupt()
 }
