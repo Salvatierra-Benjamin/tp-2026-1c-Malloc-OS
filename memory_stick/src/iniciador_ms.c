@@ -45,7 +45,7 @@ void inicializar_logger()
 void imprimir_valores_config_ms()
 {
     log_debug(ms_logger, "Valores cargados en MEMORY STICK:");
-    log_debug(ms_logger, "Puerto Escucha CPU: %d", ms_config.puerto_escucha_cpu);
+    log_debug(ms_logger, "Puerto Escucha CPU: %s", ms_config.puerto_escucha_cpu);
     log_debug(ms_logger, "Memory Delay: %d", ms_config.memory_delay);
     log_debug(ms_logger, "IP KM: %s", ms_config.ip_km);
     log_debug(ms_logger, "Puerto KM: %s", ms_config.puerto_km);
