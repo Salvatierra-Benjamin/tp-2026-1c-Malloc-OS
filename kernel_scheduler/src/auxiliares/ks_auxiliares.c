@@ -108,6 +108,17 @@ t_pcb* crear_proceso(int pid, char* path, int prioridad) {
     return nuevo_pcb;
 }
 
+t_cpu* crear_cpu(int id, int fd) {
+    t_cpu* nueva_cpu = malloc(sizeof(t_cpu));
+    if (nueva_cpu == NULL) {
+        return NULL; // Manejar error de asignación de memoria
+    }
+    nueva_cpu->id = id;
+    nueva_cpu->running_qid = -1; // Inicialmente no ejecutando ningún proceso
+    nueva_cpu->fd = fd;
+    return nueva_cpu;
+}
+
 void ks_liberar_array_queues(void) {
 	if (array_queues) {
 		for (int i = 0; i < cantidad_algoritmos; i++) {
@@ -165,7 +176,6 @@ char* estado_a_string(estados estado) {
     }
 }
 
-
 void tomar_mutex_y_log(t_pcb* pcb, pthread_mutex_t* mutex, char* nombre_mutex) {
     log_mutex_tomado(pcb, nombre_mutex);
     pthread_mutex_lock(mutex);
@@ -174,4 +184,27 @@ void tomar_mutex_y_log(t_pcb* pcb, pthread_mutex_t* mutex, char* nombre_mutex) {
 void liberar_mutex_y_log(t_pcb* pcb, pthread_mutex_t* mutex, char* nombre_mutex) {
     pthread_mutex_unlock(mutex);
     log_mutex_liberado(pcb, nombre_mutex);
+}
+
+void ks_pasar_a_block(t_pcb *pcb) {
+	pthread_mutex_lock(&mutex_exec);
+
+	bool _es_pcb(void *ptr) {
+		t_pcb *aux = ptr;
+		return aux->pid == pcb->pid;
+	}
+
+	list_remove_by_condition(procs_exec, _es_pcb);
+
+    
+	pthread_mutex_unlock(&mutex_exec);
+    
+	pcb->estado = BLOCK;
+	pcb->tiempo_inicio_block = time(NULL);
+    
+	list_add(array_queues[pcb->prioridad].list_block, pcb);
+
+    log_cambio_estado(pcb, (estados EXEC), (estados BLOCK));
+
+	sem_post(&sem_cpu_libre);
 }

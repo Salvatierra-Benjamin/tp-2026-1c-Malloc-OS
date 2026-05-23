@@ -17,75 +17,74 @@ void *ks_maneja_io(void *arg) {
 	while (ejecutando) {
 		int op_code = recibir_operacion(fd);
 		switch (op_code) {
-		case OK_SLEEP: // OK_SLEEP (TIEMPO EN MS) (PID)
-		{
-			t_paquete *contenido = recibir_paquete(fd);
+            case OK_SLEEP: // OK_SLEEP (TIEMPO EN MS) (PID)
+            {
+                t_paquete *contenido = recibir_paquete(fd);
 
-			int tiempo_en_ms;
-			buffer_read(&tiempo_en_ms, contenido->buffer, sizeof(int));
+                int tiempo_en_ms;
+                buffer_read(&tiempo_en_ms, contenido->buffer, sizeof(int));
 
-			int pid;
-			buffer_read(&pid, contenido->buffer, sizeof(int));
+                int pid;
+                buffer_read(&pid, contenido->buffer, sizeof(int));
 
-			eliminar_paquete(contenido);
-			break;
-		}
+                t_pcb* pcb = buscar_pcb_por_pid(pid);
+                
+                if (pcb != NULL) {
+                    ks_desbloquear_proceso(pcb);
+                    log_desbloqueo_sleep(pcb, tiempo_en_ms);
+                }
 
-		case OK_STDIN: // OK_STDIN(bytes)
-		{
-			t_paquete *contenido = recibir_paquete(fd);
+                eliminar_paquete(contenido);
+                break;
+            }
 
-			int bytes;
-			buffer_read(&bytes, contenido->buffer, sizeof(int));
+            case OK_STDIN: // OK_STDIN(bytes)
+            {
+                t_paquete *contenido = recibir_paquete(fd);
 
-			eliminar_paquete(contenido);
-			break;
-		}
+                int bytes;
+                buffer_read(&bytes, contenido->buffer, sizeof(int));
 
-		case OK_STDOUT_RESPUESTA_BYTES: // OK_STDOUT_RESPUESTA_BYTES (PID)
-		{
-			t_paquete *contenido = recibir_paquete(fd);
+                t_pcb* pcb = buscar_pcb_por_pid(pid);
 
-			int pid;
-			buffer_read(&pid, contenido->buffer, sizeof(int));
+                if (pcb != NULL) {
+                    ks_desbloquear_proceso(pcb);
+                }
 
-			eliminar_paquete(contenido);
-			break;
-		}
+                eliminar_paquete(contenido);
+                break;
+            }
 
-		case -1: {
-			log_warning(ks_logger, "[IO] se desconecto io");
-			ejecutando = 0;
-			break;
-		}
-		default: {
-			log_warning(ks_logger, "[IO] operacion desconocida: %d", op_code);
-			break;
-		}
+            case OK_STDOUT_RESPUESTA_BYTES: // OK_STDOUT_RESPUESTA_BYTES (PID)
+            {
+                t_paquete *contenido = recibir_paquete(fd);
+
+                int pid;
+                buffer_read(&pid, contenido->buffer, sizeof(int));
+
+                t_pcb* pcb = buscar_pcb_por_pid(pid);
+
+                if (pcb != NULL) {
+                    ks_desbloquear_proceso(pcb);
+                }
+
+                eliminar_paquete(contenido);
+                break;
+            }
+
+            case -1: {
+                log_warning(ks_logger, "[IO] se desconecto io");
+                ejecutando = 0;
+                break;
+            }
+            default: {
+                log_warning(ks_logger, "[IO] operacion desconocida: %d", op_code);
+                break;
+            }
 		}
 	}
 	close(fd);
 	return NULL;
-}
-
-void ks_pasar_a_block(t_pcb *pcb) {
-	pthread_mutex_lock(&mutex_exec);
-
-	bool _es_pcb(void *ptr) {
-		t_pcb *aux = ptr;
-		return aux->pid == pcb->pid;
-	}
-
-	list_remove_by_condition(procs_exec, _es_pcb);
-
-	pthread_mutex_unlock(&mutex_exec);
-
-	pcb->estado = BLOCK;
-	pcb->tiempo_inicio_block = time(NULL);
-
-	list_add(array_queues[pcb->prioridad].list_block, pcb);
-
-	sem_post(&sem_cpu_libre);
 }
 
 void ks_desbloquear_proceso(t_pcb* pcb) {
@@ -155,4 +154,14 @@ void ks_io_stdin(t_pcb* pcb, int tamanio, int direccion_logica) {
 
     // TODO: despues cuando vuelva:
     // enviar a KM
+}
+
+void ks_io_stdout(t_pcb* pcb,int tamanio,int direccion_logica) {
+
+    ks_pasar_a_block(pcb);
+
+    // TODO: pedir bytes a KM
+    // luego enviarselos a IO
+
+    enviar_stdout_io(pcb->io_fd,tamanio);
 }

@@ -12,15 +12,15 @@
 
 // CPU
 typedef struct {
-	uint32_t id;
-	uint32_t running_qid;
+	int id;
+	t_pcb* running_pcb; // TODO: agregarlo cuando se pasa a exec, sacarlo cuando se bloquea o termina
 	int fd;
 } t_cpu;
 
 // IO
 typedef struct {
 	char *path;
-	uint32_t prio;
+	int prio;
 	int fd;
 } t_io;
 
@@ -73,7 +73,7 @@ typedef struct {
 	int pid;
 	char *path;
 	int prioridad;
-    int prioridad_original;
+	int prioridad_original;
 	int cpu_fd;
 	int io_fd;
 	estados estado;
@@ -108,7 +108,7 @@ extern t_list *procs_exec;
 // extern t_list* procs_susp_ready;
 extern t_list *procs_exit;
 
-extern t_list* mutexes_kernel;
+extern t_list *mutexes_kernel;
 
 // MUTEX
 extern pthread_mutex_t mutex_cpus;

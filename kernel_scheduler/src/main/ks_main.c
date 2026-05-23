@@ -187,6 +187,7 @@ void *ks_conexion_loop(void *_arg) {
 			log_debug(ks_logger, "Se detachea el hilo_io");
 		} else if (op == HANDSHAKE_CPU) {
 			log_debug(ks_logger, "Se conecto un nuevo CPU");
+
 			// NO recibir_paquete aca
 			pthread_t hilo_cpu;
 
@@ -197,8 +198,18 @@ void *ks_conexion_loop(void *_arg) {
 			}
 			*socket_ptr = fd;
 
-			if (pthread_create(&hilo_cpu, NULL, ks_maneja_cpu, socket_ptr) !=
-				0) {
+			t_paquete* contenido = recibir_paquete(fd);
+
+			int id_cpu = NULL;
+			buffer_read(&id_cpu, contenido->buffer, sizeof(char*));
+
+			crear_cpu(id_cpu);
+
+			log_conexion_cpu(id_cpu);
+			
+			eliminar_paquete(contenido);
+
+			if (pthread_create(&hilo_cpu, NULL, ks_maneja_cpu, socket_ptr) != 0) {
 				log_error(ks_logger, "no se inicia el hilo cpu");
 				free(socket_ptr);
 				close(fd);

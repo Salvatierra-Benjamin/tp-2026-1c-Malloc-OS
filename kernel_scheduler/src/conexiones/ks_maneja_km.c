@@ -47,9 +47,6 @@ void *ks_conexion_km(void *_arg) {
 		}
 
 		switch (cod_op) {
-			// case RESPUESTA_MEMORIA:
-			//     ...
-			//     break;
             case DETECCION_CORRUPCION_MEMORIA:
                 matar_procesos_ready();
                 liberar_listas();
@@ -59,12 +56,95 @@ void *ks_conexion_km(void *_arg) {
                 // break;
             
 
-		default:
-			log_warning(ks_logger, "Operacion desconocida de KM (%d)", cod_op);
-			t_paquete *basura = recibir_paquete(socket_km);
-			if (basura)
-				eliminar_paquete(basura);
-			break;
+			case AUMENTO_DE_MEMORIA: // AUMENTO_DE_MEMORIA (TAMAÑO)
+            {
+                t_paquete *contenido = recibir_paquete(fd);
+
+                int tamanio;
+                buffer_read(&tamanio, contenido->buffer, sizeof(int));
+
+                eliminar_paquete(contenido);
+                break;
+            }
+
+			case COMPACTACION: 
+            {
+
+                break;
+            }
+
+			case : // ! DETECCION_CORRUPCION_MEMORIA ---→ COMPACTACION
+            {
+
+                break;
+            }
+
+			case DESALOJO_POR_COMPACTACION: 
+            {
+
+                break;
+            }
+
+			case FIN_COMPACTACION: 
+            {
+
+                break;
+            }
+
+			case OK_STDIN_DATOS_ESCRITOS: 
+            {
+
+                break;
+            }
+
+			case STDOUT_RESTUESTA_LECTURA: // STDOUT_RESTUESTA_LECTURA (BYTES)
+            {
+                t_paquete *contenido = recibir_paquete(fd);
+
+                int pid;
+                buffer_read(&pid, contenido->buffer, sizeof(int));
+
+                eliminar_paquete(contenido);
+                break;
+            }
+
+			case OK_SEGMENTO_ELIMINADO:
+            {
+
+                break;
+            }
+
+			case OK_PROCESO_SUSPENDIDO: // OK_PROCESO_SUSPENDIDO (PID)
+            {
+                t_paquete *contenido = recibir_paquete(fd);
+
+                int pid;
+                buffer_read(&pid, contenido->buffer, sizeof(int));
+
+                eliminar_paquete(contenido);
+                break;
+            }
+
+			case OK_PROCESO_DES_SUSPENDIDO: // OK_PROCESO_DES_SUSPENDIDO (PID)
+            {
+                t_paquete *contenido = recibir_paquete(fd);
+
+                int tamanio;
+                buffer_read(&tamanio, contenido->buffer, sizeof(int));
+
+                eliminar_paquete(contenido);
+                break;
+            }
+
+            case -1: {
+                log_warning(ks_logger, "[KM] se desconecto km");
+                ejecutando = 0;
+                break;
+            }
+            default: {
+                log_warning(ks_logger, "[KM] operacion desconocida: %d", op_code);
+                break;
+            }
 		}
 	}
 

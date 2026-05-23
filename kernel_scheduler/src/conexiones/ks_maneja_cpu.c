@@ -218,6 +218,8 @@ void* ks_maneja_cpu(void* arg) {
                 int tamanio;
                 buffer_read(&tamanio, contenido->buffer, sizeof(int));
 
+                ks_pasar_a_block(pcb);
+
                 free(dir_logica);
                 eliminar_paquete(contenido);
                 break;
@@ -278,7 +280,7 @@ void* ks_maneja_cpu(void* arg) {
 
                 int pid;
                 buffer_read(&pid, contenido->buffer, sizeof(int));
-                
+
                 eliminar_paquete(contenido);
                 break;
             }
