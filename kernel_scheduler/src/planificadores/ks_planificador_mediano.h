@@ -14,12 +14,15 @@
 // PLANIFICADOR
 void* ks_planificador_mediano_plazo(void* arg);
 
-// SUSPENSIONES
-void ks_suspendar_proceso(t_pcb* pcb);
+// TIMER DE SUSPENSION
+void* ks_timer_suspension(void* arg);
 
-void ks_reanudar_proceso(t_pcb* pcb);
+// TRANSICIONES
+void ks_pasar_a_susp_block(t_pcb* pcb);
+void ks_pasar_a_susp_ready(t_pcb* pcb);
+void ks_pasar_a_ready_desde_susp_ready(t_pcb* pcb);
 
-// AUXILIARES
-bool ks_supera_tiempo_suspension(t_pcb* pcb);
+// DESUSPENSION
+void ks_intentar_desuspender(void);
 
 #endif

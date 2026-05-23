@@ -14,10 +14,12 @@ t_list *cpus = NULL;
 t_list *ios = NULL;
 
 t_list *procs_exec = NULL;
-t_list *procs_block = NULL;
-t_list *procs_susp_block = NULL;
-t_list *procs_susp_ready = NULL;
+// t_list *procs_block = NULL;
+// t_list *procs_susp_block = NULL;
+// t_list *procs_susp_ready = NULL;
 t_list *procs_exit = NULL;
+
+t_list *mutexes_kernel = NULL;
 
 // MUTEX
 pthread_mutex_t mutex_cpus = PTHREAD_MUTEX_INITIALIZER;
@@ -27,3 +29,10 @@ pthread_mutex_t mutex_exec = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mutex_exit = PTHREAD_MUTEX_INITIALIZER;
 
 pthread_mutex_t mutex_array_queues = PTHREAD_MUTEX_INITIALIZER;
+
+pthread_mutex_t mutex_mutexes_kernel = PTHREAD_MUTEX_INITIALIZER;
+
+// SEMAFOROS
+sem_t sem_ready;
+sem_t sem_cpu_libre;
+sem_t sem_memoria_disponible;

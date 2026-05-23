@@ -58,10 +58,10 @@ void *ks_parsear_algoritmos(char *raw) {
 		array_queues[i].queue = queue_create();
         pthread_mutex_init(&array_queues[i].mutex_ready, NULL);
 
-        array_queues[i].queue_block = queue_create();
+        array_queues[i].list_block = list_create();
         pthread_mutex_init(&array_queues[i].mutex_block, NULL);
 
-        array_queues[i].queue_susp_block = queue_create();
+        array_queues[i].list_susp_block = list_create();
         pthread_mutex_init(&array_queues[i].mutex_susp_block, NULL);
 
         array_queues[i].queue_susp_ready = queue_create();
@@ -156,7 +156,7 @@ void *ks_conexion_loop(void *_arg) {
 			continue;
 		}
 
-		log_info(ks_logger, "Se conectó un cliente en el socket: %d", fd);
+		log_debug(ks_logger, "Se conectó un cliente en el socket: %d", fd);
 
 		int op = recibir_operacion(fd);
 		if (op <= 0) {
@@ -165,7 +165,7 @@ void *ks_conexion_loop(void *_arg) {
 		}
 
 		if (op == HANDSHAKE_IO) {
-			log_info(ks_logger, "Se conecto un nuevo IO");
+			log_debug(ks_logger, "Se conecto un nuevo IO");
 			// NO recibir_paquete aca
 			// enviar_ks_ok_conexion(fd);
 			pthread_t hilo_io;
@@ -178,15 +178,15 @@ void *ks_conexion_loop(void *_arg) {
 			*socket_ptr = fd;
 
 			if (pthread_create(&hilo_io, NULL, ks_maneja_io, socket_ptr) != 0) {
-				log_error(ks_logger, "no se inicia el hilo cpu");
+				log_error(ks_logger, "no se inicia el hilo io");
 				free(socket_ptr);
 				close(fd);
 				return;
 			}
 			pthread_detach(hilo_io);
-			log_info(ks_logger, "Se detachea el hilo_io");
+			log_debug(ks_logger, "Se detachea el hilo_io");
 		} else if (op == HANDSHAKE_CPU) {
-			log_info(ks_logger, "Se conecto un nuevo CPU");
+			log_debug(ks_logger, "Se conecto un nuevo CPU");
 			// NO recibir_paquete aca
 			pthread_t hilo_cpu;
 
@@ -205,7 +205,7 @@ void *ks_conexion_loop(void *_arg) {
 				return;
 			}
 			pthread_detach(hilo_cpu);
-			log_info(ks_logger, "Se detachea el hilo_cpu");
+			log_debug(ks_logger, "Se detachea el hilo_cpu");
 		}
 
 		else {
@@ -226,7 +226,7 @@ static void sigint_handler(int _sig) {
 	(void)_sig;
 
 	if (ks_logger)
-		log_info(ks_logger, "SIGINT: cerrando Kernel Scheduler...");
+		log_debug(ks_logger, "SIGINT: cerrando Kernel Scheduler...");
 
 	if (ks_server_fd != -1)
 		close(ks_server_fd);
@@ -245,6 +245,7 @@ int main(int argc, char *argv[]) { //  ~ ./bin/kernel_scheduler [Archivo Config]
 	}
 
     crear_listas();
+	inicializar_semaforos();
 
 	log_debug(ks_logger, "Empezando la conexion KS");
 
@@ -261,7 +262,7 @@ int main(int argc, char *argv[]) { //  ~ ./bin/kernel_scheduler [Archivo Config]
 		return EXIT_FAILURE;
 	}
 
-	log_info(ks_logger, "Kernel Scheduler escuchando en puerto %s", ks_config.puerto_escucha);
+	log_debug(ks_logger, "Kernel Scheduler escuchando en puerto %s", ks_config.puerto_escucha);
 
 	pthread_t hilo_conexiones;
 	pthread_create(&hilo_conexiones, NULL, ks_conexion_loop, NULL);

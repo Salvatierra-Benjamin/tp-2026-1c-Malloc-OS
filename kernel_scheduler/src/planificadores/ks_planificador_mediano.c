@@ -2,28 +2,148 @@
 
 #include "../main/ks_main.h"
 
-#include "../logs/ks_logs.h"
 #include "../auxiliares/ks_auxiliares.h"
+#include "../logs/ks_logs.h"
 
-void* ks_planificador_mediano_plazo(void* arg) {
-    (void)arg;
+// BLOCK -> SUSP_BLOCK
+// READY -> SUSP_READY
 
-    while (1) {
+// TRANSICIONES
+bool pasar_a_block(t_pcb *pcb) {
+	pthread_mutex_lock(&mutex_exec);
+	t_pcb *pcb_removido = list_remove_element(procs_exec, pcb);
+	pthread_mutex_unlock(&mutex_exec);
 
+	if ((pcb == NULL) || (pcb_removido == NULL)) {
+		liberar_proceso(pcb);
+		return false;
+	}
+
+	log_cambio_estado(pcb, (estados EXEC), (estados BLOCK));
+
+	pcb->estado = BLOCK;
+	pcb->tiempo_inicio_block = time(NULL);
+
+
+	pthread_mutex_lock(&mutex_block);
+	list_add(array_queues[pcb->prioridad].list_block, pcb);
+	pthread_mutex_unlock(&array_queues[pcb->prioridad].mutex_block);
+
+	pthread_t hilo_suspend;
+	t_pcb *pcb_copia = pcb;
+	pthread_create(&hilo_suspend, NULL, ks_timer_suspension, pcb_copia);
+	pthread_detach(hilo_suspend);
+
+	return true;
+}
+
+void ks_pasar_a_susp_block(t_pcb *pcb) {
+	int prio = pcb->prioridad;
+
+	// sacar de BLOCK
+	pthread_mutex_lock(&array_queues[prio].mutex_block);
+	list_remove_element(array_queues[prio].list_block, pcb);
+	pthread_mutex_unlock(&array_queues[prio].mutex_block);
+
+	// cambiar estado
+	pcb->estado = SUSP_BLOCK;
+	pcb->tiempo_inicio_suspendido = time(NULL);
+	
+    // meter en SUSP_BLOCK
+	pthread_mutex_lock(&array_queues[prio].mutex_susp_block);
+	list_add(array_queues[prio].list_susp_block,pcb);
+	pthread_mutex_unlock(&array_queues[prio].mutex_susp_block);
+
+	log_cambio_estado(pcb, (estados BLOCK), (estados SUSP_BLOCK));
+
+	// TODO: AVISAR A MEMORIA
+	// TODO: liberar estructuras
+}
+void ks_pasar_a_susp_ready(t_pcb *pcb) {
+	int prio = pcb->prioridad;
+
+	pthread_mutex_lock(&array_queues[prio].mutex_susp_block);
+    list_remove_element(array_queues[prio].list_susp_block, pcb);
+	pthread_mutex_unlock(&array_queues[prio].mutex_susp_block);
+
+    pcb->estado = SUSP_READY;
+    
+	pthread_mutex_lock(&array_queues[prio].mutex_susp_ready);
+	queue_push(array_queues[prio].queue_susp_ready, pcb);
+	pthread_mutex_unlock(&array_queues[prio].mutex_susp_ready);
+
+	log_cambio_estado(pcb, (estados SUSP_BLOCK), (estados SUSP_READY));
+}
+void ks_pasar_a_ready_desde_susp_ready(t_pcb *pcb) {
+	int prio = pcb->prioridad;
+
+	pthread_mutex_lock(&array_queues[prio].mutex_susp_ready);
+	queue_pop(array_queues[prio].queue_susp_ready); // TODO: esto no es correcto, debería buscar el PCB y sacarlo, no asumir que está al principio de la cola
+	pthread_mutex_unlock(&array_queues[prio].mutex_susp_ready);
+
+    pcb->estado = READY;
+
+	pthread_mutex_lock(&array_queues[prio].mutex_ready);
+    queue_push(array_queues[prio].queue_ready, pcb);
+	pthread_mutex_unlock(&array_queues[prio].mutex_ready);
+
+	log_cambio_estado(pcb, (estados SUSP_READY), (estados READY));
+}
+
+// TIMER DE SUSPENSION
+void *ks_timer_suspension(void *arg) {
+	t_pcb *pcb = (t_pcb *)arg;
+
+	sleep(ks_config.suspension_timeout);
+
+	// verificar si sigue bloqueado
+	if (pcb->estado != BLOCK) {
+		return NULL;
+	}
+
+	ks_pasar_a_susp_block(pcb);
+
+	return NULL;
+}
+
+// DESUSPENSION
+void ks_intentar_desuspender(void) {
+    for (int i = 0; i < cantidad_algoritmos; i++) {
+
+        while (1) {
+			pthread_mutex_lock(&array_queues[i].mutex_susp_ready);
+
+            if (queue_is_empty(array_queues[i].queue_susp_ready)) {
+				pthread_mutex_unlock(&array_queues[i].mutex_susp_ready);
+                break;
+            }
+
+            t_pcb* pcb = queue_peek(array_queues[i].queue_susp_ready);
+
+            bool hay_memoria = true; // TODO: consultar a KM si hay memoria para desuspender este proceso
+
+            if (!hay_memoria) {
+				pthread_mutex_unlock(&array_queues[i].mutex_susp_ready);
+                break;
+            }
+
+            queue_pop(array_queues[i].queue_susp_ready);
+			pthread_mutex_unlock(&array_queues[i].mutex_susp_ready);
+
+            ks_pasar_a_ready_desde_susp_ready(pcb);
+        }
     }
-
-    return NULL;
 }
 
-void ks_suspendar_proceso(t_pcb* pcb) {
-    (void)pcb;
-}
+// PLANIFICADOR
+void *ks_planificador_mediano_plazo(void *arg) {
+	(void)arg;
 
-void ks_reanudar_proceso(t_pcb* pcb) {
-    (void)pcb;
-}
+	while (1) {
+		sem_wait(&sem_memoria_disponible);
 
-bool ks_supera_tiempo_suspension(t_pcb* pcb) {
-    (void)pcb;
-    return false;
+        ks_intentar_desuspender();
+	}
+
+	return NULL;
 }

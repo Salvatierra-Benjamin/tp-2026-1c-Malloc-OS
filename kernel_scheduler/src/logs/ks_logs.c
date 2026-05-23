@@ -10,6 +10,8 @@
 
 #include <../../utils/src/utils/protocolos.h>
 
+// En caso de que fallen los logs, se puede usar: pthread_mutex_t mutex_log = PTHREAD_MUTEX_INITIALIZER; y ponerlo en cada función de logueo para evitar que se mezclen los mensajes. Pero lo ideal es que no fallen los logs, así que no lo hice.
+
 // Conexión a Kernel Memory: “## Conectado a Kernel Memory”
 void log_conexion_km() {
     log_info(ks_logger, "## Conectado a Kernel Memory");
@@ -18,6 +20,11 @@ void log_conexion_km() {
 // Conexión de CPU: “## CPU <ID CPU> Conectada”
 void log_conexion_cpu(int id_cpu) {
     log_info(ks_logger, "## CPU %d Conectada", id_cpu);
+}
+
+// Conexión de IO
+void log_conexion_io(t_io* io) {
+    log_info(ks_logger, "IO Conectada, path de IO: %s - prioridad: %d", io->path, io->prioridad);
 }
 
 // Creación de Proceso: “## (<PID>) Se crea el proceso - Estado: NEW”
@@ -31,8 +38,21 @@ void log_syscall_recibida(t_pcb* pcb, char* nombre_syscall) {
 }
 
 // Cambio de Estado: “## (<PID>) Pasa del estado <ESTADO_ANTERIOR> al estado <ESTADO_ACTUAL>”
-void log_cambio_estado(t_pcb* pcb, char* estado_anterior, char* estado_actual) {
-    log_info(ks_logger, "## (%d) Pasa del estado %s al estado %s", pcb->pid, estado_anterior, estado_actual);
+void log_cambio_estado(t_pcb* pcb, estados estado_anterior, estados estado_actual) {
+    log_info(ks_logger, "## (%d) Pasa del estado %s al estado %s", pcb->pid, estado_a_string(estado_anterior), estado_a_string(estado_actual));
+
+    switch (estado_actual){
+        case READY:
+            sem_post(&sem_ready);
+            break;
+
+        case EXIT:
+            sem_post(&sem_memoria_disponible);
+            break;
+        
+        default:
+            break;
+    }    
 }
 
 // Fin de IO: “## (<PID>) finalizó IO y pasa a READY / SUSP. READY”

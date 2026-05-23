@@ -1,45 +1,158 @@
 #include "ks_maneja_io.h"
 
-#include "../main/ks_main.h"
+#include "../auxiliares/ks_auxiliares.h"
 #include "../logs/ks_logs.h"
+#include "../main/ks_main.h"
+#include "../planificadores/ks_planificador_corto_plazo.h"
 
 void *ks_maneja_io(void *arg) {
-    int fd = *(int*)arg;
-    free(arg);
+	int fd = *(int *)arg;
+	free(arg);
 
-    log_debug(ks_logger, "Entra en ks_maneja_io");
-    // espera IO_ENVIA_IO
-    // int op = recibir_operacion(fd);
-    // if (op != IO_ENVIA_IO)
-    // {
-    //     close(fd);
-    //     return;
-    // }
+	log_debug(ks_logger, "Entra en ks_maneja_io (fd = %d)", fd);
+	log_conexion_io((t_io *)arg);
 
-    // // t_paquete *paquete = recibir_paquete(fd);
-    // // paquete->buffer->offset = 0;
+	int ejecutando = 1;
 
-    // // char *path = read_net_string_from_pkg(paquete);
-    // // uint32_t prio = 0;
-    // // buffer_read(&prio, paquete->buffer, sizeof(uint32_t));
-    // // eliminar_paquete(paquete);
+	while (ejecutando) {
+		int op_code = recibir_operacion(fd);
+		switch (op_code) {
+		case OK_SLEEP: // OK_SLEEP (TIEMPO EN MS) (PID)
+		{
+			t_paquete *contenido = recibir_paquete(fd);
 
-    // // crear IO
+			int tiempo_en_ms;
+			buffer_read(&tiempo_en_ms, contenido->buffer, sizeof(int));
 
-    // // log_io_conectado(path); // faltan datos, pero despues se completa
+			int pid;
+			buffer_read(&pid, contenido->buffer, sizeof(int));
 
-    // // mantener conexion abierta: leer hasta desconexion
-    // for (;;)
-    // {
-    //     int siguiente = recibir_operacion(fd);
-    //     if (siguiente <= 0)
-    //     {
-    //         // Desconexion de IO -> cancelar su io
-    //         // log_io_desconectado(path); // y finalizar segun estado.
+			eliminar_paquete(contenido);
+			break;
+		}
 
-    //         close(fd);
-    //         return;
-    //     }
-    //     (void)recibir_paquete(fd); // descartar payload
-    // }
+		case OK_STDIN: // OK_STDIN(bytes)
+		{
+			t_paquete *contenido = recibir_paquete(fd);
+
+			int bytes;
+			buffer_read(&bytes, contenido->buffer, sizeof(int));
+
+			eliminar_paquete(contenido);
+			break;
+		}
+
+		case OK_STDOUT_RESPUESTA_BYTES: // OK_STDOUT_RESPUESTA_BYTES (PID)
+		{
+			t_paquete *contenido = recibir_paquete(fd);
+
+			int pid;
+			buffer_read(&pid, contenido->buffer, sizeof(int));
+
+			eliminar_paquete(contenido);
+			break;
+		}
+
+		case -1: {
+			log_warning(ks_logger, "[IO] se desconecto io");
+			ejecutando = 0;
+			break;
+		}
+		default: {
+			log_warning(ks_logger, "[IO] operacion desconocida: %d", op_code);
+			break;
+		}
+		}
+	}
+	close(fd);
+	return NULL;
+}
+
+void ks_pasar_a_block(t_pcb *pcb) {
+	pthread_mutex_lock(&mutex_exec);
+
+	bool _es_pcb(void *ptr) {
+		t_pcb *aux = ptr;
+		return aux->pid == pcb->pid;
+	}
+
+	list_remove_by_condition(procs_exec, _es_pcb);
+
+	pthread_mutex_unlock(&mutex_exec);
+
+	pcb->estado = BLOCK;
+	pcb->tiempo_inicio_block = time(NULL);
+
+	list_add(array_queues[pcb->prioridad].list_block, pcb);
+
+	sem_post(&sem_cpu_libre);
+}
+
+void ks_desbloquear_proceso(t_pcb* pcb) {
+
+    if (pcb->estado == BLOCK) {
+        pthread_mutex_lock(&array_queues[pcb->prioridad].mutex_block);
+
+        bool _es_pcb(void* ptr) {
+            t_pcb* aux = ptr;
+            return aux->pid == pcb->pid;
+        }
+
+        list_remove_by_condition(array_queues[pcb->prioridad].list_block, _es_pcb);
+
+        pthread_mutex_unlock(&array_queues[pcb->prioridad].mutex_block);
+
+        pcb->estado = READY;
+
+        pthread_mutex_lock(&array_queues[pcb->prioridad].mutex_ready);
+        queue_push(array_queues[pcb->prioridad].queue_ready, pcb);
+        pthread_mutex_unlock(&array_queues[pcb->prioridad].mutex_ready);
+
+        log_cambio_estado(pcb, (estados BLOCK), (estados READY));
+
+        // sem_post(&sem_ready);
+        return;
+    }
+
+    if (pcb->estado == SUSP_BLOCK) {
+
+        pthread_mutex_lock(&array_queues[pcb->prioridad].mutex_susp_block);
+
+        bool _es_pcb(void* ptr) {
+            t_pcb* aux = ptr;
+            return aux->pid == pcb->pid;
+        }
+
+        list_remove_by_condition(array_queues[pcb->prioridad].list_susp_block, _es_pcb);
+
+        pthread_mutex_unlock(&array_queues[pcb->prioridad].mutex_susp_block);
+
+        pcb->estado = SUSP_READY;
+        pcb->tiempo_inicio_suspendido = time(NULL);
+
+        pthread_mutex_lock(&array_queues[pcb->prioridad].mutex_susp_ready);
+        queue_push(array_queues[pcb->prioridad].queue_susp_ready,pcb);
+        pthread_mutex_unlock(&array_queues[pcb->prioridad].mutex_susp_ready);
+
+        log_cambio_estado(pcb, (estados SUSP_BLOCK), (estados SUSP_READY));
+
+        sem_post(&sem_memoria_disponible);
+    }
+}
+
+void ks_io_sleep(t_pcb* pcb, int tiempo_ms) {
+
+    ks_pasar_a_block(pcb);
+
+    enviar_sleep_io(pcb->io_fd, tiempo_ms, pcb->pid);
+}
+
+void ks_io_stdin(t_pcb* pcb, int tamanio, int direccion_logica) {
+
+    ks_pasar_a_block(pcb);
+
+    enviar_stdin_io(pcb->io_fd,tamanio);
+
+    // TODO: despues cuando vuelva:
+    // enviar a KM
 }

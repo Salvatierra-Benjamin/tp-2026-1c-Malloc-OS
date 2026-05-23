@@ -54,6 +54,7 @@ void *ks_conexion_km(void *_arg) {
                 matar_procesos_ready();
                 liberar_listas();
                 liberar_mutex();
+				destruir_semaforos();
                 return NULL;
                 // break;
             
