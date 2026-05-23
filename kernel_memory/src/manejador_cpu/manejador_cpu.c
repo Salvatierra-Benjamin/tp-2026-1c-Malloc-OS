@@ -26,8 +26,26 @@ void *manejador_cpu(void *arg)
             t_paquete *paquete_pid = recibir_paquete(socket_cpu);
             int pid;
             buffer_read(&pid, paquete_pid->buffer, sizeof(int));
-            solicitar_contexto(pid);
+            t_contexto_ejecucion *contexto = solicitar_contexto(pid);
+
+            if (contexto == NULL)
+            {
+                enviar_operacion(socket_cpu, ERROR_ENVIO_CONTEXTO);
+                log_error(logger, "[CPU] contexto solicitado para PID %d es NULL", pid);
+                eliminar_paquete(paquete_pid);
+                break;
+            }
+
+            t_paquete *paquete_contexto = crear_paquete(CONTEXTO_EJECUCION);
+            agregar_a_paquete(paquete_contexto, &contexto->PID, sizeof(int));
+            agregar_a_paquete(paquete_contexto, &contexto->registros, sizeof(t_registros));
+            agregar_a_paquete(paquete_contexto, &contexto->tabla_segmentos.cantidad_segmentos, sizeof(uint32_t));
+            agregar_a_paquete(paquete_contexto, contexto->tabla_segmentos.segmento, sizeof(segmento_t)*(contexto->tabla_segmentos.cantidad_segmentos));
+
+            enviar_paquete(paquete_contexto, socket_cpu);
+
             eliminar_paquete(paquete_pid);
+            eliminar_paquete(paquete_contexto);
             break;
         }
         case SOLICITUD_INSTRUCCION:
@@ -48,8 +66,9 @@ void *manejador_cpu(void *arg)
             }
 
             t_paquete *p_ins = crear_paquete(ENVIO_INSTRUCCION);
-            agregar_a_paquete(p_ins, (int)instruccion->comando, sizeof(int));
-            agregar_a_paquete(p_ins, instruccion->PID, sizeof(int));
+            int comando_int = (int)instruccion->comando;
+            agregar_a_paquete(p_ins, &comando_int, sizeof(int));
+            agregar_a_paquete(p_ins, &instruccion->PID, sizeof(int));
 
             int parametro_1_size = strlen(instruccion->parametro_1)+1;
             int parametro_2_size = strlen(instruccion->parametro_2)+1;
@@ -62,6 +81,7 @@ void *manejador_cpu(void *arg)
             enviar_paquete(p_ins, socket_cpu);
 
             eliminar_paquete(paquete_pid_pc);
+            eliminar_paquete(p_ins);
             break;
         }
         case -1:
@@ -86,9 +106,23 @@ void conexion_cpu(int cpu_id)
     log_info(logger, "## CPU %d Conectada", cpu_id);
 }
 
-void solicitar_contexto(int pid)
+t_contexto_ejecucion *solicitar_contexto(int pid)
 {
     log_debug(logger, "[CPU] se solicita contexto : %d", pid);
+    char *key = string_itoa(pid);
+    pthread_mutex_lock(&mutex_procesos_memoria);
+    t_procesos_memoria *proceso = (t_procesos_memoria*)dictionary_get(procesos_memoria, key);
+    if (proceso == NULL)
+    {
+        pthread_mutex_unlock(&mutex_procesos_memoria);
+        free(key);
+        log_error(logger, "[CPU] PID %d no existe en memoria", pid);
+        return NULL;
+    }
+    pthread_mutex_unlock(&mutex_procesos_memoria);
+    free(key);
+
+    return proceso->contexto;
 }
 
 t_instruccion *solicitar_instruccion(int pid, uint32_t pc)
@@ -97,7 +131,8 @@ t_instruccion *solicitar_instruccion(int pid, uint32_t pc)
     pthread_mutex_lock(&mutex_procesos_memoria);
 
     t_procesos_memoria *proceso = (t_procesos_memoria*)dictionary_get(procesos_memoria, key);
-    if (proceso == NULL) {
+    if (proceso == NULL)
+    {
         pthread_mutex_unlock(&mutex_procesos_memoria);
         free(key);
         log_error(logger, "[CPU] PID %d no existe en memoria", pid);
