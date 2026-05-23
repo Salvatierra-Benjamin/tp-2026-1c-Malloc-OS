@@ -60,6 +60,8 @@ void escribir_registro(t_contexto_ejecucion *contexto, char *registro, uint32_t 
         *(uint32_t*)info.puntero = valor;            // Escribo 4 bytes
     }
 }
+
+
 /* 
 ===============================================
     FIN FUNCIONES AUXILIARES

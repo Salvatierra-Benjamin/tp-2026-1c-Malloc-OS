@@ -1,8 +1,5 @@
 #include "decode.h"
 
-
-
-
 t_executor tabla_comandos[] = {
     [NOOP]         = execute_NOOP,
     [SET]          = execute_SET,
@@ -33,7 +30,6 @@ void Iniciar_Decode(t_contexto_ejecucion *contexto_actual, t_instruccion instruc
 
     if (comando >= 0 && tabla_comandos[comando] != NULL)
     {
-
         // Llamada directa en O(1) pasándole todo de una
         tabla_comandos[comando](contexto_actual, parametro_1, parametro_2);
     }

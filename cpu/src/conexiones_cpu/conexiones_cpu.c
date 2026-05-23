@@ -4,6 +4,8 @@
 bool realizar_handshake(int socket_servidor, int id_cpu, char *nombre_servidor)
 {
     // 1. Enviamos nuestro ID de CPU
+    // TODO USAR ENVIO_CPU_ID en otro lugar (MAIN PREFEREMENTEMENTE) + CONFIRMACION DE HANDSHAKES DE KM KS MS
+    // TODO AÑADIR ERRORES DE INSTRUCCIONES Y CONTEXTO 
     t_paquete *paquete_handshake = crear_paquete(HANDSHAKE_CPU);
     agregar_a_paquete(paquete_handshake, &id_cpu, sizeof(int));
     enviar_paquete(paquete_handshake, socket_servidor);

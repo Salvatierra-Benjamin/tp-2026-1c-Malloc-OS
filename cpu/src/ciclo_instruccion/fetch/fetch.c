@@ -24,7 +24,9 @@ void Recibir_Instruccion(t_instruccion *nueva_instruccion)
 
         // 2. Deserializar parametro_1 (Dinámico)
         int len1;
-        // TODO Si la instruccion no utiliza parametro, no hacer malloc y hacer que apunte a NULL
+        // TODO Si la instruccion no utiliza parametro, no hacer malloc y hacer que apunte a NULL 
+        // ! CORRECION: DEL KM NOS PUEDE LLEGAR LONGITUD 1 O 2 SI EL PARAMETRO ESTA VACIO, POR LO TANTO SE DEBERIA HACER UNA VERIFICACION Y ASIGNARLE
+        // ! QUE APUNTE A NULO EL PARAMETRO. 
         buffer_read(&len1, paquete->buffer, sizeof(int));                   // Leemos cuánto mide
         nueva_instruccion->parametro_1 = malloc(len1);                      // Pedimos el espacio justo
         buffer_read(nueva_instruccion->parametro_1, paquete->buffer, len1); // Copiamos el contenido
