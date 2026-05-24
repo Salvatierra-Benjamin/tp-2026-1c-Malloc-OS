@@ -13,7 +13,7 @@
 
 #include "../mensajes/ks_mensajes.h"
 
-static algoritmos ks_algoritmo_from_string(char *str) {
+static algoritmos ks_algoritmo_from_string(char* str) {
 	if (strcmp(str, "FIFO") == 0)
 		return FIFO;
 	if (strcmp(str, "RR") == 0)
@@ -24,7 +24,7 @@ static algoritmos ks_algoritmo_from_string(char *str) {
 	return INVALIDO;
 }
 
-void *ks_parsear_algoritmos(char *raw) {
+void* ks_parsear_algoritmos(char* raw) {
 	if (!raw) {
 		cantidad_algoritmos = 0;
 		array_queues = NULL;
@@ -32,12 +32,12 @@ void *ks_parsear_algoritmos(char *raw) {
 	}
 
 	// saco corchetes
-	char *limpio = string_duplicate(raw);
+	char* limpio = string_duplicate(raw);
 	string_replace(&limpio, "[", "");
 	string_replace(&limpio, "]", "");
 
 	// separo por coma
-	char **tokens = string_split(limpio, ",");
+	char** tokens = string_split(limpio, ",");
 
 	// contar algoritmos
 	cantidad_algoritmos = 0;
@@ -46,8 +46,7 @@ void *ks_parsear_algoritmos(char *raw) {
 	}
 
 	// reservar memoria para array global
-	array_queues =
-		malloc(sizeof(t_elemento_array_algoritmos) * cantidad_algoritmos);
+	array_queues = malloc(sizeof(t_elemento_array_algoritmos) * cantidad_algoritmos);
 
 	// llenar array
 	for (int i = 0; i < cantidad_algoritmos; i++) {
@@ -55,17 +54,20 @@ void *ks_parsear_algoritmos(char *raw) {
 		array_queues[i].alg = ks_algoritmo_from_string(tokens[i]);
 
 		// crear queue vacía asociada con su mutex correspondiente
-		array_queues[i].queue = queue_create();
-        pthread_mutex_init(&array_queues[i].mutex_ready, NULL);
+		array_queues[i].queue_ready_prioritario = queue_create();
+		pthread_mutex_init(&array_queues[i].mutex_ready_prioritario, NULL);
 
-        array_queues[i].list_block = list_create();
-        pthread_mutex_init(&array_queues[i].mutex_block, NULL);
+		array_queues[i].queue_ready = queue_create();
+		pthread_mutex_init(&array_queues[i].mutex_ready, NULL);
 
-        array_queues[i].list_susp_block = list_create();
-        pthread_mutex_init(&array_queues[i].mutex_susp_block, NULL);
+		array_queues[i].list_block = list_create();
+		pthread_mutex_init(&array_queues[i].mutex_block, NULL);
 
-        array_queues[i].queue_susp_ready = queue_create();
-        pthread_mutex_init(&array_queues[i].mutex_susp_ready, NULL);
+		array_queues[i].list_susp_block = list_create();
+		pthread_mutex_init(&array_queues[i].mutex_susp_block, NULL);
+
+		array_queues[i].queue_susp_ready = queue_create();
+		pthread_mutex_init(&array_queues[i].mutex_susp_ready, NULL);
 	}
 
 	// liberar auxiliares
@@ -73,8 +75,8 @@ void *ks_parsear_algoritmos(char *raw) {
 	free(limpio);
 }
 
-bool ks_cargar_config(char *path_config, char *path_proceso_inicial) {
-	t_config *config = config_create(path_config);
+bool ks_cargar_config(char* path_config, char* path_proceso_inicial) {
+	t_config* config = config_create(path_config);
 
 	if (!config) {
 		return false;
@@ -101,8 +103,8 @@ bool ks_cargar_config(char *path_config, char *path_proceso_inicial) {
 	ks_config.suspension_timeout =
 		config_get_int_value(config, "SUSPENSION_TIMEOUT");
 	ks_config.path_proceso_inicial = strdup(path_proceso_inicial);
-	const char *log_level_string = config_get_string_value(config, "LOG_LEVEL");
-	t_log_level level = log_level_from_string((char *)log_level_string);
+	const char* log_level_string = config_get_string_value(config, "LOG_LEVEL");
+	t_log_level level = log_level_from_string((char*)log_level_string);
 
 	ks_logger =
 		log_create("kernel_scheduler.log", "KERNEL_SCHEDULER", 1, level);
@@ -122,20 +124,21 @@ bool ks_cargar_config(char *path_config, char *path_proceso_inicial) {
 				break;
 		}
 	}
-	*/ // PARA DEBUGGEAR
+	*/
+	// PARA DEBUGGEAR
 	return ks_logger != NULL;
 }
 
 void crear_listas() {
-    cpus = list_create();
-    ios = list_create();
-    // procesos = list_create();
+	cpus = list_create();
+	ios = list_create();
+	// procesos = list_create();
 
-    procs_exec = list_create();
-    // procs_block = list_create();
-    // procs_susp_block = list_create();
-    // procs_susp_ready = list_create();
-    procs_exit = list_create();
+	procs_exec = list_create();
+	// procs_block = list_create();
+	// procs_susp_block = list_create();
+	// procs_susp_ready = list_create();
+	procs_exit = list_create();
 }
 
 void ks_liberar_config(void) {
@@ -144,7 +147,7 @@ void ks_liberar_config(void) {
 	}
 }
 
-void *ks_conexion_loop(void *_arg) {
+void* ks_conexion_loop(void* _arg) {
 	(void)_arg;
 
 	printf("Entra en ks_conexion_loop");
@@ -170,7 +173,7 @@ void *ks_conexion_loop(void *_arg) {
 			// enviar_ks_ok_conexion(fd);
 			pthread_t hilo_io;
 
-			int *socket_ptr = malloc(sizeof(int));
+			int* socket_ptr = malloc(sizeof(int));
 			if (socket_ptr == NULL) {
 				close(fd);
 				return;
@@ -191,7 +194,7 @@ void *ks_conexion_loop(void *_arg) {
 			// NO recibir_paquete aca
 			pthread_t hilo_cpu;
 
-			int *socket_ptr = malloc(sizeof(int));
+			int* socket_ptr = malloc(sizeof(int));
 			if (socket_ptr == NULL) {
 				close(fd);
 				return;
@@ -203,13 +206,13 @@ void *ks_conexion_loop(void *_arg) {
 			int id_cpu = NULL;
 			buffer_read(&id_cpu, contenido->buffer, sizeof(char*));
 
-			crear_cpu(id_cpu);
+			t_cpu* cpu = crear_cpu(id_cpu, socket_ptr);
 
 			log_conexion_cpu(id_cpu);
-			
+
 			eliminar_paquete(contenido);
 
-			if (pthread_create(&hilo_cpu, NULL, ks_maneja_cpu, socket_ptr) != 0) {
+			if (pthread_create(&hilo_cpu, NULL, ks_maneja_cpu, cpu) != 0) {
 				log_error(ks_logger, "no se inicia el hilo cpu");
 				free(socket_ptr);
 				close(fd);
@@ -222,7 +225,7 @@ void *ks_conexion_loop(void *_arg) {
 		else {
 			log_error(ks_logger, "Handshake desconocido (%d)", op);
 			// Si vino algo, descartalo
-			t_paquete *trash = recibir_paquete(fd);
+			t_paquete* trash = recibir_paquete(fd);
 			if (trash)
 				eliminar_paquete(trash);
 			close(fd);
@@ -247,15 +250,15 @@ static void sigint_handler(int _sig) {
 	exit(0);
 }
 
-int main(int argc, char *argv[]) { //  ~ ./bin/kernel_scheduler [Archivo Config]
-								   //  [Path Proceso Inicial]
+int main(int argc, char* argv[]) {			   //  ~ ./bin/kernel_scheduler [Archivo Config]
+											   //  [Path Proceso Inicial]
 	if (!ks_cargar_config(argv[1], argv[2])) { //! Está hardcodeado el codigo del config
 		fprintf(stderr, "No pude cargar ks.config (busca en el CWD).\n");
 
 		return EXIT_FAILURE;
 	}
 
-    crear_listas();
+	crear_listas();
 	inicializar_semaforos();
 
 	log_debug(ks_logger, "Empezando la conexion KS");

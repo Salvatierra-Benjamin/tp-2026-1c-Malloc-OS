@@ -5,24 +5,33 @@
 #include "../logs/ks_logs.h"
 #include "../auxiliares/ks_auxiliares.h"
 
-void* ks_planificador_largo_plazo(void* arg) {
-    (void)arg;
+// void* ks_planificador_largo_plazo(void* arg) {
+//     (void)arg;
 
-    while (1) {
+//     while (1) {
+//         sem_wait(&sem_memoria_disponible);
 
-    }
+//         for (int i = 0; i < cantidad_algoritmos; i++) {
 
-    return NULL;
-}
+//             pthread_mutex_lock(&array_queues[i].mutex_susp_ready);
 
-void ks_admitir_proceso(t_pcb* pcb) {
-    (void)pcb;
-}
+//             while (!queue_is_empty(array_queues[i].queue_susp_ready)) {
+//                 t_pcb* pcb = queue_pop(array_queues[i].queue_susp_ready);
 
-void ks_finalizar_proceso_planificador(t_pcb* pcb) {
-    (void)pcb;
-}
+//                 pcb->estado = READY;
 
-bool ks_hay_espacio_memoria(void) {
-    return true;
-}
+//                 pthread_mutex_lock(&array_queues[i].mutex_ready);
+
+//                 queue_push(array_queues[i].queue_ready,pcb);
+
+//                 pthread_mutex_unlock(&array_queues[i].mutex_ready);
+
+//                 sem_post(&sem_ready);
+//             }
+
+//             pthread_mutex_unlock(&array_queues[i].mutex_susp_ready);
+//         }
+//     }
+
+//     return NULL;
+// }

@@ -11,8 +11,20 @@ void* ks_planificador_corto_plazo(void* arg) {
     while (1) {
         sem_wait(&sem_ready);
         sem_wait(&sem_cpu_libre);
+        
+        t_pcb* pcb = NULL;
 
-        t_pcb* pcb = ks_obtener_siguiente_ready();
+        pthread_mutex_lock(&mutex_compactacion);
+        if (!compactacion_en_progreso){
+            pthread_mutex_unlock(&mutex_compactacion);
+            pcb = ks_obtener_siguiente_ready_prioritario();
+        }
+        pthread_mutex_unlock(&mutex_compactacion);
+
+        if (pcb == NULL)
+        {
+            pcb = ks_obtener_siguiente_ready();
+        }
 
         if (pcb == NULL) {
             sem_post(&sem_cpu_libre);
@@ -56,6 +68,23 @@ t_pcb* ks_obtener_siguiente_ready(void) {
 
     return NULL;
 }
+
+t_pcb* ks_obtener_siguiente_ready_prioritario(void) {
+    for (int i = 0; i < cantidad_algoritmos; i++) {
+        pthread_mutex_lock(&array_queues[i].mutex_ready_prioritario);
+
+        if (!queue_is_empty(array_queues[i].queue_ready_prioritario)) {
+            t_pcb* pcb = queue_pop(array_queues[i].queue_ready_prioritario);
+            pthread_mutex_unlock(&array_queues[i].mutex_ready_prioritario);
+
+            return pcb;
+        }
+        pthread_mutex_unlock(&array_queues[i].mutex_ready_prioritario);
+    }
+
+    return NULL;
+}
+
 
 void ks_enviar_a_exec(t_pcb* pcb) {
     pcb->estado = EXEC;
@@ -119,43 +148,49 @@ void ks_verificar_desalojo_prioridad(t_pcb* nuevo) {
         return;
     }
 
-    t_list* with_e = list_filter(people, _has_e);
-
     pthread_mutex_lock(&mutex_exec);
 
     for (int i = 0; i < list_size(procs_exec); i++) {
         t_pcb* exec = list_get(procs_exec, i);
 
         if (exec->prioridad > nuevo->prioridad) {
-            // TODO: enviar interrupcion cpu
+            enviar_interrupcion_cpu(exec->cpu_fd, exec->pid, "Desalojo por prioridad");
 
-            log_desalojo_prioridad(exec,nuevo);
+            log_desalojo_prioridad(exec, nuevo);
         }
     }
 
     pthread_mutex_unlock(&mutex_exec);
 }
 
-void ks_desalojar_por_compactacion(void) {
+void ks_empieza_a_desalojar_por_compactacion(void) {
     pthread_mutex_lock(&mutex_exec);
 
     for (int i = 0; i < list_size(procs_exec); i++) {
         t_pcb* pcb = list_get(procs_exec, i);
 
-        // TODO: enviar interrupcion cpu
-
-        pcb->estado = READY;
-
-        queue_push(array_queues[pcb->prioridad].queue_ready, pcb);
-
-        log_cambio_estado(pcb, (estados EXEC), (estados READY));
-        
-        // sem_post(&sem_ready);
+        enviar_interrupcion_compactacion_cpu(pcb->cpu_fd, pcb->pid);
     }
-
-    list_clean(procs_exec);
+    // list_clean(procs_exec);
 
     pthread_mutex_unlock(&mutex_exec);
+}
 
-    log_inicio_compactacion();
+void ks_termina_de_desalojar_por_compactacion(void) {
+    pthread_mutex_lock(&mutex_exec);
+
+    for (int i = 0; i < list_size(procs_exec); i++) {
+        t_pcb* pcb = list_get(procs_exec, i);
+
+        pcb->estado = READY;
+        
+        pthread_mutex_lock(&array_queues[pcb->prioridad].mutex_ready_prioritario);
+        queue_push(array_queues[pcb->prioridad].queue_ready_prioritario, pcb);
+        pthread_mutex_unlock(&array_queues[pcb->prioridad].mutex_ready_prioritario);
+
+        log_cambio_estado(pcb, (estados EXEC), (estados READY)); // ! NO HACE FALTA HACER EL SEM_POST PORQUE NO SE PUEDE ALIJAR NADA DURANTE LA COMPACTACIÓN
+    }
+    // list_clean(procs_exec);
+
+    pthread_mutex_unlock(&mutex_exec);
 }

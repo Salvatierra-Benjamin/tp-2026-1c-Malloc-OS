@@ -9,6 +9,8 @@ int ks_server_fd = -1;
 t_elemento_array_algoritmos *array_queues = NULL;
 int cantidad_algoritmos = 0;
 
+bool compactacion_en_progreso = false;
+
 // LISTAS
 t_list *cpus = NULL;
 t_list *ios = NULL;
@@ -32,7 +34,10 @@ pthread_mutex_t mutex_array_queues = PTHREAD_MUTEX_INITIALIZER;
 
 pthread_mutex_t mutex_mutexes_kernel = PTHREAD_MUTEX_INITIALIZER;
 
+pthread_mutex_t mutex_compactacion = PTHREAD_MUTEX_INITIALIZER;
+
 // SEMAFOROS
 sem_t sem_ready;
 sem_t sem_cpu_libre;
 sem_t sem_memoria_disponible;
+sem_t sem_compactacion_finalizada;
