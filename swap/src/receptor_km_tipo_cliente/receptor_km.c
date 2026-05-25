@@ -26,7 +26,7 @@ void *atencion_km()
         }
         switch (cod_op)
         {
-        case KM_OK_CONEXION:
+        case HANDSHAKE_OK:
         {
             log_debug(swap_logger, "[RECEPTOR_KM_SWAP] EL HANSHAKE CON KM SE HA REALIZADO CORRECTAMENTE!!!");
             break;

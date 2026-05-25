@@ -140,33 +140,58 @@ void *atencion_debug_client(void *socket_cliente_puntero)
 
             // Simulamos la creación dinámica de los strings con malloc
             // (En el TP real esto seguro lo leas de un archivo, pero acá hardcodeamos para testear)
-            char *texto_param1 = "AX";
-            char *texto_param2 = "150";
 
+            // 1. HARDCODEAMOS LOS VALORES DE PRUEBA
+            char *texto_param1 = "AX";
+            char *texto_param2 = ""; // SIMULO QUE MANDO UN PARAMETRO CON STRING VACIO, ES DECIR, TAMAÑO = 1.
+            // char *texto_param2 = NULL;  // SIMULO QUE MANDO UN PARAMETRO VACIO, ES DECIR, TAMAÑO = 0.
+            // char *texto_param2 = "150"; // SIMULO UN PARAMETRO CUALQUIERA.
+
+            // ASIGNACIÓN PARAMETRO 1 (Normal)
             instr_prueba.parametro_1 = malloc(strlen(texto_param1) + 1);
             strcpy(instr_prueba.parametro_1, texto_param1);
 
-            instr_prueba.parametro_2 = malloc(strlen(texto_param2) + 1);
-            strcpy(instr_prueba.parametro_2, texto_param2);
+            // ASIGNACIÓN PARAMETRO 2 (Defensivo para el test)
+            if (texto_param2 == NULL)
+            {
+                instr_prueba.parametro_2 = NULL;
+            }
+            else
+            {
+                instr_prueba.parametro_2 = malloc(strlen(texto_param2) + 1);
+                strcpy(instr_prueba.parametro_2, texto_param2);
+            }
+
+            // 2. MEDIMOS LOS TAMÁÑOS USANDO 'instr_prueba' (Acá corregimos los nombres)
+            // MODIFICACION PARA EVITAR POSIBLE SEGMENTATION FAULT: Si la instruccion no lleva segundo parametro y la estructura instruccion->parametro_2 apunte a NULL
+            // al hacer strlen el programa crasheará.
+            int parametro_1_size = (instr_prueba.parametro_1 != NULL) ? (strlen(instr_prueba.parametro_1) + 1) : 0;
+            int parametro_2_size = (instr_prueba.parametro_2 != NULL) ? (strlen(instr_prueba.parametro_2) + 1) : 0;
+            // Si el parámetro existe pero está vacío(""), strlen da 0, le suma 1, y te manda 1(viaja el \0). La CPU lo atrapa en len <= 1.
+            // Si el parámetro directamente no existe(NULL), manda 0. La CPU lo atrapa en len <= 1.
 
             // ==========================================
             //  2. SERIALIZACIÓN (PATRÓN TLV)
             // ==========================================
-            t_paquete *paquete = crear_paquete(ENVIO_INSTRUCCION); // Código de op solicitado
+            t_paquete *paquete = crear_paquete(ENVIO_INSTRUCCION);
 
             // A. Datos fijos (Comando y PID)
             agregar_a_paquete(paquete, &(instr_prueba.comando), sizeof(t_palabra_reservada));
             agregar_a_paquete(paquete, &(instr_prueba.PID), sizeof(int));
 
-            // B. Parámetro 1 (Tamaño y luego el Contenido)
-            int len1 = strlen(instr_prueba.parametro_1) + 1; // ¡VITAL el +1! ( +1 para el '\0' )
-            agregar_a_paquete(paquete, &len1, sizeof(int));
-            agregar_a_paquete(paquete, instr_prueba.parametro_1, len1);
+            // B. Parámetro 1 (Tamaño y Contenido)
+            agregar_a_paquete(paquete, &parametro_1_size, sizeof(int));
+            if (parametro_1_size > 0)
+            {
+                agregar_a_paquete(paquete, instr_prueba.parametro_1, parametro_1_size);
+            }
 
-            // C. Parámetro 2 (Tamaño y luego el Contenido)
-            int len2 = strlen(instr_prueba.parametro_2) + 1; // ¡VITAL el +1! ( +1 para el '\0' )
-            agregar_a_paquete(paquete, &len2, sizeof(int));
-            agregar_a_paquete(paquete, instr_prueba.parametro_2, len2);
+            // C. Parámetro 2 (Tamaño y Contenido defensivo)
+            agregar_a_paquete(paquete, &parametro_2_size, sizeof(int));
+            if (parametro_2_size > 0)
+            {
+                agregar_a_paquete(paquete, instr_prueba.parametro_2, parametro_2_size);
+            }
 
             // ==========================================
             //  3. ENVÍO Y LIMPIEZA

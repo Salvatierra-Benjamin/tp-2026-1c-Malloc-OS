@@ -10,26 +10,7 @@ void Solicitar_Instruccion(int PID, int PC)
     eliminar_paquete(paquete);
 }
 
-// Esta función recibe el stream y lo convierte a tu struct t_instruccion
-void Recibir_Instruccion1(t_instruccion *nueva_instruccion)
-{
-    int respuesta = recibir_operacion(conexion_debug_server);
-    if (respuesta == ENVIO_INSTRUCCION)
-    {
-        t_instruccion aux;
-        t_paquete *paquete = recibir_paquete(conexion_debug_server); // Tu función de antes
-        buffer_read(&aux, paquete->buffer, sizeof(aux));
-        *nueva_instruccion = aux;
-        eliminar_paquete(paquete);
-    }
-    else
-    {
-        log_error(debug_client_logger, "Instruccion no recibida");
-        exit(EXIT_FAILURE);
-    }
-}
-
-void Recibir_Instruccion2(t_instruccion *nueva_instruccion)
+void Recibir_Instruccion(t_instruccion *nueva_instruccion)
 {
     int respuesta = recibir_operacion(conexion_debug_server);
     if (respuesta == ENVIO_INSTRUCCION)
@@ -43,21 +24,63 @@ void Recibir_Instruccion2(t_instruccion *nueva_instruccion)
 
         // 2. Deserializar parametro_1 (Dinámico)
         int len1;
-        buffer_read(&len1, paquete->buffer, sizeof(int));                   // Leemos cuánto mide
-        nueva_instruccion->parametro_1 = malloc(len1);                      // Pedimos el espacio justo
-        buffer_read(nueva_instruccion->parametro_1, paquete->buffer, len1); // Copiamos el contenido
+        buffer_read(&len1, paquete->buffer, sizeof(int)); // Leemos cuánto mide
+        // Si len1 es 0 (o menor/igual a 1 si mandan un string vacío ""), no hacemos malloc
+        if (len1 <= 1)
+        { // Si el tamaño es 0 no hay nada que limpiar en el buffer, por lo tanto lo setea en NULL.
+            nueva_instruccion->parametro_1 = NULL;
+            log_warning(debug_client_logger, "[debug_client] Parámetro 1 no provisto (len=%d). Seteado en NULL.", len1);
+            // Si KM igual mandó 1 byte (el \0), avanzamos el buffer para no desfasarnos
+            if (len1 == 1)
+            {
+                char basura;                              // Reservamos 1 byte de espacio temporal en la pila (stack)
+                buffer_read(&basura, paquete->buffer, 1); // Sacamos ese byte molesto del buffer y lo metemos ahí
+                log_warning(debug_client_logger, "[debug_client] Parámetro 1 vacío detectado (len=1). Se limpió el byte restante del buffer.");
+                // Al salir de la función, la variable 'basura' desaparece y ese byte se desecha.
+            }
+        }
+        else
+        {
+            nueva_instruccion->parametro_1 = malloc(len1);                      // Pedimos el espacio justo
+            buffer_read(nueva_instruccion->parametro_1, paquete->buffer, len1); // Copiamos el contenido
+        }
 
         // 3. Deserializar parametro_2 (Dinámico)
         int len2;
         buffer_read(&len2, paquete->buffer, sizeof(int));
-        nueva_instruccion->parametro_2 = malloc(len2);
-        buffer_read(nueva_instruccion->parametro_2, paquete->buffer, len2);
+        if (len2 <= 1)
+        {
+            nueva_instruccion->parametro_2 = NULL;
+            log_warning(debug_client_logger, "[debug_client] Parámetro 2 no provisto (len=%d). Seteado en NULL.", len2);
+            if (len2 == 1)
+            {
+                char basura;
+                buffer_read(&basura, paquete->buffer, 1);
+                log_warning(debug_client_logger, "[debug_client] Parámetro 2 vacío detectado (len=1). Se limpió el byte restante del buffer.");
+            }
+        }
+        else
+        {
+            nueva_instruccion->parametro_2 = malloc(len2);
+            buffer_read(nueva_instruccion->parametro_2, paquete->buffer, len2);
+        }
 
         eliminar_paquete(paquete);
     }
+    else if (respuesta == ERROR_ENVIO_INSTRUCCION)
+    {
+        log_error(debug_client_logger, "[debug_client] KM notificó un error al intentar obtener la instrucción (¿Fin de archivo sin EXIT?).");
+
+        // Seteamos el comando en un estado de error para que el ciclo de instrucción sepa qué hacer.
+        nueva_instruccion->comando = ERROR_INSTRUCCION;
+        nueva_instruccion->parametro_1 = NULL;
+        nueva_instruccion->parametro_2 = NULL;
+        // Importante hay que ver que hago en el Ciclo de Instruccion.
+        // NO SE LIBERA CON FREE () NADA !!! PUNTEROS APUNTANDO A NULL.
+    }
     else
     {
-        log_error(debug_client_logger, "Instruccion no recibida");
+        log_error(debug_client_logger, "[debug_client] Código de operación desconocido esperando instrucción: %d", respuesta);
         exit(EXIT_FAILURE);
     }
 }
@@ -113,8 +136,13 @@ void Destruir_Instruccion(t_instruccion *instruccion)
 void Iniciar_Fetch(t_contexto_ejecucion *contexto_actual, t_instruccion *nueva_instruccion)
 {
     Solicitar_Instruccion(contexto_actual->PID, contexto_actual->registros.PC);
-    // Recibir_Instruccion1(nueva_instruccion);
-    Recibir_Instruccion2(nueva_instruccion);
+    Recibir_Instruccion(nueva_instruccion);
     Loggear_Instruccion(nueva_instruccion);
-    Destruir_Instruccion(nueva_instruccion); // SOLO PARA Recibir_Instruccion2
+    contexto_actual->registros.PC++;
 }
+/*
+* Sumo aca el PC. En la proxima vuelta del while(1) buscara la siguientes instruccion.
+* En caso de que se ejecute el JNZ, este PC++ será pisado por el nuevo PC
+
+* De paso me ahorro repetir PC++ en las todos los execute_
+*/

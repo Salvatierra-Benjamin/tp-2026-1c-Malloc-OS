@@ -91,7 +91,6 @@ int main(int argc, char *argv[])
     inicializar_semaforos_coordinadores();
     creacion_conexiones_cpu();
 
-    //! HANDSHAKE DINAMICO CON MS
     while (1)
     {
         // 1. Esperamos a que el receptor_ks nos avise que hay un proceso
@@ -116,6 +115,17 @@ int main(int argc, char *argv[])
             log_info(cpu_logger, "Iniciando ciclo para el PID: %d", PID_a_ejecutar);
             Ejecutar_Ciclo_de_Instruccion(&contexto_actual);
             Destruir_Contexto(&contexto_actual); // USAR EN RECIBIR CONTEXTO
+        }
+        else if (respuesta_contexto_ejecucion == ERROR_ENVIO_CONTEXTO)
+        {
+            log_error(cpu_logger, "[CPU] KM reportó que el contexto para PID %d no existe o es NULL.", PID_a_ejecutar);
+
+            // Importante: Como falló, hay que ver si desalojá el proceso
+            // o si vuelve a esperar en el semáforo para el próximo.
+        }
+        else
+        {
+            log_error(cpu_logger, "[CPU] Código de operación desconocido recibido de KM: %d", respuesta_contexto_ejecucion);
         }
 
         // Cuando la función terminar, el while vuelve arriba y se vuelve a bloquear en el sem_wait esperando el próximo proceso.

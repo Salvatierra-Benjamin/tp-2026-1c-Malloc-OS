@@ -86,7 +86,7 @@ void delegar_a(int socket_cliente, void *(*manejador)(void *), const char *nombr
     }
     *socket_ptr = socket_cliente;
 
-    enviar_operacion(socket_cliente, KM_OK_CONEXION);
+    enviar_operacion(socket_cliente, HANDSHAKE_OK); // Mauri lo cambio para que sea más generico, te dejó el antiguo por las dudas: KM_OK_CONEXION
 
     pthread_t hilo;
     if (pthread_create(&hilo, NULL, manejador, socket_ptr) != 0)
