@@ -10,9 +10,9 @@ int main(int argc, char *argv[])
     }
 
     char *path = argv[1];
-    tamanio_memoria = atoi(argv[2]);
+    tamanio_memoria_ms_ingresada = atoi(argv[2]);
 
-    if (tamanio_memoria <= 0)
+    if (tamanio_memoria_ms_ingresada <= 0)
     {
         fprintf(stderr, "Error: El tamanio de memoria '%s' no es válido (Debe ser un entero > 0)\n", argv[2]);
         return EXIT_FAILURE;

@@ -2,12 +2,12 @@
 
 void memoria_reservada()
 {
-    memoria_ms = malloc(tamanio_memoria);
-    if (memoria_ms == NULL)
+    puntero_memoria_ms = malloc(tamanio_memoria_ms_ingresada);
+    if (puntero_memoria_ms == NULL)
     {
         log_debug(ms_logger, "Error al hacer malloc de la memoria principal.\n");
         liberar_todo();
         exit(EXIT_FAILURE);
     }
-    log_debug(ms_logger, "Memoria de %d bytes reservada con éxito.\n", tamanio_memoria);
+    log_debug(ms_logger, "Memoria de %d bytes reservada con éxito.\n", tamanio_memoria_ms_ingresada);
 }

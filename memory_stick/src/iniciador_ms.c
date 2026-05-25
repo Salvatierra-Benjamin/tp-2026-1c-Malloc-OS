@@ -4,12 +4,13 @@ t_log *ms_logger;
 ms_config_struct ms_config;
 int conexion_km;
 int socket_servidor_con_cpu;
-int tamanio_memoria;
-void *memoria_ms;
+int tamanio_memoria_ms_ingresada;
+void *puntero_memoria_ms;
 // Semaforos:
 pthread_mutex_t conexiones_km = PTHREAD_MUTEX_INITIALIZER;   // MUTEX
 pthread_mutex_t sockets_cliente = PTHREAD_MUTEX_INITIALIZER; // MUTEX
 sem_t semaphore;
+sem_t sem_ok_conexion_km;
 
 void ms_cargar_config(char *path)
 {
@@ -57,6 +58,7 @@ void inicializar_semaforos_coordinadores()
     // 0: El semáforo se comparte entre hilos del mismo proceso
     // 0: Valor inicial (el semáforo empieza "cerrado")
     sem_init(&semaphore, 0, 0);
+    sem_init(&sem_ok_conexion_km, 0, 0);
 }
 
 void cerrar_conexiones()
@@ -68,6 +70,7 @@ void liberar_semaforos()
 {
     pthread_mutex_destroy(&conexiones_km);
     sem_destroy(&semaphore);
+    sem_destroy(&sem_ok_conexion_km);
 }
 
 void ms_liberar_config()
@@ -91,5 +94,5 @@ void liberar_todo()
     liberar_semaforos();
     ms_liberar_config();
     ms_liberar_log();
-    free(memoria_ms);
+    free(puntero_memoria_ms);
 }

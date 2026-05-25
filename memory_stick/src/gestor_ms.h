@@ -34,11 +34,12 @@ extern t_log *ms_logger;
 extern ms_config_struct ms_config;
 extern int conexion_km;
 extern int socket_servidor_con_cpu;
-extern int tamanio_memoria;
-extern void *memoria_ms;
+extern int tamanio_memoria_ms_ingresada;
+extern void *puntero_memoria_ms;
 // Semaforos:
 extern pthread_mutex_t conexiones_km;   // MUTEX
 extern pthread_mutex_t sockets_cliente; // MUTEX
 extern sem_t semaphore;                 // Coordinacion //POR AHORA NO SE USA
+extern sem_t sem_ok_conexion_km;
 
 #endif
