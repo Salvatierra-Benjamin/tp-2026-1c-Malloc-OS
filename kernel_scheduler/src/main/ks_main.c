@@ -191,6 +191,8 @@ void* ks_conexion_loop(void* _arg) {
 		} else if (op == HANDSHAKE_CPU) {
 			log_debug(ks_logger, "Se conecto un nuevo CPU");
 
+			enviar_ok_conexion_cpu(fd);
+
 			// NO recibir_paquete aca
 			pthread_t hilo_cpu;
 

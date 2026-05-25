@@ -24,6 +24,10 @@
 	buffer_read (nueva_instruccion->parametro_1, paquete-›buffer, len1); // COPIAMOS EL CONTENIDO
 */
 
+void enviar_ok_conexion_cpu(fd) {
+	enviar_operacion(fd, HANDSHAKE_OK);
+}
+
 void enviar_interrupcion_compactacion_cpu(int cpu_fd, int pid) {
 	t_paquete* paquete_interrupcion = crear_paquete(SOLICITUD_DESALOJO_COMPACTACION_MEMORIA);
 	agregar_a_paquete(paquete_interrupcion, &pid, sizeof(int));
