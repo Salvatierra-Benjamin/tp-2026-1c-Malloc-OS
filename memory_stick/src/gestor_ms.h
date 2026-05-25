@@ -1,5 +1,5 @@
-#ifndef GESTORS_SWAP_H
-#define GESTORS_SWAP_H
+#ifndef GESTORS_MS_H
+#define GESTORS_MS_H
 #include <stdint.h>
 #include <stdbool.h>
 #include <commons/log.h>
@@ -36,5 +36,9 @@ extern int conexion_km;
 extern int socket_servidor_con_cpu;
 extern int tamanio_memoria;
 extern void *memoria_ms;
+// Semaforos:
+extern pthread_mutex_t conexiones_km;   // MUTEX
+extern pthread_mutex_t sockets_cliente; // MUTEX
+extern sem_t semaphore;                 // Coordinacion //POR AHORA NO SE USA
 
 #endif

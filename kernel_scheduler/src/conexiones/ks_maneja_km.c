@@ -56,54 +56,53 @@ void* ks_conexion_km(void* _arg) {
 			// break;
 		}
 
-
 		case AUMENTO_DE_MEMORIA: { // AUMENTO_DE_MEMORIA (TAMAÑO)
 			t_paquete* contenido = recibir_paquete(fd);
 
 			int tamanio;
 			buffer_read(&tamanio, contenido->buffer, sizeof(int));
 
-            // ? Hacer algo con el tamanio? O solo es para loguear?
+			// ? Hacer algo con el tamanio? O solo es para loguear?
 
-            sem_post(&sem_memoria_disponible);
+			sem_post(&sem_memoria_disponible);
 
 			eliminar_paquete(contenido);
 			break;
 		}
 
-		// case COMPACTACION: { // ? es lo mismo que DESALOJO_POR_COMPACTACION? O es para cuando KM detecta corrupción de memoria y decide compactar? O es para cuando KS detecta corrupción de memoria y decide matar procesos y compactar? No se si es necesario diferenciarlo, pero lo dejo por las dudas.
-        //     log_inicio_compactacion();
-        //     sem_post(&sem_memoria_disponible);
+			// case COMPACTACION: { // ? es lo mismo que DESALOJO_POR_COMPACTACION? O es para cuando KM detecta corrupción de memoria y decide compactar? O es para cuando KS detecta corrupción de memoria y decide matar procesos y compactar? No se si es necesario diferenciarlo, pero lo dejo por las dudas.
+			//     log_inicio_compactacion();
+			//     sem_post(&sem_memoria_disponible);
 
-		// 	break;
-		// }
+			// 	break;
+			// }
 
-		// case: // ! DETECCION_CORRUPCION_MEMORIA ---→ COMPACTACION
-		// {
+			// case: // ! DETECCION_CORRUPCION_MEMORIA ---→ COMPACTACION
+			// {
 
-		// 	break;
-		// }
+			// 	break;
+			// }
 
 		case DESALOJO_POR_COMPACTACION: {
-            log_inicio_compactacion();
+			log_inicio_compactacion();
 
-            pthread_mutex_lock(&mutex_compactacion);
-            compactacion_en_progreso = true;
-            pthread_mutex_unlock(&mutex_compactacion);
+			pthread_mutex_lock(&mutex_compactacion);
+			compactacion_en_progreso = true;
+			pthread_mutex_unlock(&mutex_compactacion);
 
-            ks_empieza_a_desalojar_por_compactacion();
+			ks_empieza_a_desalojar_por_compactacion();
 
 			break;
 		}
 
 		case FIN_COMPACTACION: {
-            log_fin_compactacion();
-            pthread_mutex_lock(&mutex_compactacion);
-            compactacion_en_progreso = false;
-            pthread_mutex_unlock(&mutex_compactacion);
-            
-            sem_post(&sem_memoria_disponible);
-            sem_post(&sem_ready);
+			log_fin_compactacion();
+			pthread_mutex_lock(&mutex_compactacion);
+			compactacion_en_progreso = false;
+			pthread_mutex_unlock(&mutex_compactacion);
+
+			sem_post(&sem_memoria_disponible);
+			sem_post(&sem_ready);
 			break;
 		}
 
@@ -113,7 +112,7 @@ void* ks_conexion_km(void* _arg) {
 		}
 
 		case STDOUT_RESTUESTA_LECTURA: { // STDOUT_RESTUESTA_LECTURA (BYTES)
-			t_paquete* contenido = recibir_paquete(fd);
+			t_paquete* contenido = recibir_paquete(socket_km);
 
 			int pid;
 			buffer_read(&pid, contenido->buffer, sizeof(int));
@@ -122,13 +121,18 @@ void* ks_conexion_km(void* _arg) {
 			break;
 		}
 
-		case OK_SEGMENTO_ELIMINADO: {
+		case OK_MEM_FREE: { // OK_MEM_FREE (PID)
+
+			break;
+		}
+
+		case OK_MEM_ALLOC: { // OK_MEM_ALLOC (PID)
 
 			break;
 		}
 
 		case OK_PROCESO_SUSPENDIDO: { // OK_PROCESO_SUSPENDIDO (PID)
-			t_paquete* contenido = recibir_paquete(fd);
+			t_paquete* contenido = recibir_paquete(socket_km);
 
 			int pid;
 			buffer_read(&pid, contenido->buffer, sizeof(int));
@@ -138,10 +142,57 @@ void* ks_conexion_km(void* _arg) {
 		}
 
 		case OK_PROCESO_DES_SUSPENDIDO: { // OK_PROCESO_DES_SUSPENDIDO (PID)
-			t_paquete* contenido = recibir_paquete(fd);
+			t_paquete* contenido = recibir_paquete(socket_km);
 
 			int tamanio;
 			buffer_read(&tamanio, contenido->buffer, sizeof(int));
+
+			eliminar_paquete(contenido);
+			break;
+		}
+
+		case ERROR_CREACION_PROCESO: { // ERROR_CREACION_PROCESO (PID, MOTIVO)
+			t_paquete* contenido = recibir_paquete(socket_km);
+
+			int pid;
+			buffer_read(&pid, contenido->buffer, sizeof(int));
+
+			int len_path;
+			buffer_read(&len_path, contenido->buffer, sizeof(int)); // LEEMOS CUANTO MIDE
+			char* path = malloc(len_path);						  // PEDIMOS EL ESPACIO JUSTO
+			buffer_read(path, contenido->buffer, len_path);		  // COPIAMOS EL CONTENIDO
+
+			int prioridad;
+			buffer_read(&prioridad, contenido->buffer, sizeof(int));
+
+			int len_motivo;
+			buffer_read(&len_motivo, contenido->buffer, sizeof(int)); // LEEMOS CUANTO MIDE
+			char* motivo = malloc(len_motivo);						  // PEDIMOS EL ESPACIO JUSTO
+			buffer_read(motivo, contenido->buffer, len_motivo);		  // COPIAMOS EL CONTENIDO
+
+			log_error(ks_logger, "Error al crear proceso con PID %d en Kernel Memory por el siguiente motivo: %s", pid, motivo);
+
+			free(motivo);
+			eliminar_paquete(contenido);
+			break;
+		}
+
+		case OK_CREACION_PROCESO: { // OK_CREACION_PROCESO (PID, PATH)
+			t_paquete* contenido = recibir_paquete(socket_km);
+
+			int pid;
+			buffer_read(&pid, contenido->buffer, sizeof(int));
+
+			int len_path;
+			buffer_read(&len_path, contenido->buffer, sizeof(int)); // LEEMOS CUANTO MIDE
+			char* path = malloc(len_path);						  // PEDIMOS EL ESPACIO JUSTO
+			buffer_read(path, contenido->buffer, len_path);		  // COPIAMOS EL CONTENIDO
+
+
+			int prioridad;
+			buffer_read(&prioridad, contenido->buffer, sizeof(int));
+
+			crear_proceso(pid, path, prioridad);
 
 			eliminar_paquete(contenido);
 			break;

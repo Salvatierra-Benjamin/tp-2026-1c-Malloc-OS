@@ -94,14 +94,11 @@ bool finalizar_proceso(int pid) {
 	return true;
 }
 
-
 t_pcb* crear_proceso(int pid, char* path, int prioridad) {
 	t_pcb* nuevo_pcb = malloc(sizeof(t_pcb));
 	if (nuevo_pcb == NULL) {
 		return NULL; // Manejar error de asignación de memoria
 	}
-
-	log_creacion_proceso(pid, path, prioridad);
 
 	nuevo_pcb->pid = pid;
 	nuevo_pcb->path = strdup(path); // Asegúrate de liberar esta memoria cuando ya no se necesite
@@ -110,9 +107,11 @@ t_pcb* crear_proceso(int pid, char* path, int prioridad) {
 	nuevo_pcb->cpu_fd = -1;					   // Inicialmente no asignado a ningún CPU
 	nuevo_pcb->io_fd = -1;					   // Inicialmente no asignado a ningún IO
 
+	log_creacion_proceso(pid, path, prioridad);
+
 	log_cambio_estado(nuevo_pcb, (estados NEW), (estados READY));
 
-	nuevo_pcb->estado = READY;				   // Estado inicial del proceso es "READY" (saltea NEW)
+	nuevo_pcb->estado = READY; // Estado inicial del proceso es "READY" (saltea NEW)
 
 	queue_push(array_queues[prioridad].queue, nuevo_pcb); // Agrega el proceso a la cola correspondiente según su prioridad
 	return nuevo_pcb;

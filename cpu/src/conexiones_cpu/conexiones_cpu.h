@@ -3,10 +3,10 @@
 
 #include "gestor_cpu.h"
 #include "iniciador_cpu.h"
-#include "receptor_conexiones/receptor_km.h"
-#include "receptor_conexiones/receptor_ks.h"
-#include "receptor_conexiones/receptor_ms.h"
+#include "receptor_ks.h"
 
 void creacion_conexiones_cpu();
+bool realizar_handshake(int socket_servidor, int id_cpu, char *nombre_servidor);
+bool realizar_handshake_ks(int socket_servidor, int id_cpu, char *nombre_servidor);
 
 #endif

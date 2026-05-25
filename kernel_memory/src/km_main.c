@@ -16,6 +16,8 @@ int main(int argc, char *argv[])
 
     log_info(logger, "Inicio Kernel Memory");
 
+    iniciar_recursos();
+
     int socket_servidor = iniciar_servidor(parametros->puerto_escucha);
 
     if (socket_servidor == -1)

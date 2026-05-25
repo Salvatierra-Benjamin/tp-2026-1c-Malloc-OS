@@ -13,12 +13,11 @@ int main(int argc, char *argv[])
     swap_cargar_config(path);
     inicializar_logger();
     imprimir_valores_config_swap();
+    inicializar_semaforos_coordinadores();
     creacion_conexiones_swap();
 
     log_debug(swap_logger, "SWAP TERMINO.\n");
-
-    swap_liberar_config();
-    swap_liberar_log();
+    liberar_todo();
 
     return 0;
 }

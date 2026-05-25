@@ -31,6 +31,9 @@ typedef struct
 extern t_log *io_logger;
 extern io_config_struct io_config;
 extern int conexion_ks;
-extern char* tipo_io_mayusculas;
+extern char *tipo_io_mayusculas;
+// Semaforos:
+extern pthread_mutex_t conexiones_ks; // MUTEX
+extern sem_t semaphore;               // Coordinacion //POR AHORA NO SE USA
 
 #endif

@@ -129,7 +129,7 @@ void* ks_maneja_cpu(void* arg) {
 			break;
 		}
 
-		case MEM_ALLOC: // MEM_ALLOC (Id del Segmento, Tamaño)
+		case MEM_ALLOC: // MEM_ALLOC (Id del Segmento, Tamaño, PID)
 		{
 			t_paquete* contenido = recibir_paquete(cpu->fd);
 
@@ -139,16 +139,26 @@ void* ks_maneja_cpu(void* arg) {
 			int tamanio;
 			buffer_read(&tamanio, contenido->buffer, sizeof(int));
 
+			int pid;
+			buffer_read(&pid, contenido->buffer, sizeof(int));
+
+			enviar_mem_alloc(cpu->fd, id_segmento, tamanio, pid);
+
 			eliminar_paquete(contenido);
 			break;
 		}
 
-		case MEM_FREE: // MEM_FREE (Id del Segmento)
+		case MEM_FREE: // MEM_FREE (Id del Segmento, PID)
 		{
 			t_paquete* contenido = recibir_paquete(cpu->fd);
 
 			int id_segmento;
 			buffer_read(&id_segmento, contenido->buffer, sizeof(int));
+
+			int pid;
+			buffer_read(&pid, contenido->buffer, sizeof(int));
+
+			enviar_mem_free(cpu->fd, id_segmento, pid);
 
 			eliminar_paquete(contenido);
 			break;

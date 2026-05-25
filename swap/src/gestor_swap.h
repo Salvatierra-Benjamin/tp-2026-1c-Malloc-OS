@@ -35,4 +35,8 @@ extern t_log *swap_logger;
 extern swap_config_struct swap_config;
 extern int conexion_km;
 
+// Semaforos:
+extern pthread_mutex_t conexiones_km; // MUTEX
+extern sem_t semaphore;               // Coordinacion //POR AHORA NO SE USA
+
 #endif

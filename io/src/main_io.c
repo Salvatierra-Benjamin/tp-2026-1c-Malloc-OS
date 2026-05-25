@@ -16,6 +16,7 @@ int main(int argc, char *argv[])
     inicializar_logger();
 
     imprimir_valores_config_io();
+    inicializar_semaforos_coordinadores();
 
     // !PONER FUNCIONES ARRIBA DE LA  "creacion_conexiones_swap()" Ó EN EL RECEPTOR EN SU RESPECTIVO CASE (RECOMENDADO CREAR NUEVOS CASES PARA EL SWITCH)
     // !PORQUE ESTA UTILIZANDO UN HILO TIPO JOIN PARA QUE EL PROGRAMA NO SE CIERRER.
@@ -25,8 +26,6 @@ int main(int argc, char *argv[])
     log_debug(io_logger, "IO TERMINO.\n");
 
     free(tipo_io_mayusculas);
-    io_liberar_config();
-    io_liberar_log();
-
+    liberar_todo();
     return 0;
 }

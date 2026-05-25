@@ -24,22 +24,31 @@ void *atencion_cpus(void *socket_cliente_puntero)
 
     while (1)
     {
+
         int cod_op = recibir_operacion(socket_cliente);
 
+        if (cod_op < 0)
+        {
+            log_error(ms_logger, "cod op %d", cod_op);
+            log_error(ms_logger, "CPU desconectado o error");
+            liberar_todo();
+            exit(EXIT_FAILURE);
+        }
         switch (cod_op)
         {
         case HANDSHAKE_CPU:
         {
-            enviar_operacion(socket_cliente, MS_OK_CONEXION);
-            break;
+            log_debug(ms_logger, "[RECEPTOR_CPUS]HANDSHAKE EXITOSO CON CPU!!!");
+            enviar_operacion(socket_cliente, HANDSHAKE_OK);
         }
-        case -1:
+        case ENVIO_CPU_ID:
         {
-            log_error(ms_logger, "Error de comunicación con la CPU");
-            ms_liberar_config();
-            ms_liberar_log();
-            free(memoria_ms);
-            exit(EXIT_FAILURE);
+            t_paquete *paquete_cpu_id = recibir_paquete(socket_cliente);
+            int cpu_id;
+            buffer_read(&cpu_id, paquete_cpu_id->buffer, sizeof(int));
+            eliminar_paquete(paquete_cpu_id);
+            log_debug(ms_logger, "[RECEPTOR_CPUS]Recibido el cpu_id número: %d", cpu_id);
+
             break;
         }
         default:

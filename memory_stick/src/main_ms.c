@@ -21,14 +21,12 @@ int main(int argc, char *argv[])
     ms_cargar_config(path);
     inicializar_logger();
     imprimir_valores_config_ms();
+    inicializar_semaforos_coordinadores();
     memoria_reservada();
     creacion_conexiones_ms();
 
     log_debug(ms_logger, "Memory Stick TERMINO.\n");
-
-    ms_liberar_config();
-    ms_liberar_log();
-    free(memoria_ms);
+    liberar_todo();
 
     return 0;
 }

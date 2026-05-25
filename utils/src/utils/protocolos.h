@@ -24,16 +24,21 @@ typedef enum
 {
     // ---------------- Handshakes ----------------
     // Solicitud
+
     HANDSHAKE_IO = 1000,   // se recibe al IO (io es quien lo manda)
     HANDSHAKE_CPU = 1001,  // CPU envia HS a MS
     HANDSHAKE_SWAP = 1002, // Swap envia HS a KM
     HANDSHAKE_KS = 1003,   // KS se envia a HS a KM
     HANDSHAKE_MS = 1004,   // MS envia HS a KM
+    HANDSHAKE_OK = 1005,   // MS,KS,KM LE ENVIA PARA CPU
 
-    // Respuesta
+    //  Respuesta
     KM_OK_CONEXION = 1100, // KM responde a KS, SWAP, MS
     KS_OK_CONEXION = 1101, // KM responde a KS, CPU, IO
     MS_OK_CONEXION = 1102, // MS responde a CPU
+
+    //  DEBUG
+    HANDSHAKE_DEBUG_CLIENT = 1400,
 
     // ---------------- IO -> SCHEDULER ----------------
     IO_ENVIA_IO = 2000,
@@ -51,8 +56,12 @@ typedef enum
 
     // ---------------- CPU -> SCHEDULER ----------------
     CPU_IDENTIFICACION = 3000,
+
+    // ---------------- CPU -> KM ----------------
     SOLICITUD_CONTEXTO_EJECUCION = 3001, // CPU solicita contexto a KM
     ENVIO_CPU_ID = 3002,
+    SOLICITUD_INSTRUCCION = 3003, // cpu solicuta instruccion [pid, pc]
+    OK_ALOJAR = 3004,             // cpu
 
     // ---------------- SWAP -> KM ----------------
     BLOCK_SIZE = 4000,
@@ -63,8 +72,39 @@ typedef enum
     // ---------------- MS -> KM ----------------
     MEMORY_STICK_SIZE = 6000,
 
-} op_code;
+    // ---------------- KS -> CPU ----------------
+    ALOJAR_PROCESO = 7000, // KS envia pid a CPU
+    INTERRUPCION = 7001,
+    // ---------------- KM -> CPU ----------------
+    CONTEXTO_EJECUCION = 8000, // KM envia [t_registros, t_tabla_de_segmentos]
+    ENVIO_INSTRUCCION = 8001,
+    // ---------------- CODIGOS DE ERROR -----------
+    ERROR_ENVIO_INSTRUCCION = 9001,
+    ERROR_ENVIO_CONTEXTO = 9002
 
+} op_code;
+typedef enum
+{
+    NOOP,
+    SET,              // REGISTRO , VALOR
+    MOV_IN,           // REGISTRO, DATOS
+    MOV_OUT,          // REGISTRO, DATOS
+    SUM,              // REGISTRO_DESTINO, REGISTRO_ORIGEN
+    SUB,              // REGISTRO_DESTINO, REGISTRO_ORIGEN
+    JNZ,              // REGISTRO, INSTRUCCION
+    COPY_MEM,         // REGISTRO, TAMAÑO
+    MUTEX_CREATE,     // NOMBRE_MUTEX
+    MUTEX_LOCK,       // NOMBRE_MUTEX
+    MUTEX_UNLOCK,     // NOMBRE_MUTEX
+    MEM_ALLOC,        // ID_SEGMENTO, TAMAÑO
+    MEM_FREE,         // ID_SEGMENTO
+    SLEEP,            // TIEMPO
+    STDOUT,           // REGISTRO_DIRECCION_LOGICA, REGISTRO_TAMAÑO
+    STDIN,            // REGISTRO_DIRECCION_LOGICA, REGISTRO_TAMAÑO
+    INIT_PROC,        // ARCHIVO_INSTRUCCIONES, PRIORIDAD
+    EXIT,             // FIN DE PROCESO
+    ERROR_INSTRUCCION // HUBO UN ERROR EN LA INSTRUCCION ENVIADA DE KM A CPU
+} t_palabra_reservada;
 typedef enum
 {
     OK,
@@ -84,6 +124,49 @@ typedef struct
     op_code codigo_operacion;
     t_buffer *buffer;
 } t_paquete;
+
+typedef struct
+{
+    uint32_t PC;
+    uint8_t AX;
+    uint8_t BX;
+    uint8_t CX;
+    uint8_t DX;
+    uint32_t EAX;
+    uint32_t EBX;
+    uint32_t ECX;
+    uint32_t EDX;
+    uint32_t SI;
+    uint32_t DI;
+} t_registros;
+
+typedef struct
+{
+    uint32_t dir_base;
+    uint32_t tam_seg;
+} segmento_t;
+
+typedef struct
+{
+    segmento_t *segmento;
+    uint32_t cantidad_segmentos;
+} tabla_segmentos_t;
+
+typedef struct
+{
+    int PID;
+    t_registros registros;
+    tabla_segmentos_t tabla_segmentos;
+
+} t_contexto_ejecucion;
+
+typedef struct
+{
+    t_palabra_reservada comando;
+    int PID;
+    char *parametro_1;
+    char *parametro_2;
+} t_instruccion;
 
 int enviar_operacion(int socket_destino, op_code codigo_operacion);
 int recibir_operacion(int);

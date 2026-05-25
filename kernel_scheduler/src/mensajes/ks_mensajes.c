@@ -42,3 +42,20 @@ void enviar_interrupcion_cpu(int cpu_fd, int pid, char* motivo) {
 	enviar_paquete(paquete_interrupcion, cpu_fd);
 	eliminar_paquete(paquete_interrupcion);
 }
+
+void enviar_mem_alloc(int cpu_fd, int id_segmento, int tamanio, int pid) {
+	t_paquete* paquete_alloc = crear_paquete(MEM_ALLOC);
+	agregar_a_paquete(paquete_alloc, &pid, sizeof(int));
+	agregar_a_paquete(paquete_alloc, &id_segmento, sizeof(int));
+	agregar_a_paquete(paquete_alloc, &tamanio, sizeof(int));
+	enviar_paquete(paquete_alloc, cpu_fd);
+	eliminar_paquete(paquete_alloc);
+}
+
+void enviar_mem_free(int cpu_fd, int id_segmento, int pid) {
+	t_paquete* paquete_free = crear_paquete(MEM_FREE);
+	agregar_a_paquete(paquete_free, &pid, sizeof(int));
+	agregar_a_paquete(paquete_free, &id_segmento, sizeof(int));
+	enviar_paquete(paquete_free, cpu_fd);
+	eliminar_paquete(paquete_free);
+}

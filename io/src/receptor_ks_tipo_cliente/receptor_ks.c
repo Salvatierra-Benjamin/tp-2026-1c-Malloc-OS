@@ -15,7 +15,8 @@ char *funcion_stdin(int cant_bytes)
     {
         // Manejo de error si malloc falla
         log_error(io_logger, "ERROR AL CREAR MALLOC STDIN");
-        return NULL;
+        liberar_todo();
+        exit(EXIT_FAILURE);
     }
     int index = 0;
     char caracter;
@@ -40,17 +41,19 @@ void *atencion_ks()
     log_debug(io_logger, "[RECEPTOR_KS_IO] CONECTADO CON KS");
     while (1)
     {
+
         int cod_op = recibir_operacion(conexion_ks);
 
         if (cod_op < 0)
         {
             log_error(io_logger, "cod op %d", cod_op);
             log_error(io_logger, "KS desconectado o error");
+            liberar_todo();
             exit(EXIT_FAILURE);
         }
         switch (cod_op)
         {
-        case KM_OK_CONEXION:
+        case KS_OK_CONEXION:
         {
             log_debug(io_logger, "[RECEPTOR_KS_IO] EL HANSHAKE CON KS SE HA REALIZADO CORRECTAMENTE!!!");
             break;
@@ -78,6 +81,7 @@ void *atencion_ks()
 
                 t_paquete *paquete_leido = crear_paquete(OK_STDIN);
                 agregar_a_paquete(paquete_leido, leido, cant_bytes);
+
                 enviar_paquete(paquete_leido, conexion_ks);
 
                 log_info(io_logger, "## PID: %d - Fin de IO", pid);
@@ -96,6 +100,7 @@ void *atencion_ks()
         {
             if (strcmp(tipo_io_mayusculas, "STDOUT") == 0)
             {
+
                 t_paquete *paquete = recibir_paquete(conexion_ks);
 
                 int pid;
@@ -113,7 +118,9 @@ void *atencion_ks()
                 // Inicio de IO: “## PID: <PID> - Inicio de IO”
 
                 printf("Cadena recibida de KS: %s\n", cadena_a_imprimir);
+
                 enviar_operacion(conexion_ks, OK_STDOUT);
+
                 log_info(io_logger, "## PID: %d - %s ", pid, cadena_a_imprimir);
                 // Solo para STDOUT: “## PID: <PID> - <CONTENIDO A IMPRIMIR>”
 
@@ -135,6 +142,7 @@ void *atencion_ks()
             {
 
                 t_paquete *paquete = recibir_paquete(conexion_ks);
+
                 int pid;
                 int tiempo_espera;
                 buffer_read(&pid, paquete->buffer, sizeof(int));
@@ -146,6 +154,7 @@ void *atencion_ks()
 
                 int tiempo_en_micro = tiempo_espera * 1000;
                 usleep(tiempo_en_micro);
+
                 enviar_operacion(conexion_ks, OK_SLEEP);
 
                 log_info(io_logger, "## PID: %d - Haciendo sleep por %d milisegundos.", pid, tiempo_espera);
@@ -158,14 +167,6 @@ void *atencion_ks()
             {
                 log_error(io_logger, "IO y Operacion recibida es incorrecto");
             }
-            break;
-        }
-        case -1:
-        {
-            log_error(io_logger, "Error de comunicación con la KS");
-            io_liberar_config();
-            io_liberar_log();
-            exit(EXIT_FAILURE);
             break;
         }
         default:
