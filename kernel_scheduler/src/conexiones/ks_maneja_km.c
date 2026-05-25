@@ -150,7 +150,7 @@ void* ks_conexion_km(void* _arg) {
 		case -1: {
 			log_warning(ks_logger, "[KM] se desconecto km");
 			ejecutando = 0;
-			break;
+			return NULL;
 		}
 		default: {
 			log_warning(ks_logger, "[KM] operacion desconocida: %d", op_code);

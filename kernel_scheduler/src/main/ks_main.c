@@ -195,11 +195,11 @@ void* ks_conexion_loop(void* _arg) {
 			pthread_t hilo_cpu;
 
 			int* socket_ptr = malloc(sizeof(int));
+			*socket_ptr = fd;
 			if (socket_ptr == NULL) {
 				close(fd);
 				return;
 			}
-			*socket_ptr = fd;
 
 			t_paquete* contenido = recibir_paquete(fd);
 
