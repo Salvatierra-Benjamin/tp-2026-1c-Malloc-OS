@@ -193,13 +193,6 @@ void* ks_conexion_loop(void* _arg) {
 
 			enviar_ok_conexion_cpu(fd);
 
-			int op_code = recibir_operacion(cpu->fd);
-			if (op_code != ENVIO_CPU_ID) {
-				log_error(ks_logger, "Se conecto un nuevo CPU sin enviar ID");
-				close(fd);
-				return;
-			}
-
 			int* socket_ptr = malloc(sizeof(int));
 			*socket_ptr = fd;
 			if (socket_ptr == NULL) {
@@ -213,10 +206,9 @@ void* ks_conexion_loop(void* _arg) {
 			buffer_read(&id_cpu, contenido->buffer, sizeof(char*));
 
 			t_cpu* cpu = crear_cpu(id_cpu, socket_ptr);
+			eliminar_paquete(contenido);
 
 			log_conexion_cpu(id_cpu);
-
-			eliminar_paquete(contenido);
 
 			// NO recibir_paquete aca
 			pthread_t hilo_cpu;
