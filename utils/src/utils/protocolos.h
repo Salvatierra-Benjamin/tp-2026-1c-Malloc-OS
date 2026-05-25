@@ -142,6 +142,7 @@ typedef struct
 
 typedef struct
 {
+    int id_segmento;
     uint32_t dir_base;
     uint32_t tam_seg;
 } segmento_t;

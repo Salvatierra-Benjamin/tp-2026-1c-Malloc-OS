@@ -77,6 +77,7 @@ void Recibir_Instruccion(t_instruccion *nueva_instruccion)
         nueva_instruccion->parametro_2 = NULL;
         // Importante hay que ver que hago en el Ciclo de Instruccion.
         // NO SE LIBERA CON FREE () NADA !!! PUNTEROS APUNTANDO A NULL.
+        // exit(failure)
     }
     else
     {
