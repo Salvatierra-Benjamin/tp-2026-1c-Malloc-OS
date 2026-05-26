@@ -10,7 +10,7 @@ void creacion_conexiones_io()
         exit(EXIT_FAILURE);
     }
 
-    log_info(io_logger, "## Conectado a Kernel Scheduler");
+    // log_info(io_logger, "## Conectado a Kernel Scheduler");
 
     enviar_operacion(conexion_ks, HANDSHAKE_IO);
 

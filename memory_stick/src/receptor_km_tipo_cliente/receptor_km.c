@@ -31,6 +31,10 @@ void *atencion_km()
         case KM_OK_CONEXION:
         {
             log_debug(ms_logger, "[RECEPTOR_KM_MS] EL HANDSHAKE CON KM SE HA REALIZADO CORRECTAMENTE!!!");
+
+            // Conexión a Kernel Memory: “## Conectado a Kernel Memory”
+            log_info(ms_logger, "## Conectado a Kernel Memory");
+            
             sem_post(&sem_ok_conexion_km);
 
             t_paquete *paquete_tamaño_km = crear_paquete(ENVIO_TAMANIO_KM);
@@ -71,6 +75,8 @@ void *atencion_km()
             agregar_a_paquete(paquete_ok_escritura, &pid, sizeof(int));
 
             enviar_paquete(paquete_ok_escritura, conexion_km);
+            // Escritura: “## Escritura de <CANTIDAD ESCRITA> bytes”
+            log_info(ms_logger,  "## Escritura de %d bytes", tamanio_a_escribir);
 
             // 6. Limpieza absoluta para evitar memory leaks
             eliminar_paquete(paquete_ok_escritura);

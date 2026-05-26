@@ -56,6 +56,8 @@ void *atencion_ks()
         case KS_OK_CONEXION:
         {
             log_debug(io_logger, "[RECEPTOR_KS_IO] EL HANSHAKE CON KS SE HA REALIZADO CORRECTAMENTE!!!");
+            log_info(io_logger, "## Conectado a Kernel Scheduler");
+
             break;
         }
         case STDIN_IO:
