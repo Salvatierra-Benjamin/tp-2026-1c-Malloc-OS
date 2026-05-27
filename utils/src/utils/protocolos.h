@@ -56,6 +56,9 @@ typedef enum
 
     // ---------------- CPU -> SCHEDULER ----------------
     CPU_IDENTIFICACION = 3000,
+    ENVIO_MUTEX_CREATE = 3001, // [tamanioNombre, nombreMutex, pid]
+    ENVIO_MUTEX_LOCK = 3002, // [tamanioNombre, nombreMutex, pid]
+    ENVIO_MUTEX_UNLOCK = 3003, // [tamanioNombre, nombreMutex, pid]
 
     // ---------------- CPU -> KM ----------------
     SOLICITUD_CONTEXTO_EJECUCION = 3001, // CPU solicita contexto a KM

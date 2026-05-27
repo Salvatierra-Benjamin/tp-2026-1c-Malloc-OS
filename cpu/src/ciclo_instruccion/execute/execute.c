@@ -182,19 +182,50 @@ void execute_COPY_MEM(t_contexto_ejecucion *contexto, char *tamano_str, char* pa
 // SYSCALLS - TODO
 // =========================================================
 
-void execute_MUTEX_CREATE(t_contexto_ejecucion *contexto, char *recurso, char* param2) {
+void execute_MUTEX_CREATE(t_contexto_ejecucion *contexto, char *nombre_mutex, char* param2) {
     (void) param2;
-    log_info(cpu_logger, "PID: %d - Ejecutando: MUTEX_CREATE - %s", contexto->PID, recurso);
+
+    log_info(cpu_logger, "PID: %d - Ejecutando: MUTEX_CREATE - %s", contexto->PID, nombre_mutex);
+    t_paquete * paquete_mutex = crear_paquete(ENVIO_MUTEX_CREATE);
+    int tamanio_nombre = strlen(nombre_mutex);
+    agregar_a_paquete(paquete_mutex, &tamanio_nombre, sizeof(int));
+    agregar_a_paquete(paquete_mutex, nombre_mutex, tamanio_nombre +1);
+    agregar_a_paquete(paquete_mutex, &(contexto->PID), sizeof(int));
+
+    enviar_paquete(paquete_mutex, conexion_ks);
+    
+    eliminar_paquete(paquete_mutex);
+
 }
 
-void execute_MUTEX_LOCK(t_contexto_ejecucion *contexto, char *recurso, char* param2) {
+void execute_MUTEX_LOCK(t_contexto_ejecucion *contexto, char *nombre_mutex, char* param2) {
     (void) param2;
-    log_info(cpu_logger, "PID: %d - Ejecutando: MUTEX_LOCK - %s", contexto->PID, recurso);
+    log_info(cpu_logger, "PID: %d - Ejecutando: MUTEX_LOCK - %s", contexto->PID, nombre_mutex);
+    
+    t_paquete * paquete_mutex = crear_paquete(ENVIO_MUTEX_LOCK);
+    int tamanio_nombre = strlen(nombre_mutex);
+    agregar_a_paquete(paquete_mutex, &tamanio_nombre, sizeof(int));
+    agregar_a_paquete(paquete_mutex, nombre_mutex, tamanio_nombre +1);
+    agregar_a_paquete(paquete_mutex, &(contexto->PID), sizeof(int));
+
+    enviar_paquete(paquete_mutex, conexion_ks);
+    
+    eliminar_paquete(paquete_mutex);
 }
 
-void execute_MUTEX_UNLOCK(t_contexto_ejecucion *contexto, char *recurso, char* param2) {
+void execute_MUTEX_UNLOCK(t_contexto_ejecucion *contexto, char *nombre_mutex, char* param2) {
     (void) param2;
-    log_info(cpu_logger, "PID: %d - Ejecutando: MUTEX_UNLOCK - %s", contexto->PID, recurso);
+    log_info(cpu_logger, "PID: %d - Ejecutando: MUTEX_UNLOCK - %s", contexto->PID, nombre_mutex);
+    
+    t_paquete * paquete_mutex = crear_paquete(ENVIO_MUTEX_UNLOCK);
+    int tamanio_nombre = strlen(nombre_mutex);
+    agregar_a_paquete(paquete_mutex, &tamanio_nombre, sizeof(int));
+    agregar_a_paquete(paquete_mutex, nombre_mutex, tamanio_nombre +1);
+    agregar_a_paquete(paquete_mutex, &(contexto->PID), sizeof(int));
+
+    enviar_paquete(paquete_mutex, conexion_ks);
+    
+    eliminar_paquete(paquete_mutex);
 }
 
 void execute_MEM_ALLOC(t_contexto_ejecucion *contexto, char *tamano_str, char *registro_direccion) {
