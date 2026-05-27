@@ -29,6 +29,8 @@ void *atencion_km()
         case HANDSHAKE_OK:
         {
             log_debug(swap_logger, "[RECEPTOR_KM_SWAP] EL HANSHAKE CON KM SE HA REALIZADO CORRECTAMENTE!!!");
+            // Conexión a Kernel Memory: “## Conectado a Kernel Memory”
+            log_info(swap_logger, "## Conectado a Kernel Memory");
             break;
         }
         default:
