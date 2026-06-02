@@ -1,4 +1,5 @@
 #include "ciclo_instruccion.h"
+
 void Ejecutar_Ciclo_de_Instruccion(t_contexto_ejecucion *contexto_actual)
 {
     t_instruccion nueva_instruccion;
@@ -7,7 +8,14 @@ void Ejecutar_Ciclo_de_Instruccion(t_contexto_ejecucion *contexto_actual)
     nueva_instruccion.parametro_2 = NULL;
 
     Iniciar_Fetch(contexto_actual, &nueva_instruccion);
+
+    uint32_t pc_anterior = contexto_actual->registros.PC;
+
     Iniciar_Decode(contexto_actual, nueva_instruccion);
+
+    if(contexto_actual->registros.PC == pc_anterior){
+        contexto_actual->registros.PC++;
+    }
     // Iniciar_Execute(contexto_actual); El execute se hará dentro de cada case del Decode
     Destruir_Instruccion(&nueva_instruccion); // TODO VER DONDE SE COLACA LA DESTRUCCION DE INSTRUCCIONES PARA LIMPIAR LOS MALLOC Y REASIGNAR A LOS PUNTEROS NULL PREDETERMINADO.
     // TODO check_interrupt;

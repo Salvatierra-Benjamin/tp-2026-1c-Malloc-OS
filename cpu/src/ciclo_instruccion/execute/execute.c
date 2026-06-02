@@ -146,9 +146,9 @@ void execute_JNZ(t_contexto_ejecucion *contexto, char *registro, char *instrucci
     
     if (valor_registro != 0) {
         contexto->registros.PC = nueva_instruccion;
-    }
-    
+    }    
     log_info(cpu_logger, "PID: %d - Ejecutando: JNZ - %s - %s", contexto->PID, registro, instruccion_str);
+
 }
 
 
