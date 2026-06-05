@@ -2,22 +2,33 @@
 
 void Ejecutar_Ciclo_de_Instruccion(t_contexto_ejecucion *contexto_actual)
 {
-    t_instruccion nueva_instruccion;
-    // Inicializar en NULL por las dudas, buena práctica:
-    nueva_instruccion.parametro_1 = NULL;
-    nueva_instruccion.parametro_2 = NULL;
+    bool seguir_ejecutando = true;
 
-    Iniciar_Fetch(contexto_actual, &nueva_instruccion);
+    while (seguir_ejecutando)
+    {
+        t_instruccion nueva_instruccion;
+        // Inicializar en NULL por las dudas, buena práctica:
+        nueva_instruccion.parametro_1 = NULL;
+        nueva_instruccion.parametro_2 = NULL;
 
-    uint32_t pc_anterior = contexto_actual->registros.PC;
+        Iniciar_Fetch(contexto_actual, &nueva_instruccion);
 
-    Iniciar_Decode(contexto_actual, nueva_instruccion);
+        uint32_t pc_anterior = contexto_actual->registros.PC;
 
-    if(contexto_actual->registros.PC == pc_anterior){
-        contexto_actual->registros.PC++;
+        Iniciar_Decode(contexto_actual, nueva_instruccion); // -> execute
+
+        if (contexto_actual->registros.PC == pc_anterior)
+        {
+            contexto_actual->registros.PC++;
+        }
+
+        Destruir_Instruccion(&nueva_instruccion);
+
+        // TODO check_interrupt;
+        if (check_interrupt(contexto_actual))
+        {
+            seguir_ejecutando = false;
+        }
     }
-    // Iniciar_Execute(contexto_actual); El execute se hará dentro de cada case del Decode
-    Destruir_Instruccion(&nueva_instruccion); // TODO VER DONDE SE COLACA LA DESTRUCCION DE INSTRUCCIONES PARA LIMPIAR LOS MALLOC Y REASIGNAR A LOS PUNTEROS NULL PREDETERMINADO.
-    // TODO check_interrupt;
-    //  check_interrupt()
+    log_info(cpu_logger, "Ciclo de instrucción finalizado para PID: %d", contexto_actual->PID);
 }

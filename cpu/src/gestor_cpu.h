@@ -40,6 +40,8 @@ extern int conexion_ks;
 extern int conexion_ms;
 extern int identificador_cpu;
 extern sem_t sem_proceso_nuevo;
+extern sem_t hay_interrupcion;
+extern sem_t notificar_ks;
 extern int PID_a_ejecutar;
 
 //  Semaforos:

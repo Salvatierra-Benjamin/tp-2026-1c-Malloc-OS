@@ -132,6 +132,12 @@ void Destruir_Instruccion(t_instruccion *instruccion)
     // Opcional: limpiar los punteros para no dejar basura
     instruccion->parametro_1 = NULL;
     instruccion->parametro_2 = NULL;
+
+    // 2. Resetear metadatos a valores inválidos/seguros
+    instruccion->PID = -1;
+    instruccion->comando = ERROR_INSTRUCCION; // Usamos el valor del enum que representa error
+
+    // Con esto, la instrucción queda "muerta" y es imposible ejecutarla por error.
 }
 
 void Iniciar_Fetch(t_contexto_ejecucion *contexto_actual, t_instruccion *nueva_instruccion)
@@ -141,5 +147,4 @@ void Iniciar_Fetch(t_contexto_ejecucion *contexto_actual, t_instruccion *nueva_i
     Loggear_Instruccion(nueva_instruccion);
     // Fetch Instrucción: “## PID: <PID> - FETCH - Program Counter: <PROGRAM_COUNTER>”.
     log_info(cpu_logger, "## PID: %d - FETCH - Program Counter: %u", contexto_actual->PID, contexto_actual->registros.PC);
-
 }

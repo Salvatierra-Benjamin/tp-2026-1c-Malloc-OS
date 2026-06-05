@@ -57,7 +57,7 @@ typedef enum
     // ---------------- CPU -> SCHEDULER ----------------
     CPU_IDENTIFICACION = 3000,
     ENVIO_MUTEX_CREATE = 3001, // [tamanioNombre, nombreMutex, pid]
-    ENVIO_MUTEX_LOCK = 3002, // [tamanioNombre, nombreMutex, pid]
+    ENVIO_MUTEX_LOCK = 3002,   // [tamanioNombre, nombreMutex, pid]
     ENVIO_MUTEX_UNLOCK = 3003, // [tamanioNombre, nombreMutex, pid]
 
     // ---------------- CPU -> KM ----------------
@@ -83,9 +83,11 @@ typedef enum
     // ---------------- KS -> CPU ----------------
     ALOJAR_PROCESO = 7000, // KS envia pid a CPU
     INTERRUPCION = 7001,
+    DESALOJO_PROCESO = 7002,
     // ---------------- KM -> CPU ----------------
     CONTEXTO_EJECUCION = 8000, // KM envia [t_registros, t_tabla_de_segmentos]
     ENVIO_INSTRUCCION = 8001,
+    ACTUALIZAR_CONTEXTO_EJECUCION = 8002,
     // ---------------- CODIGOS DE ERROR -----------
     ERROR_ENVIO_INSTRUCCION = 9001,
     ERROR_ENVIO_CONTEXTO = 9002

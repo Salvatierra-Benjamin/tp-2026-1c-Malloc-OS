@@ -7,6 +7,8 @@ int conexion_ks;
 int conexion_ms;
 int identificador_cpu;
 sem_t sem_proceso_nuevo;
+sem_t hay_interrupcion;
+sem_t notificar_ks;
 int PID_a_ejecutar = -1;
 
 //  Semaforos:
@@ -75,6 +77,8 @@ void inicializar_semaforos_coordinadores()
     // 0: El semáforo se comparte entre hilos del mismo proceso
     // 0: Valor inicial (el semáforo empieza "cerrado")
     sem_init(&sem_proceso_nuevo, 0, 0);
+    sem_init(&hay_interrupcion, 0, 0);
+    sem_init(&notificar_ks, 0, 0);
     sem_init(&semaphore, 0, 0);
 }
 
@@ -91,6 +95,8 @@ void liberar_semaforos()
     pthread_mutex_destroy(&conexiones_ks);
     pthread_mutex_destroy(&conexiones_ms);
     sem_destroy(&sem_proceso_nuevo);
+    sem_destroy(&hay_interrupcion);
+    sem_destroy(&notificar_ks);
     sem_destroy(&semaphore);
 }
 

@@ -59,13 +59,23 @@ void Loggear_Contexto(t_contexto_ejecucion *contexto_actual)
 
 void Destruir_Contexto(t_contexto_ejecucion *contexto)
 {
+    // 1. Limpieza de memoria dinámica (Lo que ya tenías)
     if (contexto->tabla_segmentos.segmento != NULL)
     {
         free(contexto->tabla_segmentos.segmento);
         contexto->tabla_segmentos.segmento = NULL;
     }
-}
 
+    // 2. Limpieza de metadatos (Reset a 0)
+    contexto->PID = -1;
+    contexto->tabla_segmentos.cantidad_segmentos = 0;
+
+    // 3. Reset total de registros (Opcional, pero recomendado por higiene)
+    // Esto pone todos los bytes de la estructura de registros en 0
+    memset(&(contexto->registros), 0, sizeof(t_registros));
+
+    log_info(cpu_logger, "Contexto destruido y estructura limpiada.");
+}
 int main(int argc, char *argv[])
 {
 
@@ -95,6 +105,7 @@ int main(int argc, char *argv[])
     {
         // 1. Esperamos a que el receptor_ks nos avise que hay un proceso
         sem_wait(&sem_proceso_nuevo);
+        // sem_wait(&syscall_bloqueante); // syscalls
 
         // 2. Solicitud Contexto del CPU al KS
         t_paquete *paquete_solicitud_contexto = crear_paquete(SOLICITUD_CONTEXTO_EJECUCION);
@@ -114,6 +125,7 @@ int main(int argc, char *argv[])
             // 3. Acá arranca el ciclo (Fetch -> Decode -> Execute)
             log_info(cpu_logger, "Iniciando ciclo para el PID: %d", PID_a_ejecutar);
             Ejecutar_Ciclo_de_Instruccion(&contexto_actual);
+
             Destruir_Contexto(&contexto_actual); // USAR EN RECIBIR CONTEXTO
         }
         else if (respuesta_contexto_ejecucion == ERROR_ENVIO_CONTEXTO)

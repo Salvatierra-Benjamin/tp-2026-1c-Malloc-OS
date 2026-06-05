@@ -34,14 +34,22 @@ void *atencion_ks()
             sem_post(&sem_proceso_nuevo);
             break;
         }
-        // case INTERRUPCION:
-        // {
-        //     - El Kernel te pide que desalojes.
-        //     - Solo tenés que prender una variable global (un flag atómico)
-        //     - que tu main va a leer en la etapa de "Check Interrupt"
-        //     hubo_interrupcion = true;
-        //     break;
-        // }
+        case INTERRUPCION:
+        {
+            sem_post(&hay_interrupcion);
+            sem_wait(&notificar_ks);
+            //  2) Notificar al Kernel Scheduler que se devuelve el PID por interrupción
+            //  Motivo: como receptor_ks sólo notifica la existencia de la interrupción,
+            //  usamos un motivo genérico (1 = PREEMPTIVO). Ajustar si se cambia protocolo.
+            uint8_t motivo = 1;
+            t_paquete *paquete_ks = crear_paquete(DESALOJO_PROCESO);
+            int pid = contexto_actual->PID;
+            agregar_a_paquete(paquete_ks, &pid, sizeof(int));
+            agregar_a_paquete(paquete_ks, &motivo, sizeof(uint8_t));
+            enviar_paquete(paquete_ks, conexion_ks);
+            eliminar_paquete(paquete_ks);
+            break;
+        }
         default:
         {
             log_warning(cpu_logger, "[RECEPTOR_KS_CPU] operacion desconocida : %d", cod_op);
