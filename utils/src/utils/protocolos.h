@@ -59,12 +59,14 @@ typedef enum
     ENVIO_MUTEX_CREATE = 3001, // [tamanioNombre, nombreMutex, pid]
     ENVIO_MUTEX_LOCK = 3002,   // [tamanioNombre, nombreMutex, pid]
     ENVIO_MUTEX_UNLOCK = 3003, // [tamanioNombre, nombreMutex, pid]
+    AVISO_DE_INTERRUPCION_DESALOJO = 3004,
+    AVISO_DE_INTERRUPCION_SEGMENTATION_FAULT = 3005,
 
     // ---------------- CPU -> KM ----------------
-    SOLICITUD_CONTEXTO_EJECUCION = 3001, // CPU solicita contexto a KM
-    ENVIO_CPU_ID = 3002,
-    SOLICITUD_INSTRUCCION = 3003, // cpu solicuta instruccion [pid, pc]
-    OK_ALOJAR = 3004,             // cpu
+    SOLICITUD_CONTEXTO_EJECUCION = 3008, // CPU solicita contexto a KM
+    ENVIO_CPU_ID = 3009,
+    SOLICITUD_INSTRUCCION = 3010, // cpu solicuta instruccion [pid, pc]
+    OK_ALOJAR = 3011,             // cpu
 
     // ---------------- SWAP -> KM ----------------
     BLOCK_SIZE = 4000,

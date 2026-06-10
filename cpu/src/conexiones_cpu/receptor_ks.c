@@ -41,7 +41,8 @@ void *atencion_ks()
             //  2) Notificar al Kernel Scheduler que se devuelve el PID por interrupción
             //  Motivo: como receptor_ks sólo notifica la existencia de la interrupción,
             //  usamos un motivo genérico (1 = PREEMPTIVO). Ajustar si se cambia protocolo.
-            uint8_t motivo = 1;
+            uint8_t motivo = AVISO_DE_INTERRUPCION_DESALOJO;
+
             t_paquete *paquete_ks = crear_paquete(DESALOJO_PROCESO);
             int pid = contexto_actual->PID;
             agregar_a_paquete(paquete_ks, &pid, sizeof(int));

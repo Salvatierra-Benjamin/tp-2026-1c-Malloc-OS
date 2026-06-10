@@ -3,7 +3,7 @@
 
 bool check_interrupt(t_contexto_ejecucion *contexto_actual)
 {
-    // sem_trywait devuelve 0 (hay interrupción) → ejecuta envío → retorna true → rompe while |
+    // sem_trywait devuelve 0 (hay interrupción) → ejecuta envío → retorna true → rompe while
     // sem_trywait devuelve -1 (no hay) → retorna false → sigue el while.
     if (sem_trywait(&hay_interrupcion) != 0) //
     {
