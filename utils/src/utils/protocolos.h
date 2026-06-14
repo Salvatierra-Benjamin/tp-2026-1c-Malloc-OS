@@ -61,15 +61,27 @@ typedef enum
     ENVIO_MUTEX_UNLOCK = 3003, // [tamanioNombre, nombreMutex, pid]
     AVISO_DE_INTERRUPCION_DESALOJO = 3004,
     AVISO_DE_INTERRUPCION_SEGMENTATION_FAULT = 3005,
+    ENVIO_MEM_ALLOC = 3006,
+    ENVIO_MEM_FREE = 3007,
+    ENVIO_SLEEP = 3008,
+    ENVIO_STDOUT = 3009,
+    ENVIO_STDIN = 3010,
+    ENVIO_INIT_PROC = 3011,
+    ENVIO_EXIT = 3012,
+
 
     // ---------------- CPU -> KM ----------------
-    SOLICITUD_CONTEXTO_EJECUCION = 3008, // CPU solicita contexto a KM
-    ENVIO_CPU_ID = 3009,
-    SOLICITUD_INSTRUCCION = 3010, // cpu solicuta instruccion [pid, pc]
-    OK_ALOJAR = 3011,             // cpu
+    SOLICITUD_CONTEXTO_EJECUCION = 3500, // CPU solicita contexto a KM
+    ENVIO_CPU_ID = 3501,
+    SOLICITUD_INSTRUCCION = 3502, // cpu solicuta instruccion [pid, pc]
+    OK_ALOJAR = 3503,             // cpu
 
     // ---------------- SWAP -> KM ----------------
     BLOCK_SIZE = 4000,
+    PETICION_LECTURA_SWAP = 4102,
+    RESPUESTA_LECTURA_SWAP = 4103,
+    PETICION_ESCRITURA_SWAP = 4104,
+    RESPUESTA_ESCRITURA_SWAP = 4105,
 
     // ---------------- KS -> KM ----------------
     CREACION_PROCESO = 5000,
