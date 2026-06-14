@@ -445,33 +445,148 @@ void execute_MUTEX_UNLOCK(t_contexto_ejecucion *contexto, char *nombre_mutex, ch
 void execute_MEM_ALLOC(t_contexto_ejecucion *contexto, char *tamano_str, char *registro_direccion)
 {
     log_info(cpu_logger, "PID: %d - Ejecutando: MEM_ALLOC - %s bytes", contexto->PID, tamano_str);
+    int tamanio = pasaje_de_char_a_int(tamano_str);
+    if (tamanio <= 0)
+    {
+        log_error(cpu_logger, "PID: %d - MEM_ALLOC tamanio invalido: %s", contexto->PID, tamano_str);
+        return;
+    }
+
+
+    t_paquete *paquete_mem = crear_paquete(ENVIO_MEM_ALLOC);
+    agregar_a_paquete(paquete_mem, &(contexto->PID), sizeof(int));
+    agregar_a_paquete(paquete_mem, &tamanio, sizeof(int));
+    int tamanio_registro = strlen(registro_direccion);
+    agregar_a_paquete(paquete_mem, &tamanio_registro, sizeof(int));
+    agregar_a_paquete(paquete_mem, registro_direccion, tamanio_registro + 1);
+
+
+    enviar_paquete(paquete_mem, conexion_ks);
+
+    eliminar_paquete(paquete_mem);
 }
+
 
 void execute_MEM_FREE(t_contexto_ejecucion *contexto, char *registro_direccion, char *param2)
 {
-    (void)param2;
+     (void)param2;
     log_info(cpu_logger, "PID: %d - Ejecutando: MEM_FREE", contexto->PID);
+   
+    t_paquete *paquete_mem = crear_paquete(ENVIO_MEM_FREE);
+    agregar_a_paquete(paquete_mem, &(contexto->PID), sizeof(int));
+    int tamanio_registro = strlen(registro_direccion);
+    agregar_a_paquete(paquete_mem, &tamanio_registro, sizeof(int));
+    agregar_a_paquete(paquete_mem, registro_direccion, tamanio_registro + 1);
+
+
+    enviar_paquete(paquete_mem, conexion_ks);
+
+    eliminar_paquete(paquete_mem);
+
+
 }
 
 void execute_SLEEP(t_contexto_ejecucion *contexto, char *tiempo_str, char *param2)
 {
     (void)param2;
     log_info(cpu_logger, "PID: %d - Ejecutando: SLEEP - %s", contexto->PID, tiempo_str);
+   
+    int tiempo = pasaje_de_char_a_int(tiempo_str);
+    if (tiempo < 0)
+    {
+        log_error(cpu_logger, "PID: %d - SLEEP tiempo invalido: %s", contexto->PID, tiempo_str);
+        return;
+    }
+
+
+    t_paquete *paquete_sleep = crear_paquete(ENVIO_SLEEP);
+    agregar_a_paquete(paquete_sleep, &(contexto->PID), sizeof(int));
+    agregar_a_paquete(paquete_sleep, &tiempo, sizeof(int));
+
+
+    enviar_paquete(paquete_sleep, conexion_ks);
+
+    eliminar_paquete(paquete_sleep);
+
 }
 
 void execute_STDOUT(t_contexto_ejecucion *contexto, char *registro_direccion, char *registro_tamano)
 {
     log_info(cpu_logger, "PID: %d - Ejecutando: STDOUT", contexto->PID);
+   
+    uint32_t direccion_logica = leer_registro(contexto, registro_direccion);
+    uint32_t tamanio = leer_registro(contexto, registro_tamano);
+
+
+    if (tamanio <= 0)
+    {
+        log_error(cpu_logger, "PID: %d - STDOUT tamanio invalido: %u", contexto->PID, tamanio);
+        return;
+    }
+    t_paquete *paquete_stdout = crear_paquete(ENVIO_STDOUT);
+    agregar_a_paquete(paquete_stdout, &(contexto->PID), sizeof(int));
+    agregar_a_paquete(paquete_stdout, &direccion_logica, sizeof(uint32_t));
+    agregar_a_paquete(paquete_stdout, &tamanio, sizeof(uint32_t));
+
+
+    enviar_paquete(paquete_stdout, conexion_ks);
+
+    eliminar_paquete(paquete_stdout);
+
 }
+
 
 void execute_STDIN(t_contexto_ejecucion *contexto, char *registro_direccion, char *registro_tamano)
 {
-    log_info(cpu_logger, "PID: %d - Ejecutando: STDIN", contexto->PID);
+     log_info(cpu_logger, "PID: %d - Ejecutando: STDIN", contexto->PID);
+   
+    uint32_t direccion_logica = leer_registro(contexto, registro_direccion);
+    uint32_t tamanio = leer_registro(contexto, registro_tamano);
+
+
+    if (tamanio <= 0)
+    {
+        log_error(cpu_logger, "PID: %d - STDIN tamanio invalido: %u", contexto->PID, tamanio);
+        return;
+    }
+
+
+    t_paquete *paquete_stdin = crear_paquete(ENVIO_STDIN);
+    agregar_a_paquete(paquete_stdin, &(contexto->PID), sizeof(int));
+    agregar_a_paquete(paquete_stdin, &direccion_logica, sizeof(uint32_t));
+    agregar_a_paquete(paquete_stdin, &tamanio, sizeof(uint32_t));
+
+
+    enviar_paquete(paquete_stdin, conexion_ks);
+
+    eliminar_paquete(paquete_stdin);
+
 }
 
 void execute_INIT_PROC(t_contexto_ejecucion *contexto, char *path, char *prioridad_str)
 {
-    log_info(cpu_logger, "PID: %d - Ejecutando: INIT_PROC - %s", contexto->PID, path);
+     log_info(cpu_logger, "PID: %d - Ejecutando: INIT_PROC - %s", contexto->PID, path);
+   
+    int prioridad = pasaje_de_char_a_int(prioridad_str);
+    if (prioridad < 0)
+    {
+        log_error(cpu_logger, "PID: %d - INIT_PROC prioridad invalida: %s", contexto->PID, prioridad_str);
+        return;
+    }
+
+
+    t_paquete *paquete_init = crear_paquete(ENVIO_INIT_PROC);
+    agregar_a_paquete(paquete_init, &(contexto->PID), sizeof(int));
+    int tamanio_path = strlen(path);
+    agregar_a_paquete(paquete_init, &tamanio_path, sizeof(int));
+    agregar_a_paquete(paquete_init, path, tamanio_path + 1);
+    agregar_a_paquete(paquete_init, &prioridad, sizeof(int));
+
+
+    enviar_paquete(paquete_init, conexion_ks);
+
+    eliminar_paquete(paquete_init);
+
 }
 
 void execute_EXIT(t_contexto_ejecucion *contexto, char *param1, char *param2)
@@ -479,4 +594,11 @@ void execute_EXIT(t_contexto_ejecucion *contexto, char *param1, char *param2)
     (void)param1;
     (void)param2;
     log_info(cpu_logger, "PID: %d - Ejecutando: EXIT", contexto->PID);
+   
+    t_paquete *paquete_exit = crear_paquete(ENVIO_EXIT);
+    agregar_a_paquete(paquete_exit, &(contexto->PID), sizeof(int));
+
+    enviar_paquete(paquete_exit, conexion_ks);
+    
+    eliminar_paquete(paquete_exit);
 }
