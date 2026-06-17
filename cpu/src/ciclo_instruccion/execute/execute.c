@@ -275,67 +275,67 @@ void execute_MOV_OUT(t_contexto_ejecucion *contexto, char *registro_datos, char 
     memcpy(buffer, info.puntero, info.tamanio); // TODO: Implementar lógica de MMU (Traducción + Escritura en Memoria)
 }
 
-// void execute_COPY_MEM(t_contexto_ejecucion *contexto, char *tamano_str, char *param2)
-// {
-//     (void)param2;
-//     log_info(cpu_logger, "PID: %d - Ejecutando: COPY_MEM - %s", contexto->PID, tamano_str);
+void execute_COPY_MEM(t_contexto_ejecucion *contexto, char *tamano_str, char *param2)
+{
+    (void)param2;
+    log_info(cpu_logger, "PID: %d - Ejecutando: COPY_MEM - %s", contexto->PID, tamano_str);
 
-//     int tamanio = pasaje_de_char_a_int(tamano_str);
-//     if (tamanio <= 0)
-//     {
-//         log_error(cpu_logger, "PID: %d - COPY_MEM tamanio invalido: %s", contexto->PID, tamano_str);
-//         return;
-//     }
+    int tamanio = pasaje_de_char_a_int(tamano_str);
+    if (tamanio <= 0)
+    {
+        log_error(cpu_logger, "PID: %d - COPY_MEM tamanio invalido: %s", contexto->PID, tamano_str);
+        return;
+    }
 
-//     uint32_t origen_logico = leer_registro(contexto, "SI");
-//     uint32_t destino_logico = leer_registro(contexto, "DI");
-//     uint32_t restante = (uint32_t)tamanio;
+    uint32_t origen_logico = leer_registro(contexto, "SI");
+    uint32_t destino_logico = leer_registro(contexto, "DI");
+    uint32_t restante = (uint32_t)tamanio;
 
-//     void *buffer = malloc(restante);
-//     if (buffer == NULL)
-//     {
-//         log_error(cpu_logger, "PID: %d - COPY_MEM fallo malloc", contexto->PID);
-//         return;
-//     }
+    void *buffer = malloc(restante);
+    if (buffer == NULL)
+    {
+        log_error(cpu_logger, "PID: %d - COPY_MEM fallo malloc", contexto->PID);
+        return;
+    }
 
-//     while (restante > 0)
-//     {
-//         int dir_fisica_origen;
-//         uint32_t bytes_origen;
+    while (restante > 0)
+    {
+        int dir_fisica_origen;
+        uint32_t bytes_origen;
 
-//         int mmu = MMU_TRADUCCION_FISICA((int)origen_logico, restante, &dir_fisica_origen, &bytes_origen);
-//         if (bytes_origen != info.tamanio)
-//         {
-//             log_error(cpu_logger, "PID: %d - COPY_MEM fallo traduccion origen SI", contexto->PID);
-//             break;
-//         }
-//         if (bytes_validos != info.tamanio)
-//         {
-//             log_error(cpu_logger, "PID: %d - MOV_OUT fallo en traduccion MMU para %s", contexto->PID, registro_datos);
-//         }
+        int mmu = MMU_TRADUCCION_FISICA((int)origen_logico, restante, &dir_fisica_origen, &bytes_origen);
+        if (bytes_origen != info.tamanio)
+        {
+            log_error(cpu_logger, "PID: %d - COPY_MEM fallo traduccion origen SI", contexto->PID);
+            break;
+        }
+        if (bytes_validos != info.tamanio)
+        {
+            log_error(cpu_logger, "PID: %d - MOV_OUT fallo en traduccion MMU para %s", contexto->PID, registro_datos);
+        }
 
-//         int dir_fisica_destino;
-//         uint32_t bytes_destino;
+        int dir_fisica_destino;
+        uint32_t bytes_destino;
 
-//         int mmu2 = MMU_TRADUCCION_FISICA((int)destino_logico, restante, &dir_fisica_destino, &bytes_destino);
-//         if (bytes_destino == 0)
-//         {
-//             log_error(cpu_logger, "PID: %d - COPY_MEM fallo traduccion destino DI", contexto->PID);
-//             break;
-//         }
+        int mmu2 = MMU_TRADUCCION_FISICA((int)destino_logico, restante, &dir_fisica_destino, &bytes_destino);
+        if (bytes_destino == 0)
+        {
+            log_error(cpu_logger, "PID: %d - COPY_MEM fallo traduccion destino DI", contexto->PID);
+            break;
+        }
 
-//         uint32_t conjunto = bytes_origen < bytes_destino ? bytes_origen : bytes_destino;
-//         if (conjunto > restante)
-//         {
-//             conjunto = restante;
-//         }
-//         origen_logico += conjunto;
-//         destino_logico += conjunto;
-//         restante -= conjunto;
-//     }
+        uint32_t conjunto = bytes_origen < bytes_destino ? bytes_origen : bytes_destino;
+        if (conjunto > restante)
+        {
+            conjunto = restante;
+        }
+        origen_logico += conjunto;
+        destino_logico += conjunto;
+        restante -= conjunto;
+    }
 
-//     free(buffer);
-// }
+    free(buffer);
+}
 
 // void execute_COPY_MEM(t_contexto_ejecucion *contexto, char *nombre_registro_tamano, char *param2)
 // {
