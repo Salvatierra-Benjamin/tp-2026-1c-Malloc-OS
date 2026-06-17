@@ -49,7 +49,7 @@ typedef enum
     OK_STDIN = 2004,
     OK_STDOUT = 2005,
     OK_SLEEP = 2006,
-
+    ENVIAR_DATOS_IO = 2007,
     // PAQUETE_STDIN = 2100,
     // PAQUETE_STDOUT = 2101,
     // PAQUETE_STDSLEEP = 2102,
@@ -68,7 +68,6 @@ typedef enum
     ENVIO_STDIN = 3010,
     ENVIO_INIT_PROC = 3011,
     ENVIO_EXIT = 3012,
-
 
     // ---------------- CPU -> KM ----------------
     SOLICITUD_CONTEXTO_EJECUCION = 3500, // CPU solicita contexto a KM

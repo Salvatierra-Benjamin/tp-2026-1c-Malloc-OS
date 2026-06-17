@@ -209,134 +209,134 @@ void execute_JNZ(t_contexto_ejecucion *contexto, char *registro, char *instrucci
 // MOV_IN EDX
 // MOV_OUT EDX
 
-void execute_MOV_IN(t_contexto_ejecucion *contexto, char *registro_datos, char *param2)
-{
-    (void)param2;
-    log_info(cpu_logger, "PID: %d - Ejecutando: MOV_IN - %s", contexto->PID, registro_datos);
-    if (param2 == NULL)
-    {
-        log_error(cpu_logger, "PID: %d - MOV_IN sin direccion logica", contexto->PID);
-        return;
-    }
+// void execute_MOV_IN(t_contexto_ejecucion *contexto, char *registro_datos, char *param2)
+// {
+//     (void)param2;
+//     log_info(cpu_logger, "PID: %d - Ejecutando: MOV_IN - %s", contexto->PID, registro_datos);
+//     if (param2 == NULL)
+//     {
+//         log_error(cpu_logger, "PID: %d - MOV_IN sin direccion logica", contexto->PID);
+//         return;
+//     }
 
-    t_info_registro info = obtener_info_registro(contexto, registro_datos);
-    if (info.puntero == NULL)
-    {
-        return;
-    }
+//     t_info_registro info = obtener_info_registro(contexto, registro_datos);
+//     if (info.puntero == NULL)
+//     {
+//         return;
+//     }
 
-    int direccion_logica = pasaje_de_char_a_int(param2);
-    int dir_fisica;
-    uint32_t bytes_validos;
+//     int direccion_logica = pasaje_de_char_a_int(param2);
+//     int dir_fisica;
+//     uint32_t bytes_validos;
 
-    int mmu = MMU_TRADUCCION_FISICA(direccion_logica, info.tamanio, &dir_fisica, &bytes_validos);
-    if (mmu == 0)
-    {
-        log_info(cpu_logger, "MMU llamada en MOV_IN");
-    }
-    if (bytes_validos != info.tamanio)
-    {
-        log_error(cpu_logger, "PID: %d - MOV_IN fallo en traduccion MMU para %s", contexto->PID, registro_datos);
-    }
-    // TODO: Implementar lógica de MMU (Traducción + Lectura de Memoria)
-}
+//     int mmu = MMU_TRADUCCION_FISICA(direccion_logica, info.tamanio, &dir_fisica, &bytes_validos);
+//     if (mmu == 0)
+//     {
+//         log_info(cpu_logger, "MMU llamada en MOV_IN");
+//     }
+//     if (bytes_validos != info.tamanio)
+//     {
+//         log_error(cpu_logger, "PID: %d - MOV_IN fallo en traduccion MMU para %s", contexto->PID, registro_datos);
+//     }
+//     // TODO: Implementar lógica de MMU (Traducción + Lectura de Memoria)
+// }
 
-void execute_MOV_OUT(t_contexto_ejecucion *contexto, char *registro_datos, char *param2)
-{
-    (void)param2;
-    log_info(cpu_logger, "PID: %d - Ejecutando: MOV_OUT - %s", contexto->PID, registro_datos);
+// void execute_MOV_OUT(t_contexto_ejecucion *contexto, char *registro_datos, char *param2)
+// {
+//     (void)param2;
+//     log_info(cpu_logger, "PID: %d - Ejecutando: MOV_OUT - %s", contexto->PID, registro_datos);
 
-    if (param2 == NULL)
-    {
-        log_error(cpu_logger, "PID: %d - MOV_OUT sin direccion logica", contexto->PID);
-        return;
-    }
+//     if (param2 == NULL)
+//     {
+//         log_error(cpu_logger, "PID: %d - MOV_OUT sin direccion logica", contexto->PID);
+//         return;
+//     }
 
-    t_info_registro info = obtener_info_registro(contexto, registro_datos);
-    if (info.puntero == NULL)
-    {
-        return;
-    }
+//     t_info_registro info = obtener_info_registro(contexto, registro_datos);
+//     if (info.puntero == NULL)
+//     {
+//         return;
+//     }
 
-    int direccion_logica = pasaje_de_char_a_int(param2);
-    int dir_fisica;
-    uint32_t bytes_validos;
+//     int direccion_logica = pasaje_de_char_a_int(param2);
+//     int dir_fisica;
+//     uint32_t bytes_validos;
 
-    int mmu = MMU_TRADUCCION_FISICA(direccion_logica, info.tamanio, &dir_fisica, &bytes_validos);
-    if (mmu == 0)
-    {
-        log_info(cpu_logger, "MMU llamada en MOV_OUT")
-    }
-    if (bytes_validos != info.tamanio)
-    {
-        log_error(cpu_logger, "PID: %d - MOV_OUT fallo en traduccion MMU para %s", contexto->PID, registro_datos);
-    }
+//     int mmu = MMU_TRADUCCION_FISICA(direccion_logica, info.tamanio, &dir_fisica, &bytes_validos);
+//     if (mmu == 0)
+//     {
+//         log_info(cpu_logger, "MMU llamada en MOV_OUT")
+//     }
+//     if (bytes_validos != info.tamanio)
+//     {
+//         log_error(cpu_logger, "PID: %d - MOV_OUT fallo en traduccion MMU para %s", contexto->PID, registro_datos);
+//     }
 
-    uint8_t buffer[sizeof(uint32_t)] = {0};
-    memcpy(buffer, info.puntero, info.tamanio); // TODO: Implementar lógica de MMU (Traducción + Escritura en Memoria)
-}
+//     uint8_t buffer[sizeof(uint32_t)] = {0};
+//     memcpy(buffer, info.puntero, info.tamanio); // TODO: Implementar lógica de MMU (Traducción + Escritura en Memoria)
+// }
 
-void execute_COPY_MEM(t_contexto_ejecucion *contexto, char *tamano_str, char *param2)
-{
-    (void)param2;
-    log_info(cpu_logger, "PID: %d - Ejecutando: COPY_MEM - %s", contexto->PID, tamano_str);
+// void execute_COPY_MEM(t_contexto_ejecucion *contexto, char *tamano_str, char *param2)
+// {
+//     (void)param2;
+//     log_info(cpu_logger, "PID: %d - Ejecutando: COPY_MEM - %s", contexto->PID, tamano_str);
 
-    int tamanio = pasaje_de_char_a_int(tamano_str);
-    if (tamanio <= 0)
-    {
-        log_error(cpu_logger, "PID: %d - COPY_MEM tamanio invalido: %s", contexto->PID, tamano_str);
-        return;
-    }
+//     int tamanio = pasaje_de_char_a_int(tamano_str);
+//     if (tamanio <= 0)
+//     {
+//         log_error(cpu_logger, "PID: %d - COPY_MEM tamanio invalido: %s", contexto->PID, tamano_str);
+//         return;
+//     }
 
-    uint32_t origen_logico = leer_registro(contexto, "SI");
-    uint32_t destino_logico = leer_registro(contexto, "DI");
-    uint32_t restante = (uint32_t)tamanio;
+//     uint32_t origen_logico = leer_registro(contexto, "SI");
+//     uint32_t destino_logico = leer_registro(contexto, "DI");
+//     uint32_t restante = (uint32_t)tamanio;
 
-    void *buffer = malloc(restante);
-    if (buffer == NULL)
-    {
-        log_error(cpu_logger, "PID: %d - COPY_MEM fallo malloc", contexto->PID);
-        return;
-    }
+//     void *buffer = malloc(restante);
+//     if (buffer == NULL)
+//     {
+//         log_error(cpu_logger, "PID: %d - COPY_MEM fallo malloc", contexto->PID);
+//         return;
+//     }
 
-    while (restante > 0)
-    {
-        int dir_fisica_origen;
-        uint32_t bytes_origen;
+//     while (restante > 0)
+//     {
+//         int dir_fisica_origen;
+//         uint32_t bytes_origen;
 
-        int mmu = MMU_TRADUCCION_FISICA((int)origen_logico, restante, &dir_fisica_origen, &bytes_origen);
-        if (bytes_origen != info.tamanio)
-        {
-            log_error(cpu_logger, "PID: %d - COPY_MEM fallo traduccion origen SI", contexto->PID);
-            break;
-        }
-        if (bytes_validos != info.tamanio)
-        {
-            log_error(cpu_logger, "PID: %d - MOV_OUT fallo en traduccion MMU para %s", contexto->PID, registro_datos);
-        }
+//         int mmu = MMU_TRADUCCION_FISICA((int)origen_logico, restante, &dir_fisica_origen, &bytes_origen);
+//         if (bytes_origen != info.tamanio)
+//         {
+//             log_error(cpu_logger, "PID: %d - COPY_MEM fallo traduccion origen SI", contexto->PID);
+//             break;
+//         }
+//         if (bytes_validos != info.tamanio)
+//         {
+//             log_error(cpu_logger, "PID: %d - MOV_OUT fallo en traduccion MMU para %s", contexto->PID, registro_datos);
+//         }
 
-        int dir_fisica_destino;
-        uint32_t bytes_destino;
+//         int dir_fisica_destino;
+//         uint32_t bytes_destino;
 
-        int mmu2 = MMU_TRADUCCION_FISICA((int)destino_logico, restante, &dir_fisica_destino, &bytes_destino);
-        if (bytes_destino == 0)
-        {
-            log_error(cpu_logger, "PID: %d - COPY_MEM fallo traduccion destino DI", contexto->PID);
-            break;
-        }
+//         int mmu2 = MMU_TRADUCCION_FISICA((int)destino_logico, restante, &dir_fisica_destino, &bytes_destino);
+//         if (bytes_destino == 0)
+//         {
+//             log_error(cpu_logger, "PID: %d - COPY_MEM fallo traduccion destino DI", contexto->PID);
+//             break;
+//         }
 
-        uint32_t conjunto = bytes_origen < bytes_destino ? bytes_origen : bytes_destino;
-        if (conjunto > restante)
-        {
-            conjunto = restante;
-        }
-        origen_logico += conjunto;
-        destino_logico += conjunto;
-        restante -= conjunto;
-    }
+//         uint32_t conjunto = bytes_origen < bytes_destino ? bytes_origen : bytes_destino;
+//         if (conjunto > restante)
+//         {
+//             conjunto = restante;
+//         }
+//         origen_logico += conjunto;
+//         destino_logico += conjunto;
+//         restante -= conjunto;
+//     }
 
-    free(buffer);
-}
+//     free(buffer);
+// }
 
 // void execute_COPY_MEM(t_contexto_ejecucion *contexto, char *nombre_registro_tamano, char *param2)
 // {
