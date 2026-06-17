@@ -119,13 +119,12 @@ int main(int argc, char *argv[])
         else if (respuesta_contexto_ejecucion == ERROR_ENVIO_CONTEXTO)
         {
             log_error(cpu_logger, "[CPU] KM reportó que el contexto para PID %d no existe o es NULL.", PID_a_ejecutar);
-
-            // Importante: Como falló, hay que ver si desalojá el proceso
-            // o si vuelve a esperar en el semáforo para el próximo.
+            exit(EXIT_FAILURE);
         }
         else
         {
             log_error(cpu_logger, "[CPU] Código de operación desconocido recibido de KM: %d", respuesta_contexto_ejecucion);
+            exit(EXIT_FAILURE);
         }
 
         // Cuando la función terminar, el while vuelve arriba y se vuelve a bloquear en el sem_wait esperando el próximo proceso.

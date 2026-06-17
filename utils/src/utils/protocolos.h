@@ -71,6 +71,11 @@ typedef enum
 
     // ---------------- MS -> KM ----------------
     MEMORY_STICK_SIZE = 6000,
+    ENVIO_TAMANIO_KM = 6001,
+    PETICION_LECTURA_MS = 6102,
+    RESPUESTA_LECTURA_MS = 6103,
+    PETICION_ESCRITURA_MS = 6104,
+    RESPUESTA_ESCRITURA_MS = 6105,
 
     // ---------------- KS -> CPU ----------------
     ALOJAR_PROCESO = 7000, // KS envia pid a CPU
@@ -142,6 +147,7 @@ typedef struct
 
 typedef struct
 {
+    int id_segmento;
     uint32_t dir_base;
     uint32_t tam_seg;
 } segmento_t;
@@ -167,6 +173,12 @@ typedef struct
     char *parametro_1;
     char *parametro_2;
 } t_instruccion;
+
+typedef struct
+{
+    int tamanio;
+    int id;
+} t_memory_stick; // lista para el km
 
 int enviar_operacion(int socket_destino, op_code codigo_operacion);
 int recibir_operacion(int);

@@ -61,6 +61,31 @@ void escribir_registro(t_contexto_ejecucion *contexto, char *registro, uint32_t 
     }
 }
 
+int pasaje_de_char_a_int(char *palabra)
+{
+    char *endptr;
+    // strtol siempre devuelve long, así que lo guardamos en un long temporal
+    long num_long = strtol(palabra, &endptr, 10); 
+    
+    // Lo casteamos al int que vos necesitás
+    int num = (int)num_long;
+
+    if (*endptr != '\0')
+    {
+        // Si entra acá, significa que no era un número puro (ej: "123abc")
+        log_warning(cpu_logger, "El string tiene caracteres no numéricos: %s", endptr);
+    }
+    else
+    {
+        // Usamos %d porque ahora num es de tipo int
+        log_info(cpu_logger, "Numero en String: %s", palabra);
+        log_info(cpu_logger, "Numero en Int: %d", num);
+    }
+    
+    return num;
+}
+
+
 
 /* 
 ===============================================
@@ -82,9 +107,7 @@ void execute_NOOP(t_contexto_ejecucion *contexto, char* param1, char* param2)
 
 void execute_SET(t_contexto_ejecucion *contexto, char *registro, char *valor_str)
 {    
-    log_debug(cpu_logger, "El valor de parametro en STRING: %s", valor_str);
-    uint32_t valor = (uint32_t) atoi(valor_str);
-    log_debug(cpu_logger, "El nuevo del parametro en DECIMAL: %d", valor);
+    uint32_t valor = (uint32_t) pasaje_de_char_a_int(valor_str);
     
     escribir_registro(contexto, registro, valor);
     
@@ -119,9 +142,7 @@ void execute_JNZ(t_contexto_ejecucion *contexto, char *registro, char *instrucci
 {
     uint32_t valor_registro = leer_registro(contexto, registro);
     
-    log_debug(cpu_logger, "El nuevo PC en STRING: %s", instruccion_str);
-    uint32_t nueva_instruccion = (uint32_t) atoi(instruccion_str);
-    log_debug(cpu_logger, "El nuevo PC en DECIMAL: %d", nueva_instruccion);
+    uint32_t nueva_instruccion = (uint32_t) pasaje_de_char_a_int(instruccion_str);
     
     if (valor_registro != 0) {
         contexto->registros.PC = nueva_instruccion;
