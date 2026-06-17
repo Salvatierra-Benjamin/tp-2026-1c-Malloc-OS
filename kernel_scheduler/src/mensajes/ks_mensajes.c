@@ -24,10 +24,12 @@
 	buffer_read (nueva_instruccion->parametro_1, paquete-›buffer, len1); // COPIAMOS EL CONTENIDO
 */
 
-void enviar_ok_conexion_cpu(fd) {
-	enviar_operacion(fd, HANDSHAKE_OK);
+// ! -------------------------------- KS RTA GRAL DE OK CONEXIÓN ------------------------------------------------------------------------------------------------
+void enviar_ok_conexion(fd) {
+	enviar_operacion(fd, KS_OK_CONEXION);
 }
 
+// ! -------------------------------- KS -> CPU ------------------------------------------------------------------------------------------------
 void enviar_interrupcion_compactacion_cpu(int cpu_fd, int pid) {
 	t_paquete* paquete_interrupcion = crear_paquete(SOLICITUD_DESALOJO_COMPACTACION_MEMORIA);
 	agregar_a_paquete(paquete_interrupcion, &pid, sizeof(int));
@@ -58,4 +60,29 @@ void enviar_mem_free(int cpu_fd, int id_segmento, int pid) {
 	agregar_a_paquete(paquete_free, &id_segmento, sizeof(int));
 	enviar_paquete(paquete_free, cpu_fd);
 	eliminar_paquete(paquete_free);
+}
+
+// ! -------------------------------- KS -> IO ------------------------------------------------------------------------------------------------
+void enviar_sleep_io(int io_fd, int tiempo_ms, int pid) {
+	t_paquete* paquete_sleep = crear_paquete(SLEEP_IO);
+	agregar_a_paquete(paquete_sleep, &tiempo_ms, sizeof(int));
+	agregar_a_paquete(paquete_sleep, &pid, sizeof(int));
+	enviar_paquete(paquete_sleep, io_fd);
+	eliminar_paquete(paquete_sleep);
+}
+
+void enviar_stdin_io(int io_fd, int tamanio, int pid) {
+	t_paquete* paquete_stdin = crear_paquete(STDIN_IO);
+	agregar_a_paquete(paquete_stdin, &tamanio, sizeof(int));
+	agregar_a_paquete(paquete_stdin, &pid, sizeof(int));
+	enviar_paquete(paquete_stdin, io_fd);
+	eliminar_paquete(paquete_stdin);
+}
+
+void enviar_stdout_io(int io_fd, int tamanio, int pid) {
+	t_paquete* paquete_stdout = crear_paquete(STDOUT_IO);
+	agregar_a_paquete(paquete_stdout, &tamanio, sizeof(int));
+	agregar_a_paquete(paquete_stdout, &pid, sizeof(int));
+	enviar_paquete(paquete_stdout, io_fd);
+	eliminar_paquete(paquete_stdout);
 }

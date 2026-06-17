@@ -13,7 +13,9 @@ bool compactacion_en_progreso = false;
 
 // LISTAS
 t_list *cpus = NULL;
-t_list *ios = NULL;
+t_list *ios_sleep = NULL;
+t_list *ios_stdin = NULL;
+t_list *ios_stdout = NULL;
 
 t_list *procs_exec = NULL;
 // t_list *procs_block = NULL;
@@ -25,7 +27,9 @@ t_list *mutexes_kernel = NULL;
 
 // MUTEX
 pthread_mutex_t mutex_cpus = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t mutex_ios = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t mutex_ios_sleep = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t mutex_ios_stdin = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t mutex_ios_stdout = PTHREAD_MUTEX_INITIALIZER;
 
 pthread_mutex_t mutex_exec = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mutex_exit = PTHREAD_MUTEX_INITIALIZER;

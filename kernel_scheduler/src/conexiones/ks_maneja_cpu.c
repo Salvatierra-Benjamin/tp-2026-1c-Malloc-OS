@@ -170,8 +170,79 @@ void* ks_maneja_cpu(void* arg) {
 
 			int tiempo;
 			buffer_read(&tiempo, contenido->buffer, sizeof(int));
+			
+			t_io* io = io_libre("SLEEP");
+
+			if (io == NULL) { 
+				log_warning(ks_logger, "No hay IOs libres para el proceso %d en la cpu %d, reintente el SLEEP luego", cpu->pcb_ejecutando, cpu->id_cpu);
+				return; // ? Lo mantengo???
+			}
+
+			cpu->pcb_ejecutando->io_fd = io->fd;
+
+			ks_pasar_a_block(cpu->pcb_ejecutando);
+
+			enviar_sleep_io(io->fd, tiempo, cpu->pcb_ejecutando->pid);
 
 			eliminar_paquete(contenido);
+			break;
+		}
+
+		case STDOUT: // STDOUT (Registro Dirección Lógica, Registro Tamaño)
+		{
+			t_paquete* contenido = recibir_paquete(cpu->fd);
+
+			char* dir_logica = NULL;
+			buffer_read(&dir_logica, contenido->buffer, sizeof(char*));
+
+			int tamanio;
+			buffer_read(&tamanio, contenido->buffer, sizeof(int));
+
+			t_io* io = io_libre("STDOUT");
+
+			if (io == NULL) { 
+				log_warning(ks_logger, "No hay IOs libres para el proceso %d en la cpu %d, reintente el STDOUT luego", cpu->pcb_ejecutando, cpu->id_cpu);
+				return; // ? Lo mantengo???
+			}
+
+			cpu->pcb_ejecutando->io_fd = io->fd;
+
+			ks_pasar_a_block(cpu->pcb_ejecutando);
+
+			enviar_stdout_io(io->fd, dir_logica, tamanio);
+
+			free(dir_logica);
+			eliminar_paquete(contenido);
+			break;
+		}
+
+		case STDIN: // STDIN (Registro Dirección Lógica, Registro Tamaño (DIRECCION LOGICA DONDE SE GUARDARÁ LO LEIDO))
+		{
+			t_paquete* contenido = recibir_paquete(cpu->fd);
+
+			char* dir_logica = NULL;
+			buffer_read(&dir_logica, contenido->buffer, sizeof(char*));
+
+			int tamanio;
+			buffer_read(&tamanio, contenido->buffer, sizeof(int));
+
+			t_io* io = io_libre("STDIN");
+
+			if (io == NULL) { 
+				log_warning(ks_logger, "No hay IOs libres para el proceso %d en la cpu %d, reintente el STDIN luego", cpu->pcb_ejecutando, cpu->id_cpu);
+				return; // ? Lo mantengo???
+			}
+
+			cpu->pcb_ejecutando->io_fd = io->fd;
+
+			ks_pasar_a_block(cpu->pcb_ejecutando);
+
+			enviar_stdout_io(io->fd, dir_logica, tamanio);
+			enviar_sleep_io(io->fd, tamanio, cpu->pcb_ejecutando->pid);
+
+			free(dir_logica);
+			eliminar_paquete(contenido);
+
 			break;
 		}
 
@@ -206,52 +277,6 @@ void* ks_maneja_cpu(void* arg) {
 			buffer_read(&motivo_interrupcion, contenido->buffer, sizeof(char*));
 
 			free(motivo_interrupcion);
-			eliminar_paquete(contenido);
-			break;
-		}
-
-		case STDOUT: // STDOUT (Registro Dirección Lógica, Registro Tamaño)
-		{
-			t_paquete* contenido = recibir_paquete(cpu->fd);
-
-			char* dir_logica = NULL;
-			buffer_read(&dir_logica, contenido->buffer, sizeof(char*));
-
-			int tamanio;
-			buffer_read(&tamanio, contenido->buffer, sizeof(int));
-
-			ks_pasar_a_block(pcb);
-
-			free(dir_logica);
-			eliminar_paquete(contenido);
-			break;
-		}
-
-		case STDIN: // STDIN (Registro Dirección Lógica, Registro Tamaño (DIRECCION LOGICA DONDE SE GUARDARÁ LO LEIDO))
-		{
-			t_paquete* contenido = recibir_paquete(cpu->fd);
-
-			char* dir_logica = NULL;
-			buffer_read(&dir_logica, contenido->buffer, sizeof(char*));
-
-			int tamanio;
-			buffer_read(&tamanio, contenido->buffer, sizeof(int));
-
-			free(dir_logica);
-			eliminar_paquete(contenido);
-			break;
-		}
-
-		case SLEEP_IO: // SLEEP (TIEMPO EN MS, PID)
-		{
-			t_paquete* contenido = recibir_paquete(cpu->fd);
-
-			int tiempo_en_ms;
-			buffer_read(&tiempo_en_ms, contenido->buffer, sizeof(int));
-
-			int pid;
-			buffer_read(&pid, contenido->buffer, sizeof(int));
-
 			eliminar_paquete(contenido);
 			break;
 		}

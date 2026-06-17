@@ -19,8 +19,7 @@ typedef struct {
 
 // IO
 typedef struct {
-	char* path;
-	int prio;
+	bool esta_libre;
 	int fd;
 } t_io;
 
@@ -108,7 +107,9 @@ extern bool compactacion_en_progreso;
 
 // LISTAS
 extern t_list* cpus;
-extern t_list* ios;
+extern t_list* ios_sleep;
+extern t_list* ios_stdin;
+extern t_list* ios_stdout;
 
 extern t_list* procs_exec;
 // extern t_list* procs_block;
@@ -120,7 +121,9 @@ extern t_list* mutexes_kernel;
 
 // MUTEX
 extern pthread_mutex_t mutex_cpus;
-extern pthread_mutex_t mutex_ios;
+extern pthread_mutex_t mutex_ios_sleep;
+extern pthread_mutex_t mutex_ios_stdin;
+extern pthread_mutex_t mutex_ios_stdout;
 
 extern pthread_mutex_t mutex_exec;
 extern pthread_mutex_t mutex_exit;

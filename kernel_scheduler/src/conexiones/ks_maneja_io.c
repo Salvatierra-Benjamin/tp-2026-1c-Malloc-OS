@@ -6,20 +6,20 @@
 #include "../planificadores/ks_planificador_corto_plazo.h"
 
 void* ks_maneja_io(void* arg) {
-	int fd = *(int*)arg;
+	t_cpu* cpu = (t_cpu*)arg;
 	free(arg);
 
-	log_debug(ks_logger, "Entra en ks_maneja_io (fd = %d)", fd);
+	log_debug(ks_logger, "Entra en ks_maneja_io (fd = %d)", cpu->fd);
 	log_conexion_io((t_io*)arg);
 
 	int ejecutando = 1;
 
 	while (ejecutando) {
-		int op_code = recibir_operacion(fd);
+		int op_code = recibir_operacion(cpu->fd);
 		switch (op_code) {
 		case OK_SLEEP: // OK_SLEEP (TIEMPO EN MS) (PID)
 		{
-			t_paquete* contenido = recibir_paquete(fd);
+			t_paquete* contenido = recibir_paquete(cpu->fd);
 
 			int tiempo_en_ms;
 			buffer_read(&tiempo_en_ms, contenido->buffer, sizeof(int));
@@ -40,7 +40,7 @@ void* ks_maneja_io(void* arg) {
 
 		case OK_STDIN: // OK_STDIN(bytes)
 		{
-			t_paquete* contenido = recibir_paquete(fd);
+			t_paquete* contenido = recibir_paquete(cpu->fd);
 
 			int bytes;
 			buffer_read(&bytes, contenido->buffer, sizeof(int));
@@ -51,13 +51,17 @@ void* ks_maneja_io(void* arg) {
 				ks_desbloquear_proceso(pcb);
 			}
 
+
+	// TODO: despues cuando vuelva:
+	// enviar a KM
+
 			eliminar_paquete(contenido);
 			break;
 		}
 
 		case OK_STDOUT_RESPUESTA_BYTES: // OK_STDOUT_RESPUESTA_BYTES (PID)
 		{
-			t_paquete* contenido = recibir_paquete(fd);
+			t_paquete* contenido = recibir_paquete(cpu->fd);
 
 			int pid;
 			buffer_read(&pid, contenido->buffer, sizeof(int));
@@ -83,7 +87,7 @@ void* ks_maneja_io(void* arg) {
 		}
 		}
 	}
-	close(fd);
+	close(cpu->fd);
 	return NULL;
 }
 
@@ -139,12 +143,6 @@ void ks_desbloquear_proceso(t_pcb* pcb) {
 	}
 }
 
-void ks_io_sleep(t_pcb* pcb, int tiempo_ms) {
-
-	ks_pasar_a_block(pcb);
-
-	enviar_sleep_io(pcb->io_fd, tiempo_ms, pcb->pid);
-}
 
 void ks_io_stdin(t_pcb* pcb, int tamanio, int direccion_logica) {
 

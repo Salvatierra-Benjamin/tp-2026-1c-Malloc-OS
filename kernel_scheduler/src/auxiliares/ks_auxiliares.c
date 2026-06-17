@@ -53,7 +53,9 @@ void liberar_listas_matando_procesos() {
 
 void liberar_mutex() {
 	pthread_mutex_destroy(&mutex_cpus);
-	pthread_mutex_destroy(&mutex_ios);
+	pthread_mutex_destroy(&mutex_ios_sleep);
+	pthread_mutex_destroy(&mutex_ios_stdin);
+	pthread_mutex_destroy(&mutex_ios_stdout);
 	pthread_mutex_destroy(&mutex_exec);
 	// pthread_mutex_destroy(&mutex_block);
 	// pthread_mutex_destroy(&mutex_susp_block);
@@ -128,6 +130,66 @@ t_cpu* crear_cpu(int id, int fd) {
 	nueva_cpu->fd = fd;
 
 	return nueva_cpu;
+}
+
+t_io* crear_io(int fd, char* tipo_io) {
+	t_io* nuevo_io = malloc(sizeof(t_io));
+	if (nuevo_io == NULL) {
+		return NULL; // Manejar error de asignación de memoria
+	}
+
+	nuevo_io->esta_libre = true;
+	nuevo_io->fd = fd;
+
+	if (strcmp(tipo_io, "SLEEP") == 0) {
+		mutex_lock(&mutex_ios_sleep);
+		list_add(ios_sleep, nuevo_io);
+		mutex_unlock(&mutex_ios_sleep);
+	} else if (strcmp(tipo_io, "STDIN") == 0) {
+		mutex_lock(&mutex_ios_stdin);
+		list_add(ios_stdin, nuevo_io);
+		mutex_unlock(&mutex_ios_stdin);
+	} else if (strcmp(tipo_io, "STDOUT") == 0) {
+		mutex_lock(&mutex_ios_stdout);
+		list_add(ios_stdout, nuevo_io);
+		mutex_unlock(&mutex_ios_stdout);
+	}
+
+	return nuevo_io;
+}
+
+t_io* io_libre(char* tipo_io){
+	bool _io_esta_libre(void* ptr) {
+        t_io* io = (t_io*) ptr;
+        return io->esta_libre;
+    }
+
+	if (strcmp(tipo_io, "SLEEP") == 0) {
+		pthread_mutex_lock(&mutex_ios_sleep);
+		t_io* io = list_find(ios_sleep, _io_esta_libre);
+		if (io != NULL) {
+			io->esta_libre = false;
+		}
+		pthread_mutex_unlock(&mutex_ios_sleep);
+		return io;
+	} else if (strcmp(tipo_io, "STDIN") == 0) {
+		pthread_mutex_lock(&mutex_ios_stdin);
+		t_io* io = list_find(ios_stdin, _io_esta_libre);
+		if (io != NULL) {
+			io->esta_libre = false;
+		}
+		pthread_mutex_unlock(&mutex_ios_stdin);
+		return io;
+	} else if (strcmp(tipo_io, "STDOUT") == 0) {
+		pthread_mutex_lock(&mutex_ios_stdout);
+		t_io* io = list_find(ios_stdout, _io_esta_libre);
+		if (io != NULL) {
+			io->esta_libre = false;
+		}
+		pthread_mutex_unlock(&mutex_ios_stdout);
+		return io;
+	}
+	return NULL;
 }
 
 void finalizar_cpu(t_cpu* cpu) {
