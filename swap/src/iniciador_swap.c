@@ -3,6 +3,7 @@
 t_log *swap_logger;
 swap_config_struct swap_config;
 int conexion_km;
+FILE *archivo_swap;
 // Semaforos:
 pthread_mutex_t conexiones_km = PTHREAD_MUTEX_INITIALIZER; // MUTEX
 sem_t semaphore;

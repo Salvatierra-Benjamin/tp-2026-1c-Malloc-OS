@@ -68,14 +68,14 @@ typedef enum
     ENVIO_STDIN = 3010,
     ENVIO_INIT_PROC = 3011,
     ENVIO_EXIT = 3012,
-    /* //* Envío de palabras reservadas de CPU a KS
-    MUTEX_CREATE,     // NOMBRE_MUTEX
-    MUTEX_LOCK,       // NOMBRE_MUTEX
-    MUTEX_UNLOCK,     // NOMBRE_MUTEX
-    SLEEP,            // TIEMPO, PID
-    STDOUT,           // REGISTRO_DIRECCION_LOGICA, REGISTRO_TAMAÑO
-    STDIN,            // REGISTRO_DIRECCION_LOGICA, REGISTRO_TAMAÑO
-    */
+
+    // Envío de palabras reservadas de CPU a KS (version antigua)
+    // MUTEX_CREATE,     // NOMBRE_MUTEX
+    // MUTEX_LOCK,       // NOMBRE_MUTEX
+    // MUTEX_UNLOCK,     // NOMBRE_MUTEX
+    // SLEEP,            // TIEMPO, PID
+    // STDOUT,           // REGISTRO_DIRECCION_LOGICA, REGISTRO_TAMAÑO
+    // STDIN,            // REGISTRO_DIRECCION_LOGICA, REGISTRO_TAMAÑO
 
     // ---------------- CPU -> KM ----------------
     SOLICITUD_CONTEXTO_EJECUCION = 3500, // CPU solicita contexto a KM
@@ -95,7 +95,7 @@ typedef enum
 
     // ---------------- MS -> KM ----------------
     MEMORY_STICK_SIZE = 6000,
-    ENVIO_TAMANIO_KM = 6001,
+    ENVIO_DATOS_KM = 6001,
     PETICION_LECTURA_MS = 6102,
     RESPUESTA_LECTURA_MS = 6103,
     PETICION_ESCRITURA_MS = 6104,

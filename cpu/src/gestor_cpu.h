@@ -41,8 +41,8 @@ extern int conexion_ms;
 extern int identificador_cpu;
 extern sem_t sem_proceso_nuevo;
 extern sem_t hay_interrupcion;
-extern sem_t notificar_ks;
 extern int PID_a_ejecutar;
+extern int PID_Interrupcion;
 
 //  Semaforos:
 extern pthread_mutex_t conexiones_km; // MUTEX

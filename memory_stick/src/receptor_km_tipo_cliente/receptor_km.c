@@ -34,13 +34,54 @@ void *atencion_km()
 
             // Conexión a Kernel Memory: “## Conectado a Kernel Memory”
             log_info(ms_logger, "## Conectado a Kernel Memory");
-            
+
             sem_post(&sem_ok_conexion_km);
 
-            t_paquete *paquete_tamaño_km = crear_paquete(ENVIO_TAMANIO_KM);
-            agregar_a_paquete(paquete_tamaño_km, &tamanio_memoria_ms_ingresada, sizeof(int));
-            enviar_paquete(paquete_tamaño_km, conexion_km);
-            eliminar_paquete(paquete_tamaño_km);
+            t_paquete *paquete_datos_km = crear_paquete(ENVIO_DATOS_KM);
+            // 1. Tamaño memoria
+            agregar_a_paquete(paquete_datos_km, &tamanio_memoria_ms_ingresada, sizeof(int));
+
+            // 2. IP (Primero el tamaño, luego el string)
+            int tamanio_ip = strlen(ms_config.ip_ms) + 1;
+            agregar_a_paquete(paquete_datos_km, &tamanio_ip, sizeof(int));    // Tamaño
+            agregar_a_paquete(paquete_datos_km, ms_config.ip_ms, tamanio_ip); // Contenido
+
+            // 3. Puerto (Primero el tamaño, luego el string)
+            int tamanio_puerto = strlen(ms_config.puerto_escucha_cpu) + 1;
+            agregar_a_paquete(paquete_datos_km, &tamanio_puerto, sizeof(int));                 // Tamaño
+            agregar_a_paquete(paquete_datos_km, ms_config.puerto_escucha_cpu, tamanio_puerto); // Contenido
+
+            enviar_paquete(paquete_datos_km, conexion_km);
+            eliminar_paquete(paquete_datos_km);
+
+            /*
+                !!!!!!SEBA NO LO BORRES!!!!!!!
+            / --- Lógica en el receptor km---  SEBA CON CARIÑO EL GRUPO CPU :-)
+            / 1. Extraer del paquete
+                / A. Leer tamaño memoria
+                int tamanio_memoria;
+                buffer_read(&tamanio_memoria, buffer_paquete, sizeof(int));
+
+                / B. Leer IP
+                int tamanio_ip;
+                buffer_read(&tamanio_ip, buffer_paquete, sizeof(int)); // Leemos cuánto mide
+                char* ip_recibida = malloc(tamanio_ip);
+                buffer_read(ip_recibida, buffer_paquete, tamanio_ip);  // Leemos el texto
+
+                / C. Leer Puerto
+                int tamanio_puerto;
+                buffer_read(&tamanio_puerto, buffer_paquete, sizeof(int));
+                char* puerto_recibido = malloc(tamanio_puerto);
+                buffer_read(puerto_recibido, buffer_paquete, tamanio_puerto);
+
+                / 2. Usar el string...
+
+                /3. Limpieza de memoria
+                free(ip_recibida);// Liberas el espacio del string
+                free(puerto_recibido);// Liberas el espacio del string
+                eliminar_paquete(buffer_paquete); // Liberas el buffer que llegó por la red
+
+            */
 
             break;
         }
@@ -76,7 +117,7 @@ void *atencion_km()
 
             enviar_paquete(paquete_ok_escritura, conexion_km);
             // Escritura: “## Escritura de <CANTIDAD ESCRITA> bytes”
-            log_info(ms_logger,  "## Escritura de %d bytes", tamanio_a_escribir);
+            log_info(ms_logger, "## Escritura de %d bytes", tamanio_a_escribir);
 
             // 6. Limpieza absoluta para evitar memory leaks
             eliminar_paquete(paquete_ok_escritura);

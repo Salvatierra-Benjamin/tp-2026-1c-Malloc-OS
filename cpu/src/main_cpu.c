@@ -107,7 +107,7 @@ int main(int argc, char *argv[])
         sem_wait(&sem_proceso_nuevo);
         // sem_wait(&syscall_bloqueante); // syscalls
 
-        // 2. Solicitud Contexto del CPU al KS
+        // 2. Solicitud Contexto del CPU al KM
         t_paquete *paquete_solicitud_contexto = crear_paquete(SOLICITUD_CONTEXTO_EJECUCION);
         agregar_a_paquete(paquete_solicitud_contexto, &PID_a_ejecutar, sizeof(int));
         enviar_paquete(paquete_solicitud_contexto, conexion_km);
