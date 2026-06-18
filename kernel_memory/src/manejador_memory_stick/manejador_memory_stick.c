@@ -19,6 +19,7 @@ void *manejador_memory_stick(void *arg)
             buffer_read(&tam_ms, tam_memory_stick->buffer, sizeof(int));
             int puerto;
             buffer_read(&puerto, tam_memory_stick->buffer, sizeof(int));
+            log_debug(logger, "puerto : %d", puerto);
             agregar_memory_stick(tam_ms, puerto, socket_memory_stick);
             eliminar_paquete(tam_memory_stick);
             break;

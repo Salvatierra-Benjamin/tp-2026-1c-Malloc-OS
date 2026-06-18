@@ -25,14 +25,6 @@ typedef struct
     t_contexto_ejecucion *contexto;
 } t_procesos_memoria;
 
-typedef struct
-{
-    int base;
-    int tamanio;
-    int puerto;
-    int socket;
-} t_memory_stick;
-
 extern t_dictionary *procesos_memoria;
 extern pthread_mutex_t mutex_procesos_memoria;
 
