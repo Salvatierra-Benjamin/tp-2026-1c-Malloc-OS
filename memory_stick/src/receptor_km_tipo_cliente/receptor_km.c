@@ -37,10 +37,12 @@ void *atencion_km()
             
             sem_post(&sem_ok_conexion_km);
 
-            t_paquete *paquete_tamaño_km = crear_paquete(ENVIO_TAMANIO_KM);
-            agregar_a_paquete(paquete_tamaño_km, &tamanio_memoria_ms_ingresada, sizeof(int));
-            enviar_paquete(paquete_tamaño_km, conexion_km);
-            eliminar_paquete(paquete_tamaño_km);
+            t_paquete *paquete_tamaño_puerto_km = crear_paquete(ENVIO_TAMANIO_KM);
+            agregar_a_paquete(paquete_tamaño_puerto_km, &tamanio_memoria_ms_ingresada, sizeof(int));
+            int puerto = atoi(ms_config.puerto_escucha_cpu);
+            agregar_a_paquete(paquete_tamaño_puerto_km, &puerto, sizeof(int));
+            enviar_paquete(paquete_tamaño_puerto_km, conexion_km);
+            eliminar_paquete(paquete_tamaño_puerto_km);
 
             break;
         }

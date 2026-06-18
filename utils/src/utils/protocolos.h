@@ -50,6 +50,7 @@ typedef enum
     OK_STDOUT = 2005,
     OK_SLEEP = 2006,
 
+    ENVIAR_DATOS_IO = 2007,
     // PAQUETE_STDIN = 2100,
     // PAQUETE_STDOUT = 2101,
     // PAQUETE_STDSLEEP = 2102,
