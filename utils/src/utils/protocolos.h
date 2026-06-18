@@ -49,7 +49,6 @@ typedef enum
     OK_STDIN = 2004,
     OK_STDOUT = 2005,
     OK_SLEEP = 2006,
-
     ENVIAR_DATOS_IO = 2007,
     // PAQUETE_STDIN = 2100,
     // PAQUETE_STDOUT = 2101,
@@ -70,6 +69,13 @@ typedef enum
     ENVIO_INIT_PROC = 3011,
     ENVIO_EXIT = 3012,
 
+    // Envío de palabras reservadas de CPU a KS (version antigua)
+    // MUTEX_CREATE,     // NOMBRE_MUTEX
+    // MUTEX_LOCK,       // NOMBRE_MUTEX
+    // MUTEX_UNLOCK,     // NOMBRE_MUTEX
+    // SLEEP,            // TIEMPO, PID
+    // STDOUT,           // REGISTRO_DIRECCION_LOGICA, REGISTRO_TAMAÑO
+    // STDIN,            // REGISTRO_DIRECCION_LOGICA, REGISTRO_TAMAÑO
 
     // ---------------- CPU -> KM ----------------
     SOLICITUD_CONTEXTO_EJECUCION = 3500, // CPU solicita contexto a KM
@@ -89,7 +95,7 @@ typedef enum
 
     // ---------------- MS -> KM ----------------
     MEMORY_STICK_SIZE = 6000,
-    ENVIO_TAMANIO_KM = 6001,
+    ENVIO_DATOS_KM = 6001,
     PETICION_LECTURA_MS = 6102,
     RESPUESTA_LECTURA_MS = 6103,
     PETICION_ESCRITURA_MS = 6104,
@@ -121,9 +127,9 @@ typedef enum
     MUTEX_CREATE,     // NOMBRE_MUTEX
     MUTEX_LOCK,       // NOMBRE_MUTEX
     MUTEX_UNLOCK,     // NOMBRE_MUTEX
-    MEM_ALLOC,        // ID_SEGMENTO, TAMAÑO
-    MEM_FREE,         // ID_SEGMENTO
-    SLEEP,            // TIEMPO
+    MEM_ALLOC,        // ID_SEGMENTO, TAMAÑO, PID
+    MEM_FREE,         // ID_SEGMENTO, PID
+    SLEEP,            // TIEMPO, PID
     STDOUT,           // REGISTRO_DIRECCION_LOGICA, REGISTRO_TAMAÑO
     STDIN,            // REGISTRO_DIRECCION_LOGICA, REGISTRO_TAMAÑO
     INIT_PROC,        // ARCHIVO_INSTRUCCIONES, PRIORIDAD

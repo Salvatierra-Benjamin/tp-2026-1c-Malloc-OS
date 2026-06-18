@@ -1,5 +1,5 @@
-#ifndef KS_MANEJA_IO_H
-#define KS_MANEJA_IO_H
+#ifndef KS_MANEJA_KM_H
+#define KS_MANEJA_KM_H
 
 #include "ks_estructuras.h"
 
@@ -10,9 +10,7 @@
 
 #include <commons/log.h>
 
+#include <../../utils/src/utils/conexiones.h>
 #include <../../utils/src/utils/protocolos.h>
-
-// firma correcta para pthread
-void *ks_maneja_io(void *arg);
 
 #endif

@@ -24,7 +24,8 @@ void ms_cargar_config(char *path)
     char *log_level_string = config_get_string_value(config, "LOG_LEVEL");
     ms_config.log_level = log_level_from_string((char *)log_level_string);
     ms_config.memory_delay = config_get_int_value(config, "MEMORY_DELAY");
-    ms_config.puerto_escucha_cpu =  strdup(config_get_string_value(config, "PUERTO_ESCUCHA_CPU"));
+    ms_config.ip_ms = strdup(config_get_string_value(config, "IP_MEMORY_STICK"));
+    ms_config.puerto_escucha_cpu = strdup(config_get_string_value(config, "PUERTO_ESCUCHA_CPU"));
     ms_config.ip_km = strdup(config_get_string_value(config, "IP_KM"));
     ms_config.puerto_km = strdup(config_get_string_value(config, "PUERTO_KM"));
     
@@ -75,6 +76,7 @@ void liberar_semaforos()
 
 void ms_liberar_config()
 {
+    free(ms_config.ip_ms);
     free(ms_config.puerto_escucha_cpu);
     free(ms_config.ip_km);
     free(ms_config.puerto_km);
