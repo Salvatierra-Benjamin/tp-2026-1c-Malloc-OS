@@ -92,7 +92,7 @@ void creacion_conexiones_cpu()
         exit(EXIT_FAILURE);
     }
 
-    // --- CONEXIÓN AL KERNEL MEMORY ---
+    // --- CONEXIÓN AL MEMORY STICK ---
     conexion_ms = crear_conexion(cpu_config.ip_memory_stick, cpu_config.puerto_memory_stick);
     if (conexion_ms == -1)
     {

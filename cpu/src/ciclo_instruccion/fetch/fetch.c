@@ -75,6 +75,7 @@ void Recibir_Instruccion(t_instruccion *nueva_instruccion)
         nueva_instruccion->comando = ERROR_INSTRUCCION;
         nueva_instruccion->parametro_1 = NULL;
         nueva_instruccion->parametro_2 = NULL;
+        exit(EXIT_FAILURE);
         // Importante hay que ver que hago en el Ciclo de Instruccion.
         // NO SE LIBERA CON FREE () NADA !!! PUNTEROS APUNTANDO A NULL.
     }
@@ -131,6 +132,12 @@ void Destruir_Instruccion(t_instruccion *instruccion)
     // Opcional: limpiar los punteros para no dejar basura
     instruccion->parametro_1 = NULL;
     instruccion->parametro_2 = NULL;
+
+    // 2. Resetear metadatos a valores inválidos/seguros
+    instruccion->PID = -1;
+    instruccion->comando = ERROR_INSTRUCCION; // Usamos el valor del enum que representa error
+
+    // Con esto, la instrucción queda "muerta" y es imposible ejecutarla por error.
 }
 
 void Iniciar_Fetch(t_contexto_ejecucion *contexto_actual, t_instruccion *nueva_instruccion)
@@ -138,11 +145,6 @@ void Iniciar_Fetch(t_contexto_ejecucion *contexto_actual, t_instruccion *nueva_i
     Solicitar_Instruccion(contexto_actual->PID, contexto_actual->registros.PC);
     Recibir_Instruccion(nueva_instruccion);
     Loggear_Instruccion(nueva_instruccion);
-    contexto_actual->registros.PC++;
+    // Fetch Instrucción: “## PID: <PID> - FETCH - Program Counter: <PROGRAM_COUNTER>”.
+    log_info(cpu_logger, "## PID: %d - FETCH - Program Counter: %u", contexto_actual->PID, contexto_actual->registros.PC);
 }
-/*
-* Sumo aca el PC. En la proxima vuelta del while(1) buscara la siguientes instruccion.
-* En caso de que se ejecute el JNZ, este PC++ será pisado por el nuevo PC
-
-* De paso me ahorro repetir PC++ en las todos los execute_
-*/

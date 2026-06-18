@@ -27,21 +27,20 @@ void *atencion_ks()
         {
         case ALOJAR_PROCESO:
         {
-
             t_paquete *paquete_alojar_proceso = recibir_paquete(conexion_ks);
             buffer_read(&PID_a_ejecutar, paquete_alojar_proceso->buffer, sizeof(int));
             eliminar_paquete(paquete_alojar_proceso);
             sem_post(&sem_proceso_nuevo);
             break;
         }
-        // case INTERRUPCION:
-        // {
-        //     - El Kernel te pide que desalojes.
-        //     - Solo tenés que prender una variable global (un flag atómico)
-        //     - que tu main va a leer en la etapa de "Check Interrupt"
-        //     hubo_interrupcion = true;
-        //     break;
-        // }
+        case INTERRUPCION:
+        {
+            t_paquete *paquete_interrupcion = recibir_paquete(conexion_ks);
+            buffer_read(&PID_Interrupcion, paquete_interrupcion->buffer, sizeof(int));
+            eliminar_paquete(paquete_interrupcion);
+            sem_post(&hay_interrupcion);
+            break;
+        }
         default:
         {
             log_warning(cpu_logger, "[RECEPTOR_KS_CPU] operacion desconocida : %d", cod_op);

@@ -49,35 +49,66 @@ typedef enum
     OK_STDIN = 2004,
     OK_STDOUT = 2005,
     OK_SLEEP = 2006,
-
+    ENVIAR_DATOS_IO = 2007,
     // PAQUETE_STDIN = 2100,
     // PAQUETE_STDOUT = 2101,
     // PAQUETE_STDSLEEP = 2102,
 
     // ---------------- CPU -> SCHEDULER ----------------
     CPU_IDENTIFICACION = 3000,
+    ENVIO_MUTEX_CREATE = 3001, // [tamanioNombre, nombreMutex, pid]
+    ENVIO_MUTEX_LOCK = 3002,   // [tamanioNombre, nombreMutex, pid]
+    ENVIO_MUTEX_UNLOCK = 3003, // [tamanioNombre, nombreMutex, pid]
+    AVISO_DE_INTERRUPCION_DESALOJO = 3004,
+    AVISO_DE_INTERRUPCION_SEGMENTATION_FAULT = 3005,
+    ENVIO_MEM_ALLOC = 3006,
+    ENVIO_MEM_FREE = 3007,
+    ENVIO_SLEEP = 3008,
+    ENVIO_STDOUT = 3009,
+    ENVIO_STDIN = 3010,
+    ENVIO_INIT_PROC = 3011,
+    ENVIO_EXIT = 3012,
+
+    // Envío de palabras reservadas de CPU a KS (version antigua)
+    // MUTEX_CREATE,     // NOMBRE_MUTEX
+    // MUTEX_LOCK,       // NOMBRE_MUTEX
+    // MUTEX_UNLOCK,     // NOMBRE_MUTEX
+    // SLEEP,            // TIEMPO, PID
+    // STDOUT,           // REGISTRO_DIRECCION_LOGICA, REGISTRO_TAMAÑO
+    // STDIN,            // REGISTRO_DIRECCION_LOGICA, REGISTRO_TAMAÑO
 
     // ---------------- CPU -> KM ----------------
-    SOLICITUD_CONTEXTO_EJECUCION = 3001, // CPU solicita contexto a KM
-    ENVIO_CPU_ID = 3002,
-    SOLICITUD_INSTRUCCION = 3003, // cpu solicuta instruccion [pid, pc]
-    OK_ALOJAR = 3004,             // cpu
+    SOLICITUD_CONTEXTO_EJECUCION = 3500, // CPU solicita contexto a KM
+    ENVIO_CPU_ID = 3501,
+    SOLICITUD_INSTRUCCION = 3502, // cpu solicuta instruccion [pid, pc]
+    OK_ALOJAR = 3503,             // cpu
 
     // ---------------- SWAP -> KM ----------------
     BLOCK_SIZE = 4000,
+    PETICION_LECTURA_SWAP = 4102,
+    RESPUESTA_LECTURA_SWAP = 4103,
+    PETICION_ESCRITURA_SWAP = 4104,
+    RESPUESTA_ESCRITURA_SWAP = 4105,
 
     // ---------------- KS -> KM ----------------
     CREACION_PROCESO = 5000,
 
     // ---------------- MS -> KM ----------------
     MEMORY_STICK_SIZE = 6000,
+    ENVIO_DATOS_KM = 6001,
+    PETICION_LECTURA_MS = 6102,
+    RESPUESTA_LECTURA_MS = 6103,
+    PETICION_ESCRITURA_MS = 6104,
+    RESPUESTA_ESCRITURA_MS = 6105,
 
     // ---------------- KS -> CPU ----------------
     ALOJAR_PROCESO = 7000, // KS envia pid a CPU
     INTERRUPCION = 7001,
+    DESALOJO_PROCESO = 7002,
     // ---------------- KM -> CPU ----------------
     CONTEXTO_EJECUCION = 8000, // KM envia [t_registros, t_tabla_de_segmentos]
     ENVIO_INSTRUCCION = 8001,
+    ACTUALIZAR_CONTEXTO_EJECUCION = 8002,
     // ---------------- CODIGOS DE ERROR -----------
     ERROR_ENVIO_INSTRUCCION = 9001,
     ERROR_ENVIO_CONTEXTO = 9002
@@ -96,9 +127,9 @@ typedef enum
     MUTEX_CREATE,     // NOMBRE_MUTEX
     MUTEX_LOCK,       // NOMBRE_MUTEX
     MUTEX_UNLOCK,     // NOMBRE_MUTEX
-    MEM_ALLOC,        // ID_SEGMENTO, TAMAÑO
-    MEM_FREE,         // ID_SEGMENTO
-    SLEEP,            // TIEMPO
+    MEM_ALLOC,        // ID_SEGMENTO, TAMAÑO, PID
+    MEM_FREE,         // ID_SEGMENTO, PID
+    SLEEP,            // TIEMPO, PID
     STDOUT,           // REGISTRO_DIRECCION_LOGICA, REGISTRO_TAMAÑO
     STDIN,            // REGISTRO_DIRECCION_LOGICA, REGISTRO_TAMAÑO
     INIT_PROC,        // ARCHIVO_INSTRUCCIONES, PRIORIDAD
@@ -142,6 +173,7 @@ typedef struct
 
 typedef struct
 {
+    int id_segmento;
     uint32_t dir_base;
     uint32_t tam_seg;
 } segmento_t;
@@ -167,6 +199,12 @@ typedef struct
     char *parametro_1;
     char *parametro_2;
 } t_instruccion;
+
+typedef struct
+{
+    int tamanio;
+    int id;
+} t_memory_stick; // lista para el km
 
 int enviar_operacion(int socket_destino, op_code codigo_operacion);
 int recibir_operacion(int);

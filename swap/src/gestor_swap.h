@@ -34,6 +34,7 @@ typedef struct
 extern t_log *swap_logger;
 extern swap_config_struct swap_config;
 extern int conexion_km;
+extern FILE * archivo_swap;
 
 // Semaforos:
 extern pthread_mutex_t conexiones_km; // MUTEX

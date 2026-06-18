@@ -8,11 +8,9 @@ void creacion_conexiones_ms()
         liberar_todo();
         exit(EXIT_FAILURE);
     }
-
     enviar_operacion(conexion_km, HANDSHAKE_MS);
-
     receptor_km();
-
+    sem_wait(&sem_ok_conexion_km);
     socket_servidor_con_cpu = iniciar_servidor(ms_config.puerto_escucha_cpu);
     if (socket_servidor_con_cpu == -1)
     {

@@ -56,6 +56,13 @@ void *atencion_ks()
         case KS_OK_CONEXION:
         {
             log_debug(io_logger, "[RECEPTOR_KS_IO] EL HANSHAKE CON KS SE HA REALIZADO CORRECTAMENTE!!!");
+            log_info(io_logger, "## Conectado a Kernel Scheduler");
+            t_paquete *paquete = crear_paquete(ENVIAR_DATOS_IO);
+            int longitud_tipo_io = strlen(tipo_io_mayusculas);
+            agregar_a_paquete(paquete, tipo_io_mayusculas, longitud_tipo_io);
+            enviar_paquete(paquete, conexion_ks);
+            eliminar_paquete(paquete);
+
             break;
         }
         case STDIN_IO:
