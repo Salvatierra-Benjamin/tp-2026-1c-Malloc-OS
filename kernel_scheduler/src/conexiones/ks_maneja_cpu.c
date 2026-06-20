@@ -15,16 +15,18 @@ void* ks_maneja_cpu(void* arg) {
 	while (ejecutando) {
 		int op_code = recibir_operacion(cpu->fd);
 		switch (op_code) {
-		case MUTEX_CREATE: // MUTEX_CREATE (Nombre Mutex)
+		case ENVIO_MUTEX_CREATE: // MUTEX_CREATE (Nombre Mutex)
 		{
 			t_paquete* contenido = recibir_paquete(cpu->fd);
 
-			char* nombre_mutex = NULL;
-			buffer_read(&nombre_mutex, contenido->buffer, sizeof(char*));
+			int len1;
+			buffer_read (&len1, contenido->buffer, sizeof (int)) ; // LEEMOS CUANTO MIDE
+			char* nombre_mutex = malloc(len1); // PEDIMOS EL ESPACIO JUSTO
+			buffer_read (&nombre_mutex, contenido->buffer, len1); // COPIAMOS EL CONTENIDO
 
 			t_mutex_kernel* mutex = malloc(sizeof(t_mutex_kernel));
 
-			mutex->nombre = strdup(nombre);
+			mutex->nombre = strdup(nombre_mutex);
 			mutex->tomado = false;
 			mutex->duenio = NULL;
 			mutex->bloqueados = queue_create();
@@ -37,12 +39,14 @@ void* ks_maneja_cpu(void* arg) {
 			break;
 		}
 
-		case MUTEX_LOCK: // MUTEX_LOCK (Nombre Mutex)
+		case ENVIO_MUTEX_LOCK: // MUTEX_LOCK (Nombre Mutex)
 		{
 			t_paquete* contenido = recibir_paquete(cpu->fd);
 
-			char* nombre_mutex = NULL;
-			buffer_read(&nombre_mutex, contenido->buffer, sizeof(char*));
+			int len1;
+			buffer_read (&len1, contenido->buffer, sizeof (int)) ; // LEEMOS CUANTO MIDE
+			char* nombre_mutex = malloc(len1); // PEDIMOS EL ESPACIO JUSTO
+			buffer_read (&nombre_mutex, contenido->buffer, len1); // COPIAMOS EL CONTENIDO
 
 			t_mutex_kernel* mutex = ks_buscar_mutex(nombre_mutex);
 
@@ -80,12 +84,14 @@ void* ks_maneja_cpu(void* arg) {
 			break;
 		}
 
-		case MUTEX_UNLOCK: // MUTEX_UNLOCK (Nombre Mutex)
+		case ENVIO_MUTEX_UNLOCK: // MUTEX_UNLOCK (Nombre Mutex)
 		{
 			t_paquete* contenido = recibir_paquete(cpu->fd);
 
-			char* nombre_mutex = NULL;
-			buffer_read(&nombre_mutex, contenido->buffer, sizeof(char*));
+			int len1;
+			buffer_read (&len1, contenido->buffer, sizeof (int)) ; // LEEMOS CUANTO MIDE
+			char* nombre_mutex = malloc(len1); // PEDIMOS EL ESPACIO JUSTO
+			buffer_read (&nombre_mutex, contenido->buffer, len1); // COPIAMOS EL CONTENIDO
 
 			t_mutex_kernel* mutex = ks_buscar_mutex(nombre_mutex);
 
@@ -129,7 +135,7 @@ void* ks_maneja_cpu(void* arg) {
 			break;
 		}
 
-		case MEM_ALLOC: // MEM_ALLOC (Id del Segmento, Tamaño, PID)
+		case ENVIO_MEM_ALLOC: // MEM_ALLOC (Id del Segmento, Tamaño, PID)
 		{
 			t_paquete* contenido = recibir_paquete(cpu->fd);
 
@@ -148,7 +154,7 @@ void* ks_maneja_cpu(void* arg) {
 			break;
 		}
 
-		case MEM_FREE: // MEM_FREE (Id del Segmento, PID)
+		case ENVIO_MEM_FREE: // MEM_FREE (Id del Segmento, PID)
 		{
 			t_paquete* contenido = recibir_paquete(cpu->fd);
 
@@ -164,7 +170,7 @@ void* ks_maneja_cpu(void* arg) {
 			break;
 		}
 
-		case SLEEP: // SLEEP (Tiempo)
+		case ENVIO_SLEEP: // SLEEP (Tiempo)
 		{
 			t_paquete* contenido = recibir_paquete(fd);
 
@@ -188,12 +194,15 @@ void* ks_maneja_cpu(void* arg) {
 			break;
 		}
 
-		case STDOUT: // STDOUT (Registro Dirección Lógica, Registro Tamaño)
+		case ENVIO_STDOUT: // STDOUT (Registro Dirección Lógica, Registro Tamaño, pid)
 		{
 			t_paquete* contenido = recibir_paquete(cpu->fd);
 
-			char* dir_logica = NULL;
-			buffer_read(&dir_logica, contenido->buffer, sizeof(char*));
+			int pid;
+			buffer_read(&pid, contenido->buffer, sizeof(int));
+
+			char* dir_fisica = NULL;
+			buffer_read(&dir_fisica, contenido->buffer, sizeof(char*));
 
 			int tamanio;
 			buffer_read(&tamanio, contenido->buffer, sizeof(int));
@@ -202,21 +211,21 @@ void* ks_maneja_cpu(void* arg) {
 
 			if (io == NULL) { 
 				log_warning(ks_logger, "No hay IOs libres para el proceso %d en la cpu %d, reintente el STDOUT luego", cpu->pcb_ejecutando, cpu->id_cpu);
-				return; // ? Lo mantengo???
+				return; // ? Lo mantengo??? O pongo break???
 			}
 
 			cpu->pcb_ejecutando->io_fd = io->fd;
 
 			ks_pasar_a_block(cpu->pcb_ejecutando);
 
-			enviar_stdout_io(io->fd, dir_logica, tamanio);
+			enviar_bytes_stdin(pid, len, dir_fisica, tamanio);
 
-			free(dir_logica);
+			free(dir_fisica);
 			eliminar_paquete(contenido);
 			break;
 		}
 
-		case STDIN: // STDIN (Registro Dirección Lógica, Registro Tamaño (DIRECCION LOGICA DONDE SE GUARDARÁ LO LEIDO))
+		case ENVIO_STDIN: // STDIN (Registro Dirección Lógica, Registro Tamaño (DIRECCION LOGICA DONDE SE GUARDARÁ LO LEIDO))
 		{
 			t_paquete* contenido = recibir_paquete(cpu->fd);
 
@@ -237,8 +246,7 @@ void* ks_maneja_cpu(void* arg) {
 
 			ks_pasar_a_block(cpu->pcb_ejecutando);
 
-			enviar_stdout_io(io->fd, dir_logica, tamanio);
-			enviar_sleep_io(io->fd, tamanio, cpu->pcb_ejecutando->pid);
+			enviar_stdin_io(io->fd, dir_logica, tamanio);
 
 			free(dir_logica);
 			eliminar_paquete(contenido);
@@ -246,7 +254,7 @@ void* ks_maneja_cpu(void* arg) {
 			break;
 		}
 
-		case INIT_PROC: // INIT_PROC (Archivo de instrucciones, Prioridad)
+		case ENVIO_INIT_PROC: // INIT_PROC (Archivo de instrucciones, Prioridad)
 		{
 			t_paquete* contenido = recibir_paquete(cpu->fd);
 
@@ -261,52 +269,86 @@ void* ks_maneja_cpu(void* arg) {
 			break;
 		}
 
-		case EXIT: {
+		case ENVIO_EXIT: {
 
 			break;
 		}
 
-		case OK_INTERRUPCION: // OK_INTERRUPCION (PID, MOTIVO DE INTERRUPCION)
+		case DESALOJO_PROCESO: // OK_INTERRUPCION (PID, MOTIVO DE INTERRUPCION)
 		{
 			t_paquete* contenido = recibir_paquete(cpu->fd);
 
 			int pid;
 			buffer_read(&pid, contenido->buffer, sizeof(int));
 
-			char* motivo_interrupcion = NULL;
-			buffer_read(&motivo_interrupcion, contenido->buffer, sizeof(char*));
+			uint8_t motivo_interrupcion = 0; // 
+			buffer_read(&motivo_interrupcion, contenido->buffer, sizeof(uint8_t));
 
-			free(motivo_interrupcion);
-			eliminar_paquete(contenido);
-			break;
-		}
+			if (motivo_interrupcion == AVISO_DE_INTERRUPCION_DESALOJO) {
+				log_debug(ks_logger, "Se desalojo el proceso %d, por motivo de AVISO_DE_INTERRUPCION_DESALOJO", pid);
 
-		case OK_DESALOJO_COMPACTACION_MEMORIA: {
-            ks_termina_de_desalojar_por_compactacion();
-			break;
-		}
+				t_pcb* pcb = ks_buscar_pcb_por_pid(pid);
+				ks_termina_de_desalojar_general(pcb);
+			}
+			else if (motivo_interrupcion == AVISO_DE_INTERRUPCION_SEGMENTATION_FAULT) {
+				log_debug(ks_logger, "Se desalojo el proceso %d, por motivo de AVISO_DE_INTERRUPCION_SEGMENTATION_FAULT", pid);
 
-		case OK_DESALOJO: // OK_DESALOJO (PID)
-		{
-			t_paquete* contenido = recibir_paquete(cpu->fd);
-
-			int pid;
-			buffer_read(&pid, contenido->buffer, sizeof(int));
-
-			eliminar_paquete(contenido);
-			break;
-		}
-
-		case OK_ALOJAR: // OK_ALOJAR (PID)
-		{
-			t_paquete* contenido = recibir_paquete(cpu->fd);
-
-			int pid;
-			buffer_read(&pid, contenido->buffer, sizeof(int));
+				t_pcb* pcb = ks_buscar_pcb_por_pid(pid);
+				ks_termina_de_desalojar_un_pcb_seg_fault(pcb);
+				
+				// ? Se tiene que desconectar la cpu, y eso lo manejo en el swicth cuando se desconecta (case -1).
+			}
+			else {
+				log_error(ks_logger, "Se quiere desalojar el proceso %d, por motivo desconocido (%d).", pid, motivo_interrupcion);
+			}
 
 			eliminar_paquete(contenido);
 			break;
 		}
+
+		// ! Viejo ------------------------------------------
+
+		// case OK_INTERRUPCION: // OK_INTERRUPCION (PID, MOTIVO DE INTERRUPCION)
+		// {
+		// 	t_paquete* contenido = recibir_paquete(cpu->fd);
+
+		// 	int pid;
+		// 	buffer_read(&pid, contenido->buffer, sizeof(int));
+
+		// 	char* motivo_interrupcion = NULL;
+		// 	buffer_read(&motivo_interrupcion, contenido->buffer, sizeof(char*));
+
+		// 	free(motivo_interrupcion);
+		// 	eliminar_paquete(contenido);
+		// 	break;
+		// }
+
+		// case OK_DESALOJO_COMPACTACION_MEMORIA: {
+        //     ks_termina_de_desalojar_por_compactacion();
+		// 	break;
+		// }
+
+		// case OK_DESALOJO: // OK_DESALOJO (PID)
+		// {
+		// 	t_paquete* contenido = recibir_paquete(cpu->fd);
+
+		// 	int pid;
+		// 	buffer_read(&pid, contenido->buffer, sizeof(int));
+
+		// 	eliminar_paquete(contenido);
+		// 	break;
+		// }
+
+		// case OK_ALOJAR: // OK_ALOJAR (PID)
+		// {
+		// 	t_paquete* contenido = recibir_paquete(cpu->fd);
+
+		// 	int pid;
+		// 	buffer_read(&pid, contenido->buffer, sizeof(int));
+
+		// 	eliminar_paquete(contenido);
+		// 	break;
+		// }
 
 		case -1: {
 			log_warning(logger, "[CPU %d] se desconecto cpu", cpu->id);

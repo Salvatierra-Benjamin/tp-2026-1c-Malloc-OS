@@ -6,6 +6,7 @@ t_ks_config ks_config;
 
 int ks_server_fd = -1;
 
+// ! 0 ES LA MAYOR PRIORIDAD!!!!, LUEGO LE VAN SIGUIENDO EN ORDEN LOS VALORES (CUANTO MAYOR EL VALOR, MENOR LA PRIORIDAD)
 t_elemento_array_algoritmos *array_queues = NULL;
 int cantidad_algoritmos = 0;
 

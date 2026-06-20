@@ -1,6 +1,18 @@
 #include "ks_auxiliares.h"
 
 #include "../main/ks_main.h"
+
+void liberar_io(void* io_original) {
+	t_io* io = (t_io*)io_original;
+	free(io); // Liberar la memoria de la IO
+}
+
+void liberar_cpu(void* cpu_original) {
+	t_cpu* cpu = (t_cpu*)cpu_original;
+	free(cpu->pcb_ejecutando);
+	free(cpu); // Liberar la memoria del CPU
+}
+
 void liberar_proceso(void* proc) {
 	t_pcb* proceso = (t_pcb*)proc;
 	free(proceso->path); // Liberar la memoria del path
@@ -20,33 +32,56 @@ void matar_procesos_ready() {
 		queue_destroy_and_destroy_elements(array_queues[i].queue_ready, liberar_proceso_bsod);
 		list_destroy_and_destroy_elements(array_queues[i].list_block, liberar_proceso_bsod);
 		list_destroy_and_destroy_elements(array_queues[i].list_susp_block, liberar_proceso_bsod);
-		queue_destroy_and_destroy_elements(array_queues[i].queue_susp_ready, liberar_proceso_bsod);
+		list_destroy_and_destroy_elements(array_queues[i].list_susp_ready, liberar_proceso_bsod);
 	}
+}
+
+void liberar_listas_matando_procesos_bsod() {
+	pthread_mutex_lock(&mutex_cpus);
+	list_destroy_and_destroy_elements(cpus, liberar_cpu);
+	pthread_mutex_unlock(&mutex_cpus);
+
+	pthread_mutex_lock(&mutex_ios_sleep);
+	list_destroy_and_destroy_elements(ios_sleep, liberar_io);
+	pthread_mutex_unlock(&mutex_ios_sleep);
+
+	pthread_mutex_lock(&mutex_ios_stdin);
+	list_destroy_and_destroy_elements(ios_stdin, liberar_io);
+	pthread_mutex_unlock(&mutex_ios_stdin);
+
+	pthread_mutex_lock(&mutex_ios_stdout);
+	list_destroy_and_destroy_elements(ios_stdout, liberar_io);
+	pthread_mutex_unlock(&mutex_ios_stdout);
+
+	pthread_mutex_lock(&mutex_exec);
+	list_destroy_and_destroy_elements(procs_exec, liberar_proceso_bsod);
+	pthread_mutex_unlock(&mutex_exec);
+
+	list_destroy_and_destroy_elements(procs_exit, liberar_proceso_bsod);
+	pthread_mutex_unlock(&mutex_exit);
 }
 
 void liberar_listas_matando_procesos() {
 	pthread_mutex_lock(&mutex_cpus);
-	list_destroy_and_destroy_elements(cpus, liberar_proceso);
+	list_destroy_and_destroy_elements(cpus, liberar_cpu);
 	pthread_mutex_unlock(&mutex_cpus);
 
-	pthread_mutex_lock(&mutex_ios);
-	list_destroy_and_destroy_elements(ios, liberar_proceso);
-	pthread_mutex_unlock(&mutex_ios);
-	// list_destroy_and_destroy_elements(procesos, liberar_proceso);
+	pthread_mutex_lock(&mutex_ios_sleep);
+	list_destroy_and_destroy_elements(ios_sleep, liberar_io);
+	pthread_mutex_unlock(&mutex_ios_sleep);
+
+	pthread_mutex_lock(&mutex_ios_stdin);
+	list_destroy_and_destroy_elements(ios_stdin, liberar_io);
+	pthread_mutex_unlock(&mutex_ios_stdin);
+
+	pthread_mutex_lock(&mutex_ios_stdout);
+	list_destroy_and_destroy_elements(ios_stdout, liberar_io);
+	pthread_mutex_unlock(&mutex_ios_stdout);
 
 	pthread_mutex_lock(&mutex_exec);
 	list_destroy_and_destroy_elements(procs_exec, liberar_proceso);
 	pthread_mutex_unlock(&mutex_exec);
-	// pthread_mutex_lock(&mutex_block);
-	// list_destroy_and_destroy_elements(procs_block, liberar_proceso);
-	// pthread_mutex_unlock(&mutex_block);
-	// pthread_mutex_lock(&mutex_susp_block);
-	// list_destroy_and_destroy_elements(procs_susp_block, liberar_proceso);
-	// pthread_mutex_unlock(&mutex_susp_block);
-	// pthread_mutex_lock(&mutex_susp_ready);
-	// list_destroy_and_destroy_elements(procs_susp_ready, liberar_proceso);
-	// pthread_mutex_unlock(&mutex_susp_ready);
-	// pthread_mutex_lock(&mutex_exit);
+
 	list_destroy_and_destroy_elements(procs_exit, liberar_proceso);
 	pthread_mutex_unlock(&mutex_exit);
 }
@@ -103,8 +138,8 @@ t_pcb* crear_proceso(int pid, char* path, int prioridad) {
 	}
 
 	nuevo_pcb->pid = pid;
-	nuevo_pcb->path = strdup(path); // Asegúrate de liberar esta memoria cuando ya no se necesite
-	nuevo_pcb->prioridad = prioridad;
+	nuevo_pcb->path = strdup(path);			   // Asegúrate de liberar esta memoria cuando ya no se necesite
+	nuevo_pcb->prioridad = prioridad;		   // ! No manejo el caso en el que la prioridadd exceda a la cant de alg, xq dijeron que eso no va a suceder en las pruebas
 	nuevo_pcb->prioridad_original = prioridad; // Guardar la prioridad original para herencia de prioridad
 	nuevo_pcb->cpu_fd = -1;					   // Inicialmente no asignado a ningún CPU
 	nuevo_pcb->io_fd = -1;					   // Inicialmente no asignado a ningún IO
@@ -115,7 +150,10 @@ t_pcb* crear_proceso(int pid, char* path, int prioridad) {
 
 	nuevo_pcb->estado = READY; // Estado inicial del proceso es "READY" (saltea NEW)
 
+	pthread_mutex_lock(&array_queues[prioridad].mutex_ready);
 	queue_push(array_queues[prioridad].queue, nuevo_pcb); // Agrega el proceso a la cola correspondiente según su prioridad
+	pthread_mutex_unlock(&array_queues[prioridad].mutex_ready);
+
 	return nuevo_pcb;
 }
 
@@ -158,11 +196,11 @@ t_io* crear_io(int fd, char* tipo_io) {
 	return nuevo_io;
 }
 
-t_io* io_libre(char* tipo_io){
+t_io* io_libre(char* tipo_io) {
 	bool _io_esta_libre(void* ptr) {
-        t_io* io = (t_io*) ptr;
-        return io->esta_libre;
-    }
+		t_io* io = (t_io*)ptr;
+		return io->esta_libre;
+	}
 
 	if (strcmp(tipo_io, "SLEEP") == 0) {
 		pthread_mutex_lock(&mutex_ios_sleep);
@@ -198,6 +236,8 @@ void finalizar_cpu(t_cpu* cpu) {
 		cpu->pcb_ejecutando->io_fd = -1;
 		cpu->pcb_ejecutando->estado = READY; // Cambia el estado del proceso a "READY" para que pueda ser planificado nuevamente
 
+		log_cambio_estado(cpu->pcb_ejecutando, (estados EXEC), (estados READY));
+
 		pthread_mutex_lock(&array_queues[cpu->pcb_ejecutando->prioridad].mutex_ready);
 		queue_push(array_queues[cpu->pcb_ejecutando->prioridad].queue, cpu->pcb_ejecutando); // Agrega el proceso de vuelta a la cola de ready correspondiente
 		pthread_mutex_unlock(&array_queues[cpu->pcb_ejecutando->prioridad].mutex_ready);
@@ -205,6 +245,15 @@ void finalizar_cpu(t_cpu* cpu) {
 		cpu->pcb_ejecutando = NULL;
 	}
 
+	pthread_mutex_lock(&mutex_cpus);
+	bool _es_cpu(void* ptr) {
+		t_cpu* aux = (t_cpu*)ptr;
+		return aux->id == cpu->id;
+	}
+	list_remove_by_condition(cpus, _es_cpu);
+	pthread_mutex_unlock(&mutex_cpus);
+
+	free(cpu->pcb_ejecutando);
 	free(cpu);
 }
 
@@ -227,6 +276,8 @@ t_person* find_by_name_contains(t_list* people, char* substring) {
 }
 
 t_pcb* buscar_pcb_por_pid(int pid) {
+	t_pcb* encontrado = NULL;
+
 	for (int i = 0; i < cantidad_algoritmos; i++) {
 
 		bool _pcb_tiene_pid(void* ptr) {
@@ -234,13 +285,28 @@ t_pcb* buscar_pcb_por_pid(int pid) {
 			return pcb->id == pid;
 		}
 
-		t_pcb* encontrado = list_find(array_queues[i].queue, _pcb_tiene_pid);
+		encontrado = list_find(array_queues[i].queue, _pcb_tiene_pid);
 
 		if (encontrado != NULL) {
 			return encontrado;
 		}
 	}
-	return NULL; // No se encontró el PCB con el PID dado
+
+	pthread_mutex_lock(&mutex_exec);
+	encontrado = list_find(procs_exec, _pcb_tiene_pid);
+	pthread_mutex_unlock(&mutex_exec);
+
+	if (encontrado != NULL) {
+		return encontrado;
+	}
+
+	// ptrhread_mutex_lock(&mutex_exit);
+	// encontrado = list_find(procs_exit, _pcb_tiene_pid);
+	// pthread_mutex_unlock(&mutex_exit);
+
+	// no tiene sentido hacer el if, porque no me ahorro nada y retorna directamente el NULL si no lo encuentra
+
+	return encontrado; // No se encontró el PCB con el PID dado
 }
 
 char* estado_a_string(estados estado) {

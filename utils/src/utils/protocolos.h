@@ -40,17 +40,19 @@ typedef enum
 
     // ---------------- IO -> SCHEDULER ----------------
     IO_ENVIA_IO = 2000,
-    STDIN_IO = 2001,  // ks envia stdin
-    STDOUT_IO = 2002, // ks envia stdout
-    SLEEP_IO = 2003,  // ks envia sleep
 
-    OK_STDIN = 2004,
-    OK_STDOUT = 2005,
-    OK_SLEEP = 2006,
+    OK_STDIN = 2004, // (PID)
+    OK_STDOUT = 2005, // (PID)
+    OK_SLEEP = 2006, // (PID)
     ENVIAR_DATOS_IO = 2007,
     // PAQUETE_STDIN = 2100,
     // PAQUETE_STDOUT = 2101,
     // PAQUETE_STDSLEEP = 2102,
+
+    // ---------------- SCHEDULER -> IO----------------
+    STDIN_IO = 2001,  // ks envia stdin //  int tamanio, int pid
+    STDOUT_IO = 2002, // ks envia stdout // int len, char* cadena_De_bytes, int pid
+    SLEEP_IO = 2003,  // ks envia sleep //  int tiempo_ms, int pid
 
     // ---------------- CPU -> SCHEDULER ----------------
     CPU_IDENTIFICACION = 3000,
@@ -92,6 +94,24 @@ typedef enum
 
     // ---------------- KS -> KM ----------------
     CREACION_PROCESO = 5000,
+    STDOUT_SOLICITUD_LECTURA = 5001, // int len, char* dir_logica, int tamanio, int pid
+    SUSPENCION_PROCESO = 5002,       // PID
+    SOLICITUD_DESSUSPENCION_LISTA = 5003, // Lista de PIDS Y PRIORIDADES a dessuspender: [cantidad][pid1][prioridad1][pid2][prioridad2]...[pidN][prioridadN]
+    RESPUESTA_DESSUSPENCION_LISTA = 5004, // Lista de PIDS Y PRIORIDADES dessuspendidas: [cantidad][pid1][prioridad1][pid2][prioridad2]...[pidN][prioridadN]
+
+    // ---------------- KM -> KS ----------------
+    DETECCION_CORRUPCION_MEMORIA = 10000,
+    AUMENTO_DE_MEMORIA = 10001,
+    DESALOJO_POR_COMPACTACION = 10002,
+    FIN_COMPACTACION = 10003,
+    OK_STDIN_DATOS_ESCRITOS = 10004, // (len, BYTES ESCRITOS, pid)
+    STDOUT_RESTUESTA_LECTURA = 10005, // (longitud a imprimir, cadena de bytes y pid)
+    OK_MEM_FREE = 10006, // OK_MEM_FREE (PID)
+    OK_MEM_ALLOC = 10007, // OK_MEM_ALLOC (PID)
+    OK_PROCESO_SUSPENDIDO = 10008, // OK_PROCESO_SUSPENDIDO (PID)
+    OK_PROCESO_DES_SUSPENDIDO = 10009, // OK_PROCESO_DES_SUSPENDIDO (PID)
+    ERROR_CREACION_PROCESO = 10010,
+    OK_CREACION_PROCESO = 10011,
 
     // ---------------- MS -> KM ----------------
     MEMORY_STICK_SIZE = 6000,
@@ -105,10 +125,13 @@ typedef enum
     ALOJAR_PROCESO = 7000, // KS envia pid a CPU
     INTERRUPCION = 7001,
     DESALOJO_PROCESO = 7002,
+    STDOUT_RESPUESTA_BYTES = 7003, // (longitudAImprimir, cadena de caracteres (bytes) la cual deberá imprimir, PID)
+
     // ---------------- KM -> CPU ----------------
     CONTEXTO_EJECUCION = 8000, // KM envia [t_registros, t_tabla_de_segmentos]
     ENVIO_INSTRUCCION = 8001,
     ACTUALIZAR_CONTEXTO_EJECUCION = 8002,
+
     // ---------------- CODIGOS DE ERROR -----------
     ERROR_ENVIO_INSTRUCCION = 9001,
     ERROR_ENVIO_CONTEXTO = 9002

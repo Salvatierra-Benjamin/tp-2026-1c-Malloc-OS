@@ -17,7 +17,7 @@ void* ks_planificador_corto_plazo(void* arg) {
         pthread_mutex_lock(&mutex_compactacion);
         if (!compactacion_en_progreso){
             pthread_mutex_unlock(&mutex_compactacion);
-            pcb = ks_obtener_siguiente_ready_prioritario();
+            pcb = ks_obtener_siguiente_ready_prioritario(); // Si estoy en FIFO o en RR, no afecta en nada, porque es solo una prioridad, pero si estoy en CMN, me va a asegurar que primero se planifiquen los procesos que fueron desalojados por compactacion
         }
         pthread_mutex_unlock(&mutex_compactacion);
 
@@ -109,17 +109,20 @@ void ks_planificar_rr(t_pcb* pcb) {
     usleep(ks_config.rr_quantum);
 
     if (pcb->estado == EXEC) {
+        pthread_mutex_lock(&mutex_exec);
+        list_remove(procs_exec, pcb);
+        pthread_mutex_unlock(&mutex_exec);
+
         pcb->estado = READY;
 
         pthread_mutex_lock(&array_queues[pcb->prioridad].mutex_ready);
-        queue_push(array_queues[pcb->prioridad].queue_ready,pcb);
+        queue_push(array_queues[pcb->prioridad].queue_ready, pcb);
         pthread_mutex_unlock(&array_queues[pcb->prioridad].mutex_ready);
 
         log_cambio_estado(pcb, (estados EXEC), (estados READY));
 
         log_desalojo_quantum(pcb);
-
-        // sem_post(&sem_ready);
+        // sem_post(&sem_ready); // ? Hace falta hacerlo??
     }
 }
 
@@ -157,6 +160,8 @@ void ks_verificar_desalojo_prioridad(t_pcb* nuevo) {
             enviar_interrupcion_cpu(exec->cpu_fd, exec->pid, "Desalojo por prioridad");
 
             log_desalojo_prioridad(exec, nuevo);
+
+            return;
         }
     }
 
@@ -176,6 +181,35 @@ void ks_empieza_a_desalojar_por_compactacion(void) {
     pthread_mutex_unlock(&mutex_exec);
 }
 
+void ks_termina_de_desalojar_un_pcb_general(t_pcb* pcb) {
+    pthread_mutex_lock(&mutex_exec);
+    list_remove(procs_exec, pcb);
+    pthread_mutex_unlock(&mutex_exec);
+
+    pcb->estado = READY;
+    
+    pthread_mutex_lock(&array_queues[pcb->prioridad].mutex_ready_prioritario);
+    queue_push(array_queues[pcb->prioridad].queue_ready_prioritario, pcb);
+    pthread_mutex_unlock(&array_queues[pcb->prioridad].mutex_ready_prioritario);
+
+    log_cambio_estado(pcb, (estados EXEC), (estados READY));
+    sem_post(&sem_ready);
+}
+
+void ks_termina_de_desalojar_un_pcb_seg_fault(t_pcb* pcb) {
+    pthread_mutex_lock(&mutex_exec);
+    list_remove(procs_exec, pcb);
+    pthread_mutex_unlock(&mutex_exec);
+
+    pcb->estado = READY;
+    
+    pthread_mutex_lock(&array_queues[pcb->prioridad].mutex_ready_prioritario);
+    queue_push(array_queues[pcb->prioridad].queue_ready_prioritario, pcb);
+    pthread_mutex_unlock(&array_queues[pcb->prioridad].mutex_ready_prioritario);
+
+    log_cambio_estado(pcb, (estados EXEC), (estados READY));  // ! NO HACE FALTA HACER EL SEM_POST PORQUE NO SE PUEDE ALOJAR NADA PORQUE SE DESCONECTA LA CPU
+}
+
 void ks_termina_de_desalojar_por_compactacion(void) {
     pthread_mutex_lock(&mutex_exec);
 
@@ -188,9 +222,10 @@ void ks_termina_de_desalojar_por_compactacion(void) {
         queue_push(array_queues[pcb->prioridad].queue_ready_prioritario, pcb);
         pthread_mutex_unlock(&array_queues[pcb->prioridad].mutex_ready_prioritario);
 
-        log_cambio_estado(pcb, (estados EXEC), (estados READY)); // ! NO HACE FALTA HACER EL SEM_POST PORQUE NO SE PUEDE ALIJAR NADA DURANTE LA COMPACTACIÓN
+        log_cambio_estado(pcb, (estados EXEC), (estados READY)); // ! NO HACE FALTA HACER EL SEM_POST PORQUE NO SE PUEDE ALOJAR NADA DURANTE LA COMPACTACIÓN
     }
     // list_clean(procs_exec);
 
     pthread_mutex_unlock(&mutex_exec);
 }
+

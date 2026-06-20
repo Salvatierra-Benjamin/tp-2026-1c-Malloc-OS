@@ -19,9 +19,9 @@
 
 	// ! RECEPCIONES
 	int len1;
-	buffer_read (&len1, paquete->buffer, sizeof (int)) ; // LEEMOS CUANTO MIDE
-	nueva instruccion->parametro 1 = malloc(len1); // PEDIMOS EL ESPACIO JUSTO
-	buffer_read (nueva_instruccion->parametro_1, paquete-›buffer, len1); // COPIAMOS EL CONTENIDO
+	buffer_read (&len1, contenido->buffer, sizeof (int)) ; // LEEMOS CUANTO MIDE
+	char* nombre_mutex = malloc(len1); // PEDIMOS EL ESPACIO JUSTO
+	buffer_read (&nombre_mutex, contenido->buffer, len1); // COPIAMOS EL CONTENIDO DEL BUFFER
 */
 
 // ! -------------------------------- KS RTA GRAL DE OK CONEXIÓN ------------------------------------------------------------------------------------------------
@@ -79,10 +79,45 @@ void enviar_stdin_io(int io_fd, int tamanio, int pid) {
 	eliminar_paquete(paquete_stdin);
 }
 
-void enviar_stdout_io(int io_fd, int tamanio, int pid) {
+void enviar_stdout_io(int io_fd, char* cadena_de_bytes, int len, int pid) {
 	t_paquete* paquete_stdout = crear_paquete(STDOUT_IO);
-	agregar_a_paquete(paquete_stdout, &tamanio, sizeof(int));
+	agregar_a_paquete(paquete_stdout, &len, sizeof(int));
+	agregar_a_paquete(paquete_stdout, cadena_de_bytes, len);
 	agregar_a_paquete(paquete_stdout, &pid, sizeof(int));
 	enviar_paquete(paquete_stdout, io_fd);
 	eliminar_paquete(paquete_stdout);
+}
+
+// ! -------------------------------- KS -> KM ------------------------------------------------------------------------------------------------
+void enviar_bytes_stdin(int pid, int len, char* dir_logica, int tamanio) {
+	t_paquete* paquete_stdin = crear_paquete(STDOUT_SOLICITUD_LECTURA);
+	agregar_a_paquete(paquete_stdin, &len, sizeof(int));
+	agregar_a_paquete(paquete_stdin, dir_logica, len);
+	agregar_a_paquete(paquete_stdin, &tamanio, sizeof(int));
+	agregar_a_paquete(paquete_stdin, &pid, sizeof(int));
+	enviar_paquete(paquete_stdin, socket_km);
+	eliminar_paquete(paquete_stdin);
+}
+
+void enviar_aviso_suspension_km(int pid) {
+	t_paquete* paquete_suspension = crear_paquete(SUSPENCION_PROCESO);
+	agregar_a_paquete(paquete_suspension, &pid, sizeof(int));
+	enviar_paquete(paquete_suspension, socket_km);
+	eliminar_paquete(paquete_suspension);
+}
+
+void enviar_lista_desuspension_km(t_list* lista_a_desuspender) {
+	t_paquete* paquete_dessuspencion_lista = crear_paquete(SOLICITUD_DESSUSPENCION_LISTA);
+
+    int cantidad = list_size(lista_a_desuspender);
+    agregar_a_paquete(paquete_dessuspencion_lista, &cantidad, sizeof(int));
+
+    for (int i = 0; i < cantidad; i++) {
+        t_pcb* pcb = list_get(lista_a_desuspender, i);
+        agregar_a_paquete(paquete_dessuspencion_lista, &(pcb->pid), sizeof(int));
+        agregar_a_paquete(paquete_dessuspencion_lista, &(pcb->prioridad), sizeof(int));
+    }
+
+    enviar_paquete(paquete_dessuspencion_lista, socket_km);
+    eliminar_paquete(paquete_dessuspencion_lista);
 }

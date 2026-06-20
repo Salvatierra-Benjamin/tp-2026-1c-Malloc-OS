@@ -49,7 +49,7 @@ void* ks_conexion_km(void* _arg) {
 		switch (cod_op) {
 		case DETECCION_CORRUPCION_MEMORIA: {
 			matar_procesos_ready();
-			liberar_listas_matando_procesos();
+			liberar_listas_matando_procesos_bsod();
 			liberar_mutex();
 			destruir_semaforos();
 			return NULL;
@@ -107,16 +107,27 @@ void* ks_conexion_km(void* _arg) {
 		}
 
 		case OK_STDIN_DATOS_ESCRITOS: {
-
-			break;
-		}
-
-		case STDOUT_RESTUESTA_LECTURA: { // STDOUT_RESTUESTA_LECTURA (BYTES)
 			t_paquete* contenido = recibir_paquete(socket_km);
+
+			int len1;
+			buffer_read (&len1, contenido->buffer, sizeof (int)) ; // LEEMOS CUANTO MIDE
+			
+			char* cadena_de_bytes = malloc(len1); // PEDIMOS EL ESPACIO JUSTO
+			buffer_read (&cadena_de_bytes, contenido->buffer, len1); // COPIAMOS EL CONTENIDO DEL BUFFER
 
 			int pid;
 			buffer_read(&pid, contenido->buffer, sizeof(int));
 
+			t_io* io = io_libre("STDOUT");
+
+			if (io == NULL) { 
+				log_warning(ks_logger, "No hay IOs libres para el proceso %d en la cpu %d, reintente el STDOUT luego", cpu->pcb_ejecutando, cpu->id_cpu);
+				return; // ? Lo mantengo??? O pongo break???
+			}
+
+			enviar_stdout_io(io->fd, cadena_de_bytes, len1, pid);
+
+			free(cadena_de_bytes);
 			eliminar_paquete(contenido);
 			break;
 		}
@@ -193,6 +204,27 @@ void* ks_conexion_km(void* _arg) {
 			buffer_read(&prioridad, contenido->buffer, sizeof(int));
 
 			crear_proceso(pid, path, prioridad);
+
+			eliminar_paquete(contenido);
+			break;
+		}
+
+		case RESPUESTA_DESSUSPENCION_LISTA: // Lista de PIDS Y PRIORIDADES dessuspendidas: [cantidad][pid1][prioridad1][pid2][prioridad2]...[pidN][prioridadN]
+		{
+			t_paquete* contenido = recibir_paquete(socket_km);
+
+			int cantidad;
+			buffer_read(&cantidad, contenido->buffer, sizeof(int));
+
+			for (int i = 0; i < cantidad; i++) {
+				int pid;
+				buffer_read(&pid, contenido->buffer, sizeof(int));
+
+				int prioridad;
+				buffer_read(&prioridad, contenido->buffer, sizeof(int));
+
+				ks_pasar_a_ready_desde_susp_ready_pid(pid, prioridad);
+			}
 
 			eliminar_paquete(contenido);
 			break;
