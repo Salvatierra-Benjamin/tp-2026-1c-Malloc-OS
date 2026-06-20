@@ -128,6 +128,10 @@ void *atencion_ks()
 
                 enviar_operacion(conexion_ks, OK_STDOUT);
 
+                /*
+
+                */
+
                 log_info(io_logger, "## PID: %d - %s ", pid, cadena_a_imprimir);
                 // Solo para STDOUT: “## PID: <PID> - <CONTENIDO A IMPRIMIR>”
 
