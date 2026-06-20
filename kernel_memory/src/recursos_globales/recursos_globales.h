@@ -28,6 +28,9 @@ typedef struct
 extern t_dictionary *procesos_memoria;
 extern pthread_mutex_t mutex_procesos_memoria;
 
+extern t_list *lista_memory_sticks;
+extern pthread_mutex_t mutex_lista_memory_sticks;
+
 extern t_log *logger;
 extern t_config *config;
 extern km_config *parametros;

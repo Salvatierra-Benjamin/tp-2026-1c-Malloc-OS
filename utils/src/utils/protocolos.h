@@ -201,9 +201,11 @@ typedef struct
 
 typedef struct
 {
+    int base;
     int tamanio;
-    int id;
-} t_memory_stick; // lista para el km
+    int puerto;
+    int socket;
+} t_memory_stick;
 
 int enviar_operacion(int socket_destino, op_code codigo_operacion);
 int recibir_operacion(int);

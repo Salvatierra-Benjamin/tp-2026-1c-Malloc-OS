@@ -4,21 +4,30 @@ t_dictionary *procesos_memoria;
 
 pthread_mutex_t mutex_procesos_memoria;
 
+t_list *lista_memory_sticks;
+pthread_mutex_t mutex_lista_memory_sticks;
+
 void iniciar_recursos()
 {
     pthread_mutex_init(&mutex_procesos_memoria, NULL);
     procesos_memoria = dictionary_create();
+
+    pthread_mutex_init(&mutex_lista_memory_sticks, NULL);
+    lista_memory_sticks = list_create();
 }
 
 void liberar_recursos()
 {
     pthread_mutex_destroy(&mutex_procesos_memoria);
+    pthread_mutex_destroy(&mutex_lista_memory_sticks);
 
     free(parametros->allocation_strategy);
     free(parametros->puerto_escucha);
     free(parametros->scripts_basepath);
     free(parametros);
     dictionary_destroy_and_destroy_elements(procesos_memoria, destruir_proceso_memoria);
+
+    list_destroy_and_destroy_elements(lista_memory_sticks, free);
 
     log_destroy(logger);
     config_destroy(config);
