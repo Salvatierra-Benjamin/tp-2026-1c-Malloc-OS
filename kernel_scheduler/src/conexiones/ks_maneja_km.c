@@ -107,7 +107,7 @@ void* ks_conexion_km(void* _arg) {
 		}
 
 		case OK_STDIN_DATOS_ESCRITOS: {
-
+			
 			break;
 		}
 

@@ -176,6 +176,35 @@ void ks_empieza_a_desalojar_por_compactacion(void) {
     pthread_mutex_unlock(&mutex_exec);
 }
 
+void ks_termina_de_desalojar_un_pcb_general(t_pcb* pcb) {
+    pthread_mutex_lock(&mutex_exec);
+    list_remove(procs_exec, pcb);
+    pthread_mutex_unlock(&mutex_exec);
+
+    pcb->estado = READY;
+    
+    pthread_mutex_lock(&array_queues[pcb->prioridad].mutex_ready_prioritario);
+    queue_push(array_queues[pcb->prioridad].queue_ready_prioritario, pcb);
+    pthread_mutex_unlock(&array_queues[pcb->prioridad].mutex_ready_prioritario);
+
+    log_cambio_estado(pcb, (estados EXEC), (estados READY));
+    sem_post(&sem_ready);
+}
+
+void ks_termina_de_desalojar_un_pcb_seg_fault(t_pcb* pcb) {
+    pthread_mutex_lock(&mutex_exec);
+    list_remove(procs_exec, pcb);
+    pthread_mutex_unlock(&mutex_exec);
+
+    pcb->estado = READY;
+    
+    pthread_mutex_lock(&array_queues[pcb->prioridad].mutex_ready_prioritario);
+    queue_push(array_queues[pcb->prioridad].queue_ready_prioritario, pcb);
+    pthread_mutex_unlock(&array_queues[pcb->prioridad].mutex_ready_prioritario);
+
+    log_cambio_estado(pcb, (estados EXEC), (estados READY));  // ! NO HACE FALTA HACER EL SEM_POST PORQUE NO SE PUEDE ALOJAR NADA PORQUE SE DESCONECTA LA CPU
+}
+
 void ks_termina_de_desalojar_por_compactacion(void) {
     pthread_mutex_lock(&mutex_exec);
 
@@ -188,9 +217,10 @@ void ks_termina_de_desalojar_por_compactacion(void) {
         queue_push(array_queues[pcb->prioridad].queue_ready_prioritario, pcb);
         pthread_mutex_unlock(&array_queues[pcb->prioridad].mutex_ready_prioritario);
 
-        log_cambio_estado(pcb, (estados EXEC), (estados READY)); // ! NO HACE FALTA HACER EL SEM_POST PORQUE NO SE PUEDE ALIJAR NADA DURANTE LA COMPACTACIÓN
+        log_cambio_estado(pcb, (estados EXEC), (estados READY)); // ! NO HACE FALTA HACER EL SEM_POST PORQUE NO SE PUEDE ALOJAR NADA DURANTE LA COMPACTACIÓN
     }
     // list_clean(procs_exec);
 
     pthread_mutex_unlock(&mutex_exec);
 }
+

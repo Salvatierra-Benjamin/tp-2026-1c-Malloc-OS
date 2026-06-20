@@ -40,9 +40,6 @@ typedef enum
 
     // ---------------- IO -> SCHEDULER ----------------
     IO_ENVIA_IO = 2000,
-    STDIN_IO = 2001,  // ks envia stdin
-    STDOUT_IO = 2002, // ks envia stdout
-    SLEEP_IO = 2003,  // ks envia sleep
 
     OK_STDIN = 2004,
     OK_STDOUT = 2005,
@@ -51,6 +48,11 @@ typedef enum
     // PAQUETE_STDIN = 2100,
     // PAQUETE_STDOUT = 2101,
     // PAQUETE_STDSLEEP = 2102,
+
+    // ---------------- SCHEDULER -> IO----------------
+    STDIN_IO = 2001,  // ks envia stdin
+    STDOUT_IO = 2002, // ks envia stdout
+    SLEEP_IO = 2003,  // ks envia sleep
 
     // ---------------- CPU -> SCHEDULER ----------------
     CPU_IDENTIFICACION = 3000,
@@ -91,6 +93,21 @@ typedef enum
 
     // ---------------- KS -> KM ----------------
     CREACION_PROCESO = 5000,
+    STDIN_TOTAL_A_LEER_PARA_ESCRIBIR = 5001, // (cantidad de caracteres (bytes) que deberá leer) (pid)
+
+    // ---------------- KM -> KS ----------------
+    DETECCION_CORRUPCION_MEMORIA = 10000,
+    AUMENTO_DE_MEMORIA = 10001,
+    DESALOJO_POR_COMPACTACION = 10002,
+    FIN_COMPACTACION = 10003,
+    OK_STDIN_DATOS_ESCRITOS = 10004, // OK_STDIN_DATOS_ESCRITOS (PID, BYTES ESCRITOS)
+    STDOUT_RESTUESTA_LECTURA = 10005, // (bytes)
+    OK_MEM_FREE = 10006, // OK_MEM_FREE (PID)
+    OK_MEM_ALLOC = 10007, // OK_MEM_ALLOC (PID)
+    OK_PROCESO_SUSPENDIDO = 10008, // OK_PROCESO_SUSPENDIDO (PID)
+    OK_PROCESO_DES_SUSPENDIDO = 10009, // OK_PROCESO_DES_SUSPENDIDO (PID)
+    ERROR_CREACION_PROCESO = 10010,
+    OK_CREACION_PROCESO = 10011,
 
     // ---------------- MS -> KM ----------------
     MEMORY_STICK_SIZE = 6000,

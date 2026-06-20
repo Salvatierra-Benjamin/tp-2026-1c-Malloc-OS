@@ -180,6 +180,13 @@ void* ks_conexion_loop(void* _arg) {
 			}
 			*socket_ptr = fd;
 
+			if (op != ENVIAR_DATOS_IO) {
+				log_error(ks_logger, "Se conecto un nuevo CPU, pero no envio CPU_IDENTIFICACION");
+				eliminar_paquete(contenido);
+				close(fd);
+				break;
+			}
+			
 			t_paquete* contenido = recibir_paquete(fd);
 
 			int len_tipo_io;
@@ -211,6 +218,15 @@ void* ks_conexion_loop(void* _arg) {
 			if (socket_ptr == NULL) {
 				close(fd);
 				return;
+			}
+
+			int op = recibir_operacion(fd);
+
+			if (op != CPU_IDENTIFICACION) {
+				log_error(ks_logger, "Se conecto un nuevo CPU, pero no envio CPU_IDENTIFICACION");
+				eliminar_paquete(contenido);
+				close(fd);
+				break;
 			}
 
 			t_paquete* contenido = recibir_paquete(fd);

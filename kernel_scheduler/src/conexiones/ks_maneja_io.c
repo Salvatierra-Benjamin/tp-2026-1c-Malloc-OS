@@ -45,21 +45,24 @@ void* ks_maneja_io(void* arg) {
 			int bytes;
 			buffer_read(&bytes, contenido->buffer, sizeof(int));
 
+			int pid;
+			buffer_read(&pid, contenido->buffer, sizeof(int));
+
+
 			t_pcb* pcb = buscar_pcb_por_pid(pid);
 
 			if (pcb != NULL) {
 				ks_desbloquear_proceso(pcb);
 			}
 
-
-	// TODO: despues cuando vuelva:
-	// enviar a KM
+			// enviar a KM
+			enviar_bytes_stdin(pcb, bytes);
 
 			eliminar_paquete(contenido);
 			break;
 		}
 
-		case OK_STDOUT_RESPUESTA_BYTES: // OK_STDOUT_RESPUESTA_BYTES (PID)
+		case OK_STDOUT: // OK_STDOUT_RESPUESTA_BYTES (PID)
 		{
 			t_paquete* contenido = recibir_paquete(cpu->fd);
 

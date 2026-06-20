@@ -198,6 +198,8 @@ void finalizar_cpu(t_cpu* cpu) {
 		cpu->pcb_ejecutando->io_fd = -1;
 		cpu->pcb_ejecutando->estado = READY; // Cambia el estado del proceso a "READY" para que pueda ser planificado nuevamente
 
+		log_cambio_estado(cpu->pcb_ejecutando, (estados EXEC), (estados READY));
+
 		pthread_mutex_lock(&array_queues[cpu->pcb_ejecutando->prioridad].mutex_ready);
 		queue_push(array_queues[cpu->pcb_ejecutando->prioridad].queue, cpu->pcb_ejecutando); // Agrega el proceso de vuelta a la cola de ready correspondiente
 		pthread_mutex_unlock(&array_queues[cpu->pcb_ejecutando->prioridad].mutex_ready);
@@ -205,6 +207,15 @@ void finalizar_cpu(t_cpu* cpu) {
 		cpu->pcb_ejecutando = NULL;
 	}
 
+	pthread_mutex_lock(&mutex_cpus);
+	bool _es_cpu(void* ptr) {
+		t_cpu* aux = (t_cpu*)ptr;
+		return aux->id == cpu->id;
+	}
+	list_remove_by_condition(cpus, _es_cpu);
+	pthread_mutex_unlock(&mutex_cpus);
+
+	free(cpu->pcb_ejecutando);
 	free(cpu);
 }
 

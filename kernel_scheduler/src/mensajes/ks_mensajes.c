@@ -19,9 +19,9 @@
 
 	// ! RECEPCIONES
 	int len1;
-	buffer_read (&len1, paquete->buffer, sizeof (int)) ; // LEEMOS CUANTO MIDE
-	nueva instruccion->parametro 1 = malloc(len1); // PEDIMOS EL ESPACIO JUSTO
-	buffer_read (nueva_instruccion->parametro_1, paquete-›buffer, len1); // COPIAMOS EL CONTENIDO
+	buffer_read (&len1, contenido->buffer, sizeof (int)) ; // LEEMOS CUANTO MIDE
+	char* nombre_mutex = malloc(len1); // PEDIMOS EL ESPACIO JUSTO
+	buffer_read (&nombre_mutex, contenido->buffer, len1); // COPIAMOS EL CONTENIDO DEL BUFFER
 */
 
 // ! -------------------------------- KS RTA GRAL DE OK CONEXIÓN ------------------------------------------------------------------------------------------------
@@ -85,4 +85,13 @@ void enviar_stdout_io(int io_fd, int tamanio, int pid) {
 	agregar_a_paquete(paquete_stdout, &pid, sizeof(int));
 	enviar_paquete(paquete_stdout, io_fd);
 	eliminar_paquete(paquete_stdout);
+}
+
+// ! -------------------------------- KS -> KM ------------------------------------------------------------------------------------------------
+void enviar_bytes_stdin(t_pcb* pcb, int bytes) {
+	t_paquete* paquete_stdin = crear_paquete(STDIN_TOTAL_A_LEER_PARA_ESCRIBIR);
+	agregar_a_paquete(paquete_stdin, &bytes, sizeof(int));
+	agregar_a_paquete(paquete_stdin, &pcb->pid, sizeof(int));
+	enviar_paquete(paquete_stdin, socket_km);
+	eliminar_paquete(paquete_stdin);
 }
