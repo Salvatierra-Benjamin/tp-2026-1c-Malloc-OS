@@ -2,8 +2,8 @@
 
 #include "../main/ks_main.h"
 
-#include "../logs/ks_logs.h"
 #include "../auxiliares/ks_auxiliares.h"
+#include "../logs/ks_logs.h"
 
 // void* ks_planificador_largo_plazo(void* arg) {
 //     (void)arg;

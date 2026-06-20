@@ -69,6 +69,7 @@ typedef enum
     ENVIO_INIT_PROC = 3011,
     ENVIO_EXIT = 3012,
     ENVIO_TAMANIO_KM = 3013,
+    DESALOJO_PROCESO = 3014,
 
     // Envío de palabras reservadas de CPU a KS (version antigua)
     // MUTEX_CREATE,     // NOMBRE_MUTEX
@@ -96,7 +97,7 @@ typedef enum
     STDOUT_SOLICITUD_LECTURA = 5001, // int len, char* dir_logica, int tamanio, int pid
     SUSPENCION_PROCESO = 5002,       // PID
     SOLICITUD_DESSUSPENCION_LISTA = 5003, // Lista de PIDS Y PRIORIDADES a dessuspender: [cantidad][pid1][prioridad1][pid2][prioridad2]...[pidN][prioridadN]
-    RESPUESTA_DESSUSPENCION_LISTA = 5004, // Lista de PIDS Y PRIORIDADES dessuspendidas: [cantidad][pid1][prioridad1][pid2][prioridad2]...[pidN][prioridadN]
+    FIN_PROCESO = 5005, // PID
 
     // ---------------- KM -> KS ----------------
     DETECCION_CORRUPCION_MEMORIA = 10000,
@@ -111,6 +112,7 @@ typedef enum
     OK_PROCESO_DES_SUSPENDIDO = 10009, // OK_PROCESO_DES_SUSPENDIDO (PID)
     ERROR_CREACION_PROCESO = 10010,
     OK_CREACION_PROCESO = 10011,
+    RESPUESTA_DESSUSPENCION_LISTA = 10012, // Lista de PIDS Y PRIORIDADES dessuspendidas: [cantidad][pid1][prioridad1][pid2][prioridad2]...[pidN][prioridadN]
 
     // ---------------- MS -> KM ----------------
     MEMORY_STICK_SIZE = 6000,
@@ -122,9 +124,8 @@ typedef enum
 
     // ---------------- KS -> CPU ----------------
     ALOJAR_PROCESO = 7000, // KS envia pid a CPU
-    INTERRUPCION = 7001,
-    DESALOJO_PROCESO = 7002,
-    STDOUT_RESPUESTA_BYTES = 7003, // (longitudAImprimir, cadena de caracteres (bytes) la cual deberá imprimir, PID)
+    INTERRUPCION = 7001, // KS envia pid a CPU
+    // STDOUT_RESPUESTA_BYTES = 7003, // (longitudAImprimir, cadena de caracteres (bytes) la cual deberá imprimir, PID)
 
     // ---------------- KM -> CPU ----------------
     CONTEXTO_EJECUCION = 8000, // KM envia [t_registros, t_tabla_de_segmentos]

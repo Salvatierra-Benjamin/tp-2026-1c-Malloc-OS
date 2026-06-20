@@ -22,10 +22,10 @@ void log_conexion_cpu(int id_cpu) {
 	log_info(ks_logger, "## CPU %d Conectada", id_cpu);
 }
 
-// Conexión de IO
-void log_conexion_io(t_io* io) {
-	log_info(ks_logger, "IO Conectada, path de IO: %s - prioridad: %d", io->path, io->prioridad);
-}
+// // Conexión de IO
+// void log_conexion_io(t_io* io) {
+// 	log_info(ks_logger, "IO Conectada, path de IO: %s - prioridad: %d", io->path, io->prioridad);
+// }
 
 // Creación de Proceso: “## (<PID>) Se crea el proceso - Estado: NEW”
 void log_creacion_proceso(t_pcb* pcb) {
@@ -45,7 +45,7 @@ void log_cambio_estado(t_pcb* pcb, estados estado_anterior, estados estado_actua
 		ks_verificar_desalojo_prioridad(pcb);
 	}
 
-    // TODO: Hacer en cada lugar donde se llame a la funcion, no acá (por la compactación)
+	// TODO: Hacer en cada lugar donde se llame a la funcion, no acá (por la compactación)
 	// switch (estado_actual) {
 	// case READY:
 	// 	sem_post(&sem_ready);
@@ -76,8 +76,8 @@ void log_mutex_liberado(t_pcb* pcb, char* nombre_mutex) {
 }
 
 // Cambio de prioridad de Proceso: “## <PID> Cambio de prioridad: <PRIORIDAD_ANTERIOR> - <PRIORIDAD_NUEVA>”
-void log_cambio_prioridad(t_pcb* pcb, int prioridad_anterior, int prioridad_nueva) {
-	log_info(ks_logger, "## %d Cambio de prioridad: %d - %d", pcb->pid, prioridad_anterior, prioridad_nueva);
+void log_cambio_prioridad(t_pcb* pcb) {
+	log_info(ks_logger, "## %d Cambio de prioridad: %d - %d", pcb->pid, pcb->prioridad_original, pcb->prioridad);
 }
 
 // Desalojo por fin de Quantum: “## (<PID>) - Desalojado por fin de quantum”

@@ -125,8 +125,14 @@ bool finalizar_proceso(int pid) {
 	if (pcb == NULL) {
 		return false; // No se encontró el proceso con el PID dado
 	}
-	pcb->estado = EXIT;		   // Cambia el estado del proceso a "EXIT"
+	pcb->estado = EXIT; // Cambia el estado del proceso a "EXIT"
+	pthread_mutex_lock(&mutex_exit);
 	list_add(procs_exit, pcb); // Agrega el proceso a la lista de procesos en estado EXIT
+	pthread_mutex_unlock(&mutex_exit);
+
+	log_fin_proceso(pcb, "EXIT");
+
+	enviar_fin_proceso_km(pid);
 
 	return true;
 }
@@ -192,6 +198,8 @@ t_io* crear_io(int fd, char* tipo_io) {
 		list_add(ios_stdout, nuevo_io);
 		mutex_unlock(&mutex_ios_stdout);
 	}
+
+	log_debug(ks_logger, "IO de tipo %s creada con fd %d", tipo_io, fd);
 
 	return nuevo_io;
 }

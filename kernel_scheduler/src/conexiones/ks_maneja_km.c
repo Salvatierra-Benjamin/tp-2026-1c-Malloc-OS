@@ -110,17 +110,17 @@ void* ks_conexion_km(void* _arg) {
 			t_paquete* contenido = recibir_paquete(socket_km);
 
 			int len1;
-			buffer_read (&len1, contenido->buffer, sizeof (int)) ; // LEEMOS CUANTO MIDE
-			
-			char* cadena_de_bytes = malloc(len1); // PEDIMOS EL ESPACIO JUSTO
-			buffer_read (&cadena_de_bytes, contenido->buffer, len1); // COPIAMOS EL CONTENIDO DEL BUFFER
+			buffer_read(&len1, contenido->buffer, sizeof(int)); // LEEMOS CUANTO MIDE
+
+			char* cadena_de_bytes = malloc(len1);					// PEDIMOS EL ESPACIO JUSTO
+			buffer_read(&cadena_de_bytes, contenido->buffer, len1); // COPIAMOS EL CONTENIDO DEL BUFFER
 
 			int pid;
 			buffer_read(&pid, contenido->buffer, sizeof(int));
 
 			t_io* io = io_libre("STDOUT");
 
-			if (io == NULL) { 
+			if (io == NULL) {
 				log_warning(ks_logger, "No hay IOs libres para el proceso %d en la cpu %d, reintente el STDOUT luego", cpu->pcb_ejecutando, cpu->id_cpu);
 				return; // ? Lo mantengo??? O pongo break???
 			}
@@ -170,8 +170,8 @@ void* ks_conexion_km(void* _arg) {
 
 			int len_path;
 			buffer_read(&len_path, contenido->buffer, sizeof(int)); // LEEMOS CUANTO MIDE
-			char* path = malloc(len_path);						  // PEDIMOS EL ESPACIO JUSTO
-			buffer_read(path, contenido->buffer, len_path);		  // COPIAMOS EL CONTENIDO
+			char* path = malloc(len_path);							// PEDIMOS EL ESPACIO JUSTO
+			buffer_read(path, contenido->buffer, len_path);			// COPIAMOS EL CONTENIDO
 
 			int prioridad;
 			buffer_read(&prioridad, contenido->buffer, sizeof(int));
@@ -196,9 +196,8 @@ void* ks_conexion_km(void* _arg) {
 
 			int len_path;
 			buffer_read(&len_path, contenido->buffer, sizeof(int)); // LEEMOS CUANTO MIDE
-			char* path = malloc(len_path);						  // PEDIMOS EL ESPACIO JUSTO
-			buffer_read(path, contenido->buffer, len_path);		  // COPIAMOS EL CONTENIDO
-
+			char* path = malloc(len_path);							// PEDIMOS EL ESPACIO JUSTO
+			buffer_read(path, contenido->buffer, len_path);			// COPIAMOS EL CONTENIDO
 
 			int prioridad;
 			buffer_read(&prioridad, contenido->buffer, sizeof(int));

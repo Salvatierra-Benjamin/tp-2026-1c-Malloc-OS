@@ -29,6 +29,7 @@ void* ks_maneja_io(void* arg) {
 			if (pcb != NULL) {
 				ks_desbloquear_proceso(pcb);
 				log_debug(ks_logger, "Proceso %d desbloqueado del SLEEP", pid);
+				log_fin_io(pcb);
 			}
 
 			eliminar_paquete(contenido);
@@ -50,6 +51,7 @@ void* ks_maneja_io(void* arg) {
 			if (pcb != NULL) {
 				ks_desbloquear_proceso(pcb);
 				log_debug(ks_logger, "Proceso %d desbloqueado del STDIN", pid);
+				log_fin_io(pcb);
 			}
 
 			// enviar a KM
@@ -71,6 +73,7 @@ void* ks_maneja_io(void* arg) {
 			if (pcb != NULL) {
 				ks_desbloquear_proceso(pcb);
 				log_debug(ks_logger, "Proceso %d desbloqueado del STDOUT", pid);
+				log_fin_io(pcb);
 			}
 
 			eliminar_paquete(contenido);

@@ -81,7 +81,7 @@ void* ks_solo_un_algoritmo(algoritmos alg) {
 
 	// llenar array
 	string_trim(&tokens[i]);
-	array_queues[i].alg = ks_algoritmo_from_string(tokens[i]);
+	array_queues[i].alg = alg;
 
 	// crear queue vacía asociada con su mutex correspondiente
 	array_queues[i].queue_ready_prioritario = queue_create();

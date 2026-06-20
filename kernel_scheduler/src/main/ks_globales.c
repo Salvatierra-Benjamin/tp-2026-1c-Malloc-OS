@@ -1,30 +1,30 @@
 #include "ks_main.h"
 
 // VARIABLES GLOBALES
-t_log *ks_logger = NULL;
+t_log* ks_logger = NULL;
 t_ks_config ks_config;
 
 int ks_server_fd = -1;
 
 // ! 0 ES LA MAYOR PRIORIDAD!!!!, LUEGO LE VAN SIGUIENDO EN ORDEN LOS VALORES (CUANTO MAYOR EL VALOR, MENOR LA PRIORIDAD)
-t_elemento_array_algoritmos *array_queues = NULL;
+t_elemento_array_algoritmos* array_queues = NULL;
 int cantidad_algoritmos = 0;
 
 bool compactacion_en_progreso = false;
 
 // LISTAS
-t_list *cpus = NULL;
-t_list *ios_sleep = NULL;
-t_list *ios_stdin = NULL;
-t_list *ios_stdout = NULL;
+t_list* cpus = NULL;
+t_list* ios_sleep = NULL;
+t_list* ios_stdin = NULL;
+t_list* ios_stdout = NULL;
 
-t_list *procs_exec = NULL;
+t_list* procs_exec = NULL;
 // t_list *procs_block = NULL;
 // t_list *procs_susp_block = NULL;
 // t_list *procs_susp_ready = NULL;
-t_list *procs_exit = NULL;
+t_list* procs_exit = NULL;
 
-t_list *mutexes_kernel = NULL;
+t_list* mutexes_kernel = NULL;
 
 // MUTEX
 pthread_mutex_t mutex_cpus = PTHREAD_MUTEX_INITIALIZER;
