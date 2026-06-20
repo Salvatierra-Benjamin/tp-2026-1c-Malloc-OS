@@ -44,8 +44,8 @@ typedef struct {
 	// susp_block
 	t_list* list_susp_block;
 	pthread_mutex_t mutex_susp_block;
-	// susp_ready
-	t_queue* queue_susp_ready;
+	// susp_ready // Era queue, pero no se puede buscar para dessuspender, asi que lo cambio a lista
+	t_list* list_susp_ready;
 	pthread_mutex_t mutex_susp_ready;
 } t_elemento_array_algoritmos;
 

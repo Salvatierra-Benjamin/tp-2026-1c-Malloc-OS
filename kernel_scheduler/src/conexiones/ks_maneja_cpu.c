@@ -218,7 +218,7 @@ void* ks_maneja_cpu(void* arg) {
 
 			ks_pasar_a_block(cpu->pcb_ejecutando);
 
-			enviar_stdout_io(io->fd, dir_fisica, tamanio);
+			enviar_bytes_stdin(pid, len, dir_fisica, tamanio);
 
 			free(dir_fisica);
 			eliminar_paquete(contenido);
@@ -246,8 +246,7 @@ void* ks_maneja_cpu(void* arg) {
 
 			ks_pasar_a_block(cpu->pcb_ejecutando);
 
-			enviar_stdout_io(io->fd, dir_logica, tamanio);
-			enviar_sleep_io(io->fd, tamanio, cpu->pcb_ejecutando->pid);
+			enviar_stdin_io(io->fd, dir_logica, tamanio);
 
 			free(dir_logica);
 			eliminar_paquete(contenido);

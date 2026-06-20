@@ -17,12 +17,9 @@ void* ks_maneja_io(void* arg) {
 	while (ejecutando) {
 		int op_code = recibir_operacion(cpu->fd);
 		switch (op_code) {
-		case OK_SLEEP: // OK_SLEEP (TIEMPO EN MS) (PID)
+		case OK_SLEEP: // OK_SLEEP  (PID)
 		{
 			t_paquete* contenido = recibir_paquete(cpu->fd);
-
-			int tiempo_en_ms;
-			buffer_read(&tiempo_en_ms, contenido->buffer, sizeof(int));
 
 			int pid;
 			buffer_read(&pid, contenido->buffer, sizeof(int));
@@ -31,14 +28,14 @@ void* ks_maneja_io(void* arg) {
 
 			if (pcb != NULL) {
 				ks_desbloquear_proceso(pcb);
-				log_desbloqueo_sleep(pcb, tiempo_en_ms);
+				log_debug(ks_logger, "Proceso %d desbloqueado del SLEEP", pid);
 			}
 
 			eliminar_paquete(contenido);
 			break;
 		}
 
-		case OK_STDIN: // OK_STDIN(bytes)
+		case OK_STDIN: // OK_STDIN(pid)
 		{
 			t_paquete* contenido = recibir_paquete(cpu->fd);
 
@@ -48,11 +45,11 @@ void* ks_maneja_io(void* arg) {
 			int pid;
 			buffer_read(&pid, contenido->buffer, sizeof(int));
 
-
 			t_pcb* pcb = buscar_pcb_por_pid(pid);
 
 			if (pcb != NULL) {
 				ks_desbloquear_proceso(pcb);
+				log_debug(ks_logger, "Proceso %d desbloqueado del STDIN", pid);
 			}
 
 			// enviar a KM
@@ -73,6 +70,7 @@ void* ks_maneja_io(void* arg) {
 
 			if (pcb != NULL) {
 				ks_desbloquear_proceso(pcb);
+				log_debug(ks_logger, "Proceso %d desbloqueado del STDOUT", pid);
 			}
 
 			eliminar_paquete(contenido);
@@ -137,32 +135,11 @@ void ks_desbloquear_proceso(t_pcb* pcb) {
 		pcb->tiempo_inicio_suspendido = time(NULL);
 
 		pthread_mutex_lock(&array_queues[pcb->prioridad].mutex_susp_ready);
-		queue_push(array_queues[pcb->prioridad].queue_susp_ready, pcb);
+		list_add(array_queues[pcb->prioridad].list_susp_ready, pcb);
 		pthread_mutex_unlock(&array_queues[pcb->prioridad].mutex_susp_ready);
 
 		log_cambio_estado(pcb, (estados SUSP_BLOCK), (estados SUSP_READY));
 
 		sem_post(&sem_memoria_disponible);
 	}
-}
-
-
-void ks_io_stdin(t_pcb* pcb, int tamanio, int direccion_logica) {
-
-	ks_pasar_a_block(pcb);
-
-	enviar_stdin_io(pcb->io_fd, tamanio);
-
-	// TODO: despues cuando vuelva:
-	// enviar a KM
-}
-
-void ks_io_stdout(t_pcb* pcb, int tamanio, int direccion_logica) {
-
-	ks_pasar_a_block(pcb);
-
-	// TODO: pedir bytes a KM
-	// luego enviarselos a IO
-
-	enviar_stdout_io(pcb->io_fd, tamanio);
 }

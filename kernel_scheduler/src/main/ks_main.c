@@ -66,13 +66,38 @@ void* ks_parsear_algoritmos(char* raw) {
 		array_queues[i].list_susp_block = list_create();
 		pthread_mutex_init(&array_queues[i].mutex_susp_block, NULL);
 
-		array_queues[i].queue_susp_ready = queue_create();
+		array_queues[i].list_susp_ready = list_create();
 		pthread_mutex_init(&array_queues[i].mutex_susp_ready, NULL);
 	}
 
 	// liberar auxiliares
 	string_array_destroy(tokens);
 	free(limpio);
+}
+
+void* ks_solo_un_algoritmo(algoritmos alg) {
+	int i = 0; // prioridad
+	array_queues = malloc(sizeof(t_elemento_array_algoritmos));
+
+	// llenar array
+	string_trim(&tokens[i]);
+	array_queues[i].alg = ks_algoritmo_from_string(tokens[i]);
+
+	// crear queue vacía asociada con su mutex correspondiente
+	array_queues[i].queue_ready_prioritario = queue_create();
+	pthread_mutex_init(&array_queues[i].mutex_ready_prioritario, NULL);
+
+	array_queues[i].queue_ready = queue_create();
+	pthread_mutex_init(&array_queues[i].mutex_ready, NULL);
+
+	array_queues[i].list_block = list_create();
+	pthread_mutex_init(&array_queues[i].mutex_block, NULL);
+
+	array_queues[i].list_susp_block = list_create();
+	pthread_mutex_init(&array_queues[i].mutex_susp_block, NULL);
+
+	array_queues[i].list_susp_ready = list_create();
+	pthread_mutex_init(&array_queues[i].mutex_susp_ready, NULL);
 }
 
 bool ks_cargar_config(char* path_config, char* path_proceso_inicial) {
@@ -84,12 +109,15 @@ bool ks_cargar_config(char* path_config, char* path_proceso_inicial) {
 
 	ks_config.ip_km = strdup(config_get_string_value(config, "IP_KM"));
 	ks_config.puerto_km = strdup(config_get_string_value(config, "PUERTO_KM"));
-	ks_config.puerto_escucha =
-		strdup(config_get_string_value(config, "PUERTO_ESCUCHA"));
-	ks_config.algoritmo = ks_algoritmo_from_string(
-		config_get_string_value(config, "PLANIFICATION_ALGORITHM"));
-	ks_config.algoritmo_queues = ks_parsear_algoritmos(
-		config_get_string_value(config, "QUEUES_ALGORITHMS"));
+	ks_config.puerto_escucha = strdup(config_get_string_value(config, "PUERTO_ESCUCHA"));
+	ks_config.algoritmo = ks_algoritmo_from_string(config_get_string_value(config, "PLANIFICATION_ALGORITHM"));
+
+	if (ks_config.algoritmo == FIFO || ks_config.algoritmo == RR) {
+		ks_config.algoritmo_queues = ks_solo_un_algoritmo(ks_config.algoritmo);
+	} else {
+		ks_config.algoritmo_queues = ks_parsear_algoritmos(config_get_string_value(config, "QUEUES_ALGORITHMS"));
+	}
+
 	ks_config.rr_quantum = config_get_int_value(config, "RR_QUANTUM");
 	// config_get_string_value(config, "QUEUE_PREEMPTION");
 	// ks_config.queue_preemption = strdup(config_get_string_value(config,
@@ -186,16 +214,16 @@ void* ks_conexion_loop(void* _arg) {
 				close(fd);
 				break;
 			}
-			
+
 			t_paquete* contenido = recibir_paquete(fd);
 
 			int len_tipo_io;
 			buffer_read(&len_tipo_io, contenido->buffer, sizeof(int)); // LEEMOS CUANTO MIDE
 			char* tipo_io = malloc(len_tipo_io);					   // PEDIMOS EL ESPACIO JUSTO
 			buffer_read(tipo_io, contenido->buffer, len_tipo_io);	   // COPIAMOS EL CONTENIDO
-			
+
 			t_io* io = crear_io(socket_ptr, tipo_io);
-			
+
 			eliminar_paquete(contenido);
 
 			if (pthread_create(&hilo_io, NULL, ks_maneja_io, io) != 0) {
@@ -205,7 +233,7 @@ void* ks_conexion_loop(void* _arg) {
 				close(fd);
 				return;
 			}
-			
+
 			pthread_detach(hilo_io);
 			log_debug(ks_logger, "Se detachea el hilo_io");
 		} else if (op == HANDSHAKE_CPU) {
@@ -311,6 +339,19 @@ int main(int argc, char* argv[]) {			   //  ~ ./bin/kernel_scheduler [Archivo Co
 	pthread_t hilo_conexiones;
 	pthread_create(&hilo_conexiones, NULL, ks_conexion_loop, NULL);
 	pthread_detach(hilo_conexiones);
+
+	pthread_t hilo_planificador_corto;
+	pthread_create(&hilo_planificador_corto, NULL, ks_planificador_corto_plazo, NULL);
+	pthread_detach(hilo_planificador_corto);
+
+	pthread_t hilo_planificador_mediano;
+	pthread_create(&hilo_planificador_mediano, NULL, ks_planificador_mediano_plazo, NULL);
+	pthread_detach(hilo_planificador_mediano);
+
+	log_debug(ks_logger, "Planificadores de corto y mediano plazo iniciados");
+
+	// creo el proceso inicial (PID, path, prioridad), Hardcodeo el PID 0 y la mayor prioridad (0)
+	crear_proceso(0, argv[2], 0);
 
 	// dormir el main para siempre
 	for (;;)

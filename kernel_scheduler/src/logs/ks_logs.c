@@ -41,6 +41,10 @@ void log_syscall_recibida(t_pcb* pcb, char* nombre_syscall) {
 void log_cambio_estado(t_pcb* pcb, estados estado_anterior, estados estado_actual) {
 	log_info(ks_logger, "## (%d) Pasa del estado %s al estado %s", pcb->pid, estado_a_string(estado_anterior), estado_a_string(estado_actual));
 
+	if (estado_actual == READY) { // Lo hago acá porque es cada vez que se pasa a READY
+		ks_verificar_desalojo_prioridad(pcb);
+	}
+
     // TODO: Hacer en cada lugar donde se llame a la funcion, no acá (por la compactación)
 	// switch (estado_actual) {
 	// case READY:
