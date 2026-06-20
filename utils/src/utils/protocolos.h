@@ -14,12 +14,10 @@
 #include <commons/config.h>
 #include <commons/collections/list.h>
 #include <stdint.h>
-#include <stdlib.h>
-#include <string.h>
 #include <stdbool.h>
 #include <semaphore.h>
 #include <pthread.h>
-
+#include <netdb.h>
 typedef enum
 {
     // ---------------- Handshakes ----------------
@@ -68,6 +66,7 @@ typedef enum
     ENVIO_STDIN = 3010,
     ENVIO_INIT_PROC = 3011,
     ENVIO_EXIT = 3012,
+    ENVIO_TAMANIO_KM = 3013,
 
     // Envío de palabras reservadas de CPU a KS (version antigua)
     // MUTEX_CREATE,     // NOMBRE_MUTEX
