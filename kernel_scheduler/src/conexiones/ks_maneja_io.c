@@ -95,15 +95,13 @@ void* ks_maneja_io(void* arg) {
 void ks_desbloquear_proceso(t_pcb* pcb) {
 
 	if (pcb->estado == BLOCK) {
-		pthread_mutex_lock(&array_queues[pcb->prioridad].mutex_block);
-
 		bool _es_pcb(void* ptr) {
 			t_pcb* aux = ptr;
 			return aux->pid == pcb->pid;
 		}
 
+		pthread_mutex_lock(&array_queues[pcb->prioridad].mutex_block);
 		list_remove_by_condition(array_queues[pcb->prioridad].list_block, _es_pcb);
-
 		pthread_mutex_unlock(&array_queues[pcb->prioridad].mutex_block);
 
 		pcb->estado = READY;
@@ -119,16 +117,12 @@ void ks_desbloquear_proceso(t_pcb* pcb) {
 	}
 
 	if (pcb->estado == SUSP_BLOCK) {
-
-		pthread_mutex_lock(&array_queues[pcb->prioridad].mutex_susp_block);
-
 		bool _es_pcb(void* ptr) {
 			t_pcb* aux = ptr;
 			return aux->pid == pcb->pid;
 		}
-
+		pthread_mutex_lock(&array_queues[pcb->prioridad].mutex_susp_block);
 		list_remove_by_condition(array_queues[pcb->prioridad].list_susp_block, _es_pcb);
-
 		pthread_mutex_unlock(&array_queues[pcb->prioridad].mutex_susp_block);
 
 		pcb->estado = SUSP_READY;

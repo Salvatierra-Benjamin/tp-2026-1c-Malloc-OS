@@ -26,13 +26,15 @@ void* ks_maneja_cpu(void* arg) {
 
 			t_mutex_kernel* mutex = malloc(sizeof(t_mutex_kernel));
 
-			mutex->nombre = strdup(nombre_mutex);
+			strcpy(mutex->nombre, nombre_mutex);
 			mutex->tomado = false;
 			mutex->duenio = NULL;
 			mutex->bloqueados = queue_create();
 			pthread_mutex_init(&mutex->mutex, NULL);
 
+			pthread_mutex_lock(&mutex_mutexes_kernel);
 			list_add(mutexes_kernel, mutex);
+			pthread_mutex_unlock(&mutex_mutexes_kernel);
 
 			free(nombre_mutex);
 			eliminar_paquete(contenido);
@@ -51,33 +53,35 @@ void* ks_maneja_cpu(void* arg) {
 			t_mutex_kernel* mutex = ks_buscar_mutex(nombre_mutex);
 
 			if (mutex == NULL) {
-				return;
+				log_warning(ks_logger, "El mutex %s no se encontró. El proceso %d en la cpu %d, no puede tomarlo", nombre_mutex, cpu->pcb_ejecutando->pid, cpu->id);
+				free(nombre_mutex);
+				eliminar_paquete(contenido);
+				break;
 			}
 
 			pthread_mutex_lock(&mutex->mutex);
-
-			if (!mutex->tomado) {
-
+			if (!mutex->tomado) { // El mutex no está tomado, lo tomo y termino
 				mutex->tomado = true;
-				mutex->duenio = pcb;
-
-				log_mutex_tomado(pcb, nombre_mutex);
+				mutex->duenio = cpu->pcb_ejecutando;
 
 				pthread_mutex_unlock(&mutex->mutex);
+				
+				log_mutex_tomado(cpu->pcb_ejecutando, nombre_mutex);
 
-				return;
+				break;
 			}
 
+			// El mutex estaba tomado, reviso si hay herencia de prioridad
 			// HERENCIA PRIORIDAD
-
-			if (pcb->prioridad < mutex->duenio->prioridad) {
-				mutex->duenio->prioridad = pcb->prioridad;
+			if (cpu->pcb_ejecutando->prioridad > mutex->duenio->prioridad) {
+				mutex->duenio->prioridad_original = mutex->duenio->prioridad;
+				mutex->duenio->prioridad = cpu->pcb_ejecutando->prioridad;
 			}
 
-			queue_push(mutex->bloqueados, pcb);
+			queue_push(mutex->bloqueados, cpu->pcb_ejecutando);
 			pthread_mutex_unlock(&mutex->mutex);
 
-			ks_pasar_a_block(pcb);
+			ks_pasar_a_block(cpu->pcb_ejecutando);
 
 			free(nombre_mutex);
 			eliminar_paquete(contenido);
@@ -96,31 +100,32 @@ void* ks_maneja_cpu(void* arg) {
 			t_mutex_kernel* mutex = ks_buscar_mutex(nombre_mutex);
 
 			if (mutex == NULL) {
-				return;
+				log_warning(ks_logger, "El mutex %s no se encontró. El proceso %d en la cpu %d, no puede tomarlo", nombre_mutex, cpu->pcb_ejecutando->pid, cpu->id);
+				free(nombre_mutex);
+				eliminar_paquete(contenido);
+				break;
 			}
 
 			pthread_mutex_lock(&mutex->mutex);
-
-			if (mutex->duenio != pcb) {
+			if (mutex->duenio != cpu->pcb_ejecutando) {
+				mutex->duenio->prioridad = mutex->duenio->prioridad_original;
 				pthread_mutex_unlock(&mutex->mutex);
-				return;
+				break;
 			}
 
-			pcb->prioridad = pcb->prioridad_original;
-
-			log_mutex_liberado(pcb, nombre_mutex);
+			log_mutex_liberado(mutex->duenio, nombre_mutex);
 
 			if (queue_is_empty(mutex->bloqueados)) {
-
 				mutex->tomado = false;
 				mutex->duenio = NULL;
 
 				pthread_mutex_unlock(&mutex->mutex);
-				return;
+				break;
 			}
 
 			t_pcb* desbloqueado = queue_pop(mutex->bloqueados);
 			mutex->duenio = desbloqueado;
+
 			log_mutex_tomado(desbloqueado, nombre_mutex);
 			pthread_mutex_unlock(&mutex->mutex);
 
@@ -148,7 +153,7 @@ void* ks_maneja_cpu(void* arg) {
 			int pid;
 			buffer_read(&pid, contenido->buffer, sizeof(int));
 
-			enviar_mem_alloc(cpu->fd, id_segmento, tamanio, pid);
+			enviar_mem_alloc(id_segmento, tamanio, pid);
 
 			eliminar_paquete(contenido);
 			break;
@@ -164,7 +169,7 @@ void* ks_maneja_cpu(void* arg) {
 			int pid;
 			buffer_read(&pid, contenido->buffer, sizeof(int));
 
-			enviar_mem_free(cpu->fd, id_segmento, pid);
+			enviar_mem_free(id_segmento, pid);
 
 			eliminar_paquete(contenido);
 			break;
@@ -374,9 +379,7 @@ t_mutex_kernel* ks_buscar_mutex(char* nombre) {
 	}
 
 	pthread_mutex_lock(&mutex_mutexes_kernel);
-
 	t_mutex_kernel* encontrado = list_find(mutexes_kernel, _es_mutex);
-
 	pthread_mutex_unlock(&mutex_mutexes_kernel);
 
 	return encontrado;
