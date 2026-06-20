@@ -81,6 +81,7 @@ typedef enum
     ENVIO_CPU_ID = 3501,
     SOLICITUD_INSTRUCCION = 3502, // cpu solicuta instruccion [pid, pc]
     OK_ALOJAR = 3503,             // cpu
+    RECIBIR_MEMORY_STICK = 3504,
 
     // ---------------- SWAP -> KM ----------------
     BLOCK_SIZE = 4000,
@@ -203,8 +204,10 @@ typedef struct
 {
     int base;
     int tamanio;
-    int puerto;
     int socket;
+    char *ip;
+    char *puerto;
+
 } t_memory_stick;
 
 int enviar_operacion(int socket_destino, op_code codigo_operacion);

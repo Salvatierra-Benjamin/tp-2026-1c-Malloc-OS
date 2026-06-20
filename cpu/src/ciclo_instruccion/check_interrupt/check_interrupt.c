@@ -26,14 +26,12 @@ bool check_interrupt(t_contexto_ejecucion *contexto_actual)
     eliminar_paquete(paquete_km);
 
     //  2) Notificar al Kernel Scheduler que se devuelve el PID por interrupción
-    //  Motivo: como receptor_ks sólo notifica la existencia de la interrupción,
-    //  usamos un motivo genérico (1 = PREEMPTIVO). Ajustar si se cambia protocolo.
 
-    uint8_t motivo = AVISO_DE_INTERRUPCION_DESALOJO;
+    int motivo = AVISO_DE_INTERRUPCION_DESALOJO;
     t_paquete *paquete_ks = crear_paquete(DESALOJO_PROCESO);
     int pid = contexto_actual->PID;
     agregar_a_paquete(paquete_ks, &pid, sizeof(int));
-    agregar_a_paquete(paquete_ks, &motivo, sizeof(uint8_t));
+    agregar_a_paquete(paquete_ks, &motivo, sizeof(int));
     enviar_paquete(paquete_ks, conexion_ks);
     eliminar_paquete(paquete_ks);
 
