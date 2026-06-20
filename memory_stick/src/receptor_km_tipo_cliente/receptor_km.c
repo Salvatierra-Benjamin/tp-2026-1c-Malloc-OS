@@ -28,7 +28,7 @@ void *atencion_km()
         }
         switch (cod_op)
         {
-        case KM_OK_CONEXION:
+        case HANDSHAKE_OK:
         {
             log_debug(ms_logger, "[RECEPTOR_KM_MS] EL HANDSHAKE CON KM SE HA REALIZADO CORRECTAMENTE!!!");
 
@@ -37,7 +37,7 @@ void *atencion_km()
 
             sem_post(&sem_ok_conexion_km);
 
-            t_paquete *paquete_tamaño_puerto_km = crear_paquete(ENVIO_TAMANIO_KM);
+            t_paquete *paquete_tamaño_puerto_km = crear_paquete(MEMORY_STICK_SIZE);
             agregar_a_paquete(paquete_tamaño_puerto_km, &tamanio_memoria_ms_ingresada, sizeof(int));
             int puerto = atoi(ms_config.puerto_escucha_cpu);
             agregar_a_paquete(paquete_tamaño_puerto_km, &puerto, sizeof(int));

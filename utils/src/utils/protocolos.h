@@ -14,12 +14,10 @@
 #include <commons/config.h>
 #include <commons/collections/list.h>
 #include <stdint.h>
-#include <stdlib.h>
-#include <string.h>
 #include <stdbool.h>
 #include <semaphore.h>
 #include <pthread.h>
-
+#include <netdb.h>
 typedef enum
 {
     // ---------------- Handshakes ----------------
