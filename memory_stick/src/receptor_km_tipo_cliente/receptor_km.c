@@ -28,7 +28,7 @@ void *atencion_km()
         }
         switch (cod_op)
         {
-        case HANDSHAKE_OK:
+        case KM_OK_CONEXION:
         {
             log_debug(ms_logger, "[RECEPTOR_KM_MS] EL HANDSHAKE CON KM SE HA REALIZADO CORRECTAMENTE!!!");
 
@@ -106,10 +106,10 @@ void *atencion_km()
             procesar_peticion_lectura(conexion_km, direccion_fisica, tamanio_a_leer);
             break;
         }
-        case KM_OK_CONEXION: // SI ESTO NO ESTA ROMPE (no se porque) NO LO BORRES MAURI!!!
-        {
-            break;
-        }
+        // case: // SI ESTO NO ESTA ROMPE (no se porque) NO LO BORRES MAURI!!!
+        // {
+        //     break;
+        // }
         default:
         {
             log_warning(ms_logger, "[RECEPTOR_KM_MS] operacion desconocida : %d", cod_op);
