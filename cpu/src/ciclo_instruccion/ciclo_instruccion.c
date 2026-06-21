@@ -24,7 +24,6 @@ void Ejecutar_Ciclo_de_Instruccion(t_contexto_ejecucion *contexto_actual)
 
         Destruir_Instruccion(&nueva_instruccion);
 
-        // TODO check_interrupt;
         if (check_interrupt(contexto_actual))
         {
             seguir_ejecutando = false;

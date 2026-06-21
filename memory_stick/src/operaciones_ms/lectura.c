@@ -4,15 +4,13 @@
 
 void procesar_peticion_lectura(int socket, uint32_t direccion_fisica, int tamanio_a_leer)
 {
-    /*
-    TODO VALIDAR EN CPU ANTES DE LEER, YA QUE PODRIA SUCEDER QUE NO ESTE EN ESTE MS LOS BYTES QUE PRECISA.
-    if ((direccion_fisica + tamanio_a_leer) > tamanio_memoria_ms_ingresada)
-    {
-        log_error(ms_logger, "Violación de segmento. Intento de lectura fuera de límites.");
 
-        exit(EXIT_FAILURE);
-    }
-    */
+    // if ((direccion_fisica + tamanio_a_leer) > tamanio_memoria_ms_ingresada)
+    // {
+    //     log_error(ms_logger, "Violación de segmento. Intento de lectura fuera de límites.");
+    //      enviar_paqueteks()...
+    //     exit(EXIT_FAILURE);
+    // }
 
     // 1. Reservar un buffer temporal para guardar los datos que vamos a leer
     void *datos_leidos = malloc(tamanio_a_leer);
@@ -28,7 +26,7 @@ void procesar_peticion_lectura(int socket, uint32_t direccion_fisica, int tamani
     // 4. Agregar los datos leídos al paquete
     agregar_a_paquete(paquete_respuesta, datos_leidos, tamanio_a_leer);
 
-    //! usleep(ms_config.memory_delay  * 1000); //! VER SI ES NECESARIO!!!
+    usleep(ms_config.memory_delay * 1000);
 
     // 5. Enviar de vuelta a la CPU que te lo pidió
     enviar_paquete(paquete_respuesta, socket);

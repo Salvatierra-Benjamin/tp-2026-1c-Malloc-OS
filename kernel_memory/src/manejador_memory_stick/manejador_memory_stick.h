@@ -4,6 +4,6 @@
 #include <recursos_globales/recursos_globales.h>
 
 void *manejador_memory_stick(void *arg);
-void agregar_memory_stick(int tam_ms, int puerto, int socket_memory_stick);
+void agregar_memory_stick(int tam_ms, char *ip, char *puerto, int socket_memory_stick);
 
 #endif
