@@ -56,6 +56,13 @@ void *atencion_ks()
         case KS_OK_CONEXION:
         {
             log_debug(io_logger, "[RECEPTOR_KS_IO] EL HANSHAKE CON KS SE HA REALIZADO CORRECTAMENTE!!!");
+            log_info(io_logger, "## Conectado a Kernel Scheduler");
+            t_paquete *paquete = crear_paquete(ENVIAR_DATOS_IO);
+            int longitud_tipo_io = strlen(tipo_io_mayusculas);
+            agregar_a_paquete(paquete, tipo_io_mayusculas, longitud_tipo_io);
+            enviar_paquete(paquete, conexion_ks);
+            eliminar_paquete(paquete);
+
             break;
         }
         case STDIN_IO:
@@ -116,10 +123,14 @@ void *atencion_ks()
 
                 log_info(io_logger, "## PID: %d - Inicio de IO", pid);
                 // Inicio de IO: “## PID: <PID> - Inicio de IO”
+                // OK_STDOUT: // OK_STDOUT_RESPUESTA_BYTES (PID)
 
                 printf("Cadena recibida de KS: %s\n", cadena_a_imprimir);
 
-                enviar_operacion(conexion_ks, OK_STDOUT);
+                t_paquete *paquete_stdout = crear_paquete(OK_STDOUT);
+                agregar_a_paquete(paquete_stdout, &pid, sizeof(int));
+
+                enviar_paquete(paquete_stdout, conexion_ks);
 
                 log_info(io_logger, "## PID: %d - %s ", pid, cadena_a_imprimir);
                 // Solo para STDOUT: “## PID: <PID> - <CONTENIDO A IMPRIMIR>”
@@ -155,7 +166,10 @@ void *atencion_ks()
                 int tiempo_en_micro = tiempo_espera * 1000;
                 usleep(tiempo_en_micro);
 
-                enviar_operacion(conexion_ks, OK_SLEEP);
+                t_paquete *paquete_sleep = crear_paquete(OK_SLEEP);
+                agregar_a_paquete(paquete_sleep, &pid, sizeof(int));
+
+                enviar_paquete(paquete_sleep, conexion_ks);
 
                 log_info(io_logger, "## PID: %d - Haciendo sleep por %d milisegundos.", pid, tiempo_espera);
                 // Solo para SLEEP: “## PID: <PID> - Haciendo sleep por <TIEMPO> milisegundos.”

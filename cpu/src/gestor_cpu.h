@@ -24,10 +24,8 @@ typedef struct
 {
     char *ip_kernel_memory;
     char *ip_kernel_scheduler;
-    char *ip_memory_stick;
     char *puerto_kernel_memory;
     char *puerto_kernel_scheduler;
-    char *puerto_memory_stick;
     t_log_level log_level;
 
 } cpu_struct_config;
@@ -40,7 +38,10 @@ extern int conexion_ks;
 extern int conexion_ms;
 extern int identificador_cpu;
 extern sem_t sem_proceso_nuevo;
+extern sem_t hay_interrupcion;
 extern int PID_a_ejecutar;
+extern int PID_Interrupcion;
+extern t_list *lista_memory_sticks;
 
 //  Semaforos:
 extern pthread_mutex_t conexiones_km; // MUTEX

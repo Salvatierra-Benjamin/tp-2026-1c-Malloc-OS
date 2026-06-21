@@ -14,14 +14,13 @@
 #include <commons/config.h>
 #include <commons/collections/list.h>
 #include <stdint.h>
-#include <stdlib.h>
-#include <string.h>
 #include <stdbool.h>
 #include <commons/collections/list.h>
 #include <semaphore.h>
 #include <pthread.h>
+#include <netdb.h>
 
-int iniciar_servidor(char*);
+int iniciar_servidor(char *);
 int esperar_cliente(int);
-int crear_conexion(char* ip, char* puerto);
+int crear_conexion(char *ip, char *puerto);
 #endif

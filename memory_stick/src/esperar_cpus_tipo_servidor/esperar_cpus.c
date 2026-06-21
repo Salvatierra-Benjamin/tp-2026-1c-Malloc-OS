@@ -49,6 +49,8 @@ void *atencion_cpus(void *socket_cliente_puntero)
             eliminar_paquete(paquete_cpu_id);
             log_debug(ms_logger, "[RECEPTOR_CPUS]Recibido el cpu_id número: %d", cpu_id);
 
+            // Conexión de CPU: “## CPU <ID CPU> Conectada”
+            log_info(ms_logger, "“## CPU %d Conectada”" , cpu_id);
             break;
         }
         case PETICION_ESCRITURA_MS:
@@ -83,6 +85,9 @@ void *atencion_cpus(void *socket_cliente_puntero)
 
             enviar_paquete(paquete_ok_escritura, socket_cliente);
 
+            // Escritura: “## Escritura de <CANTIDAD ESCRITA> bytes”
+            log_info(ms_logger,  "## Escritura de %d bytes", tamanio_a_escribir);
+
             // 6. Limpieza absoluta para evitar memory leaks
             eliminar_paquete(paquete_ok_escritura);
             free(datos);
@@ -107,6 +112,8 @@ void *atencion_cpus(void *socket_cliente_puntero)
 
             // 3. Procesar la lectura
             procesar_peticion_lectura(socket_cliente, direccion_fisica, tamanio_a_leer);
+            // Lectura: “## Lectura de <CANTIDAD ESCRITA> bytes” // Asumno que se equivocaron en el enunciado
+            log_info(ms_logger,  "## Lectura de %d bytes", tamanio_a_leer);
             break;
         }
         default:

@@ -7,7 +7,10 @@ int conexion_ks;
 int conexion_ms;
 int identificador_cpu;
 sem_t sem_proceso_nuevo;
+sem_t hay_interrupcion;
 int PID_a_ejecutar = -1;
+int PID_Interrupcion = -1;
+t_list *lista_memory_sticks;
 
 //  Semaforos:
 pthread_mutex_t conexiones_km = PTHREAD_MUTEX_INITIALIZER; // MUTEX
@@ -28,10 +31,8 @@ void cpu_cargar_config(char *path)
     cpu_config.log_level = log_level_from_string((char *)log_level_string);
     cpu_config.ip_kernel_memory = strdup(config_get_string_value(config, "IP_KERNEL_MEMORY"));
     cpu_config.ip_kernel_scheduler = strdup(config_get_string_value(config, "IP_KERNEL_SCHEDULER"));
-    cpu_config.ip_memory_stick = strdup(config_get_string_value(config, "IP_MEMORY_STICK"));
     cpu_config.puerto_kernel_memory = strdup(config_get_string_value(config, "PUERTO_KERNEL_MEMORY"));
     cpu_config.puerto_kernel_scheduler = strdup(config_get_string_value(config, "PUERTO_KERNEL_SCHEDULER"));
-    cpu_config.puerto_memory_stick = strdup(config_get_string_value(config, "PUERTO_MEMORY_STICK"));
 
     config_destroy(config);
 }
@@ -59,12 +60,10 @@ void imprimir_valores_config_cpu()
     // IPs
     log_debug(cpu_logger, "IP Kernel Memory: %s", cpu_config.ip_kernel_memory);
     log_debug(cpu_logger, "IP Kernel Scheduler: %s", cpu_config.ip_kernel_scheduler);
-    log_debug(cpu_logger, "IP Memory Stick: %s", cpu_config.ip_memory_stick);
 
     // Puertos
     log_debug(cpu_logger, "Puerto Kernel Memory: %s", cpu_config.puerto_kernel_memory);
     log_debug(cpu_logger, "Puerto Kernel Scheduler: %s", cpu_config.puerto_kernel_scheduler);
-    log_debug(cpu_logger, "Puerto Memory Stick: %s", cpu_config.puerto_memory_stick);
 
     // Log Level
     log_debug(cpu_logger, "Nivel de Log: %d\n", cpu_config.log_level);
@@ -75,6 +74,7 @@ void inicializar_semaforos_coordinadores()
     // 0: El semáforo se comparte entre hilos del mismo proceso
     // 0: Valor inicial (el semáforo empieza "cerrado")
     sem_init(&sem_proceso_nuevo, 0, 0);
+    sem_init(&hay_interrupcion, 0, 0);
     sem_init(&semaphore, 0, 0);
 }
 
@@ -91,6 +91,7 @@ void liberar_semaforos()
     pthread_mutex_destroy(&conexiones_ks);
     pthread_mutex_destroy(&conexiones_ms);
     sem_destroy(&sem_proceso_nuevo);
+    sem_destroy(&hay_interrupcion);
     sem_destroy(&semaphore);
 }
 
@@ -98,10 +99,8 @@ void cpu_liberar_config()
 {
     free(cpu_config.ip_kernel_memory);
     free(cpu_config.ip_kernel_scheduler);
-    free(cpu_config.ip_memory_stick);
     free(cpu_config.puerto_kernel_memory);
     free(cpu_config.puerto_kernel_scheduler);
-    free(cpu_config.puerto_memory_stick);
 
     log_debug(cpu_logger, "Estructura de la Config Liberada\n");
 }
@@ -118,4 +117,5 @@ void liberar_todo()
     liberar_semaforos();
     cpu_liberar_config();
     cpu_liberar_log();
+    list_destroy_and_destroy_elements(lista_memory_sticks, free);
 }

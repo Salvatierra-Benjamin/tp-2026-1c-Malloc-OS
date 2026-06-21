@@ -15,10 +15,31 @@ void *manejador_memory_stick(void *arg)
         case MEMORY_STICK_SIZE:
         {
             t_paquete *tam_memory_stick = recibir_paquete(socket_memory_stick);
-            int tam_ms;
-            buffer_read(&tam_ms, tam_memory_stick->buffer, sizeof(int));
-            agregar_memory_stick(tam_ms);
-            eliminar_paquete(tam_memory_stick);
+
+            /* A.Leer tamaño memoria */
+            int tamanio_memoria;
+            buffer_read(&tamanio_memoria, tam_memory_stick->buffer, sizeof(int));
+
+            /* B. Leer IP */
+            int tamanio_ip;
+            buffer_read(&tamanio_ip, tam_memory_stick->buffer, sizeof(int)); // Leemos cuánto mide
+            char *ip_recibida = malloc(tamanio_ip);
+            buffer_read(ip_recibida, tam_memory_stick->buffer, tamanio_ip); // Leemos el texto
+
+            /* C. Leer Puerto */
+            int tamanio_puerto;
+            buffer_read(&tamanio_puerto, tam_memory_stick->buffer, sizeof(int));
+            char *puerto_recibido = malloc(tamanio_puerto);
+            buffer_read(puerto_recibido, tam_memory_stick->buffer, tamanio_puerto);
+
+            /* 2. Usar el string... */
+            agregar_memory_stick(tamanio_memoria, ip_recibida, puerto_recibido, socket_memory_stick);
+
+            /* 3. Limpieza de memoria */
+
+            free(ip_recibida);                  // Liberas el espacio del string
+            free(puerto_recibido);              // Liberas el espacio del string
+            eliminar_paquete(tam_memory_stick); // Liberas el buffer que llegó por la red
             break;
         }
         case -1:
@@ -38,7 +59,64 @@ void *manejador_memory_stick(void *arg)
     return NULL;
 }
 
-void agregar_memory_stick(int tam_ms)
+void agregar_memory_stick(int tam_ms, char *ip, char *puerto, int socket_memory_stick)
 {
+    t_memory_stick *ms = malloc(sizeof(t_memory_stick));
+
+    // 1. Guardamos los datos. Usamos string_duplicate para copiar la memoria
+    // y asegurarnos de que el char* no se borre si la variable original muere.
+    ms->ip = string_duplicate(ip);
+    ms->puerto = string_duplicate(puerto);
+    ms->tamanio = tam_ms;
+    ms->socket = socket_memory_stick;
+
+    pthread_mutex_lock(&mutex_lista_memory_sticks);
+
+    if (list_is_empty(lista_memory_sticks))
+    {
+        ms->base = 0;
+    }
+    else
+    {
+        t_memory_stick *ms_ultimo = (t_memory_stick *)list_get(lista_memory_sticks, list_size(lista_memory_sticks) - 1);
+        ms->base = ms_ultimo->base + ms_ultimo->tamanio;
+    }
+
+    list_add(lista_memory_sticks, ms);
+
+    // 2. Empaquetamos todo para enviarlo
+    t_paquete *paquete_ms = crear_paquete(RECIBIR_MEMORY_STICK);
+
+    // Enteros estáticos (base y tamaño)
+    agregar_a_paquete(paquete_ms, &(ms->base), sizeof(int));
+    agregar_a_paquete(paquete_ms, &(ms->tamanio), sizeof(int));
+
+    // 3. Empaquetamos la IP (Tamaño + String)
+    int ip_size = strlen(ms->ip) + 1; // +1 para enviar el caracter centinela '\0'
+    agregar_a_paquete(paquete_ms, &ip_size, sizeof(int));
+    agregar_a_paquete(paquete_ms, ms->ip, ip_size);
+
+    // 4. Empaquetamos el PUERTO (Tamaño + String)
+    int puerto_size = strlen(ms->puerto) + 1;
+    agregar_a_paquete(paquete_ms, &puerto_size, sizeof(int));
+    agregar_a_paquete(paquete_ms, ms->puerto, puerto_size);
+
+    // TODO enviar_paquete(paquete_ms, SOCKETS_DE_TODOS_LOS_CPUS); // TODO FALTA PONER TODOS LOS SOCKETS DE LAS CPUS!!!!!!!! MUY MUCHO IMPORTANTANTE
+    /*
+    ej for(int i =0; i < listsize(cpu); i++){
+        enviar_ms_cpu(cpu, ms);
+    }
+    */
+
+    pthread_mutex_unlock(&mutex_lista_memory_sticks);
+
+    // MUY IMPORTANTE: Liberar la memoria de la estructura del paquete una vez enviado
+    eliminar_paquete(paquete_ms);
+
     log_info(logger, "## Memory Stick de %d bytes Conectada", tam_ms);
+
+    // Cuando llegue el momento de destruir un Memory Stick:
+    // free(ms->ip);     // Liberás el string_duplicate de la IP
+    // free(ms->puerto); // Liberás el string_duplicate del puerto
+    // free(ms);         // Finalmente, liberás la estructura principal
 }
