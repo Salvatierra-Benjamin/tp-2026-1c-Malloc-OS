@@ -4,7 +4,7 @@
 #include <recursos_globales/recursos_globales.h>
 
 void *manejador_ks(void *arg);
-void creacion_proceso(int PID, char* PATH);
+void creacion_proceso(int PID, char* PATH, int prioridad);
 t_list *dividir_archivo_por_lineas(char *path);
 char *armar_ruta(char *ruta_relativa);
 t_list *convertir_lineas_en_instrucciones(t_list *lineas);

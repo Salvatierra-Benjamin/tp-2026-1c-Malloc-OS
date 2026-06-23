@@ -23,6 +23,7 @@ typedef struct
 {
     t_list *instrucciones; // t_instruccion []
     t_contexto_ejecucion *contexto;
+    int prioridad;
 } t_procesos_memoria;
 
 extern t_dictionary *procesos_memoria;

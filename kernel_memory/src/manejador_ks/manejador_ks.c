@@ -27,7 +27,10 @@ void *manejador_ks(void *arg)
             char *path = malloc(path_size);
             buffer_read(path, info_proceso->buffer, path_size);
 
-            creacion_proceso(pid, path);
+            int prioridad;
+            buffer_read(&prioridad, info_proceso->buffer, sizeof(int));
+
+            creacion_proceso(pid, path, prioridad);
 
             free(path);
             eliminar_paquete(info_proceso);
@@ -50,7 +53,7 @@ void *manejador_ks(void *arg)
     return NULL;
 }
 
-void creacion_proceso(int pid, char *path)
+void creacion_proceso(int pid, char *path, int prioridad)
 {
     // list_lineas = dividir_archivo_por_linea(path_archivo)
     char *ruta_absoluta = armar_ruta(path);
@@ -65,6 +68,7 @@ void creacion_proceso(int pid, char *path)
     t_procesos_memoria *proceso = malloc(sizeof(t_procesos_memoria));
     proceso->instrucciones = instrucciones;
     proceso->contexto = crear_contexto_ejecucion(pid);
+    proceso->prioridad = prioridad;
 
     // crear proceso_memoria y añadir al diccionario (vinculado a pid) (NO OLVIDAD MUTEX)
     char *key = string_itoa(pid);
