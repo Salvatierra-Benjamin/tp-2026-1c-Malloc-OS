@@ -17,7 +17,7 @@ void *manejador_cpu(void *arg)
             t_paquete *paquete_cpu_id = recibir_paquete(socket_cpu);
             int cpu_id;
             buffer_read(&cpu_id, paquete_cpu_id->buffer, sizeof(int));
-            conexion_cpu(cpu_id);
+            conexion_cpu(cpu_id, socket_cpu);
             eliminar_paquete(paquete_cpu_id);
             break;
         }
@@ -117,8 +117,16 @@ void *manejador_cpu(void *arg)
     return NULL;
 }
 
-void conexion_cpu(int cpu_id)
+void conexion_cpu(int cpu_id, int cpu_socket)
 {
+    t_cpu *cpu = malloc(sizeof(t_cpu));
+    cpu->cpu_id = cpu_id;
+    cpu->cpu_socket = cpu_socket;
+
+    pthread_mutex_lock(&mutex_lista_cpu);
+    list_add(lista_cpu, cpu);
+    pthread_mutex_unlock(&mutex_lista_cpu);
+
     log_info(logger, "## CPU %d Conectada", cpu_id);
 }
 

@@ -26,6 +26,15 @@ typedef struct
     int prioridad;
 } t_procesos_memoria;
 
+typedef struct
+{
+    int cpu_id;
+    int cpu_socket;
+} t_cpu;
+
+extern t_list *lista_cpu;
+extern pthread_mutex_t mutex_lista_cpu;
+
 extern t_dictionary *procesos_memoria;
 extern pthread_mutex_t mutex_procesos_memoria;
 

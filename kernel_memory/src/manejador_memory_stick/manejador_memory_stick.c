@@ -88,11 +88,6 @@ void agregar_memory_stick(int tam_ms, char *ip, char *puerto, int socket_memory_
 
     list_add(lista_memory_sticks, ms);
     pthread_mutex_unlock(&mutex_lista_memory_sticks);
-    
-    log_debug(logger, "-----MS-----");
-    log_debug(logger, "base : %d | tamanio : %d", ms->base, ms->tamanio);
-    log_debug(logger, "socket : %d | puerto : %s", ms->socket, ms->puerto);
-    log_debug(logger, "-----MS-----");
 
     // 2. Empaquetamos todo para enviarlo
     t_paquete *paquete_ms = crear_paquete(RECIBIR_MEMORY_STICK);
