@@ -32,6 +32,9 @@ extern pthread_mutex_t mutex_procesos_memoria;
 extern t_list *lista_memory_sticks;
 extern pthread_mutex_t mutex_lista_memory_sticks;
 
+extern int socket_kernel_scheduler;
+extern pthread_mutex_t mutex_socket_kernel_scheduler;
+
 extern t_log *logger;
 extern t_config *config;
 extern km_config *parametros;

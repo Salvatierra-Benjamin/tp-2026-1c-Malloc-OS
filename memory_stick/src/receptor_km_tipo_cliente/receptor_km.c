@@ -38,9 +38,17 @@ void *atencion_km()
             sem_post(&sem_ok_conexion_km);
 
             t_paquete *paquete_tamaño_puerto_km = crear_paquete(MEMORY_STICK_SIZE);
+
             agregar_a_paquete(paquete_tamaño_puerto_km, &tamanio_memoria_ms_ingresada, sizeof(int));
-            int puerto = atoi(ms_config.puerto_escucha_cpu);
-            agregar_a_paquete(paquete_tamaño_puerto_km, &puerto, sizeof(int));
+
+            int tamanio_mi_ip = strlen(ms_config.mi_ip)+1;
+            agregar_a_paquete(paquete_tamaño_puerto_km, &tamanio_mi_ip, sizeof(int));
+            agregar_a_paquete(paquete_tamaño_puerto_km, ms_config.mi_ip, tamanio_mi_ip);
+
+            int tamanio_puerto = strlen(ms_config.puerto_escucha_cpu)+1;
+            agregar_a_paquete(paquete_tamaño_puerto_km, &tamanio_puerto, sizeof(int));
+            agregar_a_paquete(paquete_tamaño_puerto_km, ms_config.puerto_escucha_cpu, tamanio_puerto);
+
             enviar_paquete(paquete_tamaño_puerto_km, conexion_km);
             eliminar_paquete(paquete_tamaño_puerto_km);
 

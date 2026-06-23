@@ -7,6 +7,9 @@ pthread_mutex_t mutex_procesos_memoria;
 t_list *lista_memory_sticks;
 pthread_mutex_t mutex_lista_memory_sticks;
 
+int socket_kernel_scheduler;
+pthread_mutex_t mutex_socket_kernel_scheduler;
+
 void iniciar_recursos()
 {
     pthread_mutex_init(&mutex_procesos_memoria, NULL);
@@ -14,12 +17,16 @@ void iniciar_recursos()
 
     pthread_mutex_init(&mutex_lista_memory_sticks, NULL);
     lista_memory_sticks = list_create();
+
+    pthread_mutex_init(&mutex_socket_kernel_scheduler, NULL);
+    socket_kernel_scheduler = -1;
 }
 
 void liberar_recursos()
 {
     pthread_mutex_destroy(&mutex_procesos_memoria);
     pthread_mutex_destroy(&mutex_lista_memory_sticks);
+    pthread_mutex_destroy(&mutex_socket_kernel_scheduler);
 
     free(parametros->allocation_strategy);
     free(parametros->puerto_escucha);

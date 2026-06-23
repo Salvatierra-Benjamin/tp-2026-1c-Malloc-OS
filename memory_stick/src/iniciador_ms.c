@@ -28,6 +28,7 @@ void ms_cargar_config(char *path)
     ms_config.puerto_escucha_cpu = strdup(config_get_string_value(config, "PUERTO_ESCUCHA_CPU"));
     ms_config.ip_km = strdup(config_get_string_value(config, "IP_KM"));
     ms_config.puerto_km = strdup(config_get_string_value(config, "PUERTO_KM"));
+    ms_config.mi_ip = strdup(config_get_string_value(config, "MI_IP"));
     
     config_destroy(config);
 }

@@ -46,6 +46,10 @@ void *manejador_memory_stick(void *arg)
         {
             log_warning(logger, "[MS] se desconecto memory stick");
             ejecutando = 0;
+            pthread_mutex_lock(&mutex_socket_kernel_scheduler);
+            enviar_operacion(socket_kernel_scheduler, DETECCION_CORRUPCION_MEMORIA);
+            pthread_mutex_unlock(&mutex_socket_kernel_scheduler);
+            log_debug(logger, "[MS] corrupcion de memoria enviado a ks");
             break;
         }
         default:
@@ -83,6 +87,12 @@ void agregar_memory_stick(int tam_ms, char *ip, char *puerto, int socket_memory_
     }
 
     list_add(lista_memory_sticks, ms);
+    pthread_mutex_unlock(&mutex_lista_memory_sticks);
+    
+    log_debug(logger, "-----MS-----");
+    log_debug(logger, "base : %d | tamanio : %d", ms->base, ms->tamanio);
+    log_debug(logger, "socket : %d | puerto : %s", ms->socket, ms->puerto);
+    log_debug(logger, "-----MS-----");
 
     // 2. Empaquetamos todo para enviarlo
     t_paquete *paquete_ms = crear_paquete(RECIBIR_MEMORY_STICK);
@@ -108,10 +118,10 @@ void agregar_memory_stick(int tam_ms, char *ip, char *puerto, int socket_memory_
     }
     */
 
-    pthread_mutex_unlock(&mutex_lista_memory_sticks);
-
     // MUY IMPORTANTE: Liberar la memoria de la estructura del paquete una vez enviado
     eliminar_paquete(paquete_ms);
+
+    aviso_aumento_memoria(ms);
 
     log_info(logger, "## Memory Stick de %d bytes Conectada", tam_ms);
 
@@ -119,4 +129,17 @@ void agregar_memory_stick(int tam_ms, char *ip, char *puerto, int socket_memory_
     // free(ms->ip);     // Liberás el string_duplicate de la IP
     // free(ms->puerto); // Liberás el string_duplicate del puerto
     // free(ms);         // Finalmente, liberás la estructura principal
+}
+
+void aviso_aumento_memoria(t_memory_stick * ms)
+{
+    // aviso a ks de aumento de memoria
+    t_paquete *aviso_ks = crear_paquete(AUMENTO_DE_MEMORIA);
+    agregar_a_paquete(aviso_ks, &(ms->tamanio), sizeof(int));
+
+    pthread_mutex_lock(&mutex_socket_kernel_scheduler);
+    enviar_paquete(aviso_ks, socket_kernel_scheduler);
+    pthread_mutex_unlock(&mutex_socket_kernel_scheduler);
+
+    eliminar_paquete(aviso_ks);
 }

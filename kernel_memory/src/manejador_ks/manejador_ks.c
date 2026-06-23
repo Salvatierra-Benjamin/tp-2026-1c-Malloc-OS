@@ -9,6 +9,10 @@ void *manejador_ks(void *arg)
 
     int ejecutando = 1;
 
+    pthread_mutex_lock(&mutex_socket_kernel_scheduler);
+    socket_kernel_scheduler = socket_ks;
+    pthread_mutex_unlock(&mutex_socket_kernel_scheduler);
+
     while (ejecutando)
     {
         int op_code = recibir_operacion(socket_ks);
@@ -40,6 +44,9 @@ void *manejador_ks(void *arg)
         {
             log_warning(logger, "[KS] se desconecto ks");
             ejecutando = 0;
+            pthread_mutex_lock(&mutex_socket_kernel_scheduler);
+            socket_kernel_scheduler = -1;
+            pthread_mutex_unlock(&mutex_socket_kernel_scheduler);
             break;
         }
         default:

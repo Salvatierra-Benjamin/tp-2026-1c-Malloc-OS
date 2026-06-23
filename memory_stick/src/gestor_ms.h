@@ -22,6 +22,7 @@
 // Definición de Tipos:
 typedef struct
 {
+    char *mi_ip; // IP DEL MS
     char *ip_ms;
     char *puerto_escucha_cpu;
     char *ip_km;     // FIFO, RR, CMN
