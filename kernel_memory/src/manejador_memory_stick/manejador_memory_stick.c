@@ -89,44 +89,12 @@ void agregar_memory_stick(int tam_ms, char *ip, char *puerto, int socket_memory_
     list_add(lista_memory_sticks, ms);
     pthread_mutex_unlock(&mutex_lista_memory_sticks);
 
-    // 2. Empaquetamos todo para enviarlo
-    t_paquete *paquete_ms = crear_paquete(RECIBIR_MEMORY_STICK);
-
-    // Enteros estáticos (base y tamaño)
-    agregar_a_paquete(paquete_ms, &(ms->base), sizeof(int));
-    agregar_a_paquete(paquete_ms, &(ms->tamanio), sizeof(int));
-
-    // 3. Empaquetamos la IP (Tamaño + String)
-    int ip_size = strlen(ms->ip) + 1; // +1 para enviar el caracter centinela '\0'
-    agregar_a_paquete(paquete_ms, &ip_size, sizeof(int));
-    agregar_a_paquete(paquete_ms, ms->ip, ip_size);
-
-    // 4. Empaquetamos el PUERTO (Tamaño + String)
-    int puerto_size = strlen(ms->puerto) + 1;
-    agregar_a_paquete(paquete_ms, &puerto_size, sizeof(int));
-    agregar_a_paquete(paquete_ms, ms->puerto, puerto_size);
-
-    // TODO enviar_paquete(paquete_ms, SOCKETS_DE_TODOS_LOS_CPUS); // TODO FALTA PONER TODOS LOS SOCKETS DE LAS CPUS!!!!!!!! MUY MUCHO IMPORTANTANTE
-    /*
-    ej for(int i =0; i < listsize(cpu); i++){
-        enviar_ms_cpu(cpu, ms);
-    }
-    */
-
-    // MUY IMPORTANTE: Liberar la memoria de la estructura del paquete una vez enviado
-    eliminar_paquete(paquete_ms);
-
     aviso_aumento_memoria(ms);
 
     log_info(logger, "## Memory Stick de %d bytes Conectada", tam_ms);
-
-    // Cuando llegue el momento de destruir un Memory Stick:
-    // free(ms->ip);     // Liberás el string_duplicate de la IP
-    // free(ms->puerto); // Liberás el string_duplicate del puerto
-    // free(ms);         // Finalmente, liberás la estructura principal
 }
 
-void aviso_aumento_memoria(t_memory_stick * ms)
+void aviso_aumento_memoria(t_memory_stick *ms)
 {
     // aviso a ks de aumento de memoria
     t_paquete *aviso_ks = crear_paquete(AUMENTO_DE_MEMORIA);
@@ -135,6 +103,32 @@ void aviso_aumento_memoria(t_memory_stick * ms)
     pthread_mutex_lock(&mutex_socket_kernel_scheduler);
     enviar_paquete(aviso_ks, socket_kernel_scheduler);
     pthread_mutex_unlock(&mutex_socket_kernel_scheduler);
+
+    pthread_mutex_lock(&mutex_lista_cpu);
+    t_list_iterator *it = list_iterator_create(lista_cpu);
+    while (list_iterator_has_next(it))
+    {
+        t_cpu *cpu = (t_cpu *)list_iterator_next(it);
+        t_paquete *paquete_ms = crear_paquete(RECIBIR_MEMORY_STICK);
+
+        // Enteros estáticos (base y tamaño)
+        agregar_a_paquete(paquete_ms, &(ms->base), sizeof(int));
+        agregar_a_paquete(paquete_ms, &(ms->tamanio), sizeof(int));
+
+        // 3. Empaquetamos la IP (Tamaño + String)
+        int ip_size = strlen(ms->ip) + 1; // +1 para enviar el caracter centinela '\0'
+        agregar_a_paquete(paquete_ms, &ip_size, sizeof(int));
+        agregar_a_paquete(paquete_ms, ms->ip, ip_size);
+
+        // 4. Empaquetamos el PUERTO (Tamaño + String)
+        int puerto_size = strlen(ms->puerto) + 1;
+        agregar_a_paquete(paquete_ms, &puerto_size, sizeof(int));
+        agregar_a_paquete(paquete_ms, ms->puerto, puerto_size);
+
+        enviar_paquete(paquete_ms, cpu->cpu_socket);
+    }
+    list_iterator_destroy(it);
+    pthread_mutex_unlock(&mutex_lista_cpu);
 
     eliminar_paquete(aviso_ks);
 }
