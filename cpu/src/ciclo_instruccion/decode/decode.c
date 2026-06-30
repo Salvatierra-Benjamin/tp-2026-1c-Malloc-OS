@@ -1,5 +1,5 @@
 #include "decode.h"
-
+// comentario borrar
 t_executor tabla_comandos[] = {
     [NOOP] = execute_NOOP,
     [SET] = execute_SET,
