@@ -13,6 +13,9 @@ pthread_mutex_t mutex_socket_kernel_scheduler;
 t_list *lista_cpu;
 pthread_mutex_t mutex_lista_cpu;
 
+t_list *lista_huecos;
+pthread_mutex_t mutex_lista_huecos;
+
 void iniciar_recursos()
 {
     pthread_mutex_init(&mutex_procesos_memoria, NULL);
@@ -26,6 +29,9 @@ void iniciar_recursos()
 
     pthread_mutex_init(&mutex_lista_cpu, NULL);
     lista_cpu = list_create();
+
+    pthread_mutex_init(&mutex_lista_huecos, NULL);
+    lista_huecos = list_create();
 }
 
 void liberar_recursos()
@@ -34,6 +40,7 @@ void liberar_recursos()
     pthread_mutex_destroy(&mutex_lista_memory_sticks);
     pthread_mutex_destroy(&mutex_socket_kernel_scheduler);
     pthread_mutex_destroy(&mutex_lista_cpu);
+    pthread_mutex_destroy(&mutex_lista_huecos);
 
     free(parametros->allocation_strategy);
     free(parametros->puerto_escucha);
@@ -43,6 +50,7 @@ void liberar_recursos()
 
     list_destroy_and_destroy_elements(lista_memory_sticks, free);
     list_destroy_and_destroy_elements(lista_cpu, free);
+    list_destroy_and_destroy_elements(lista_huecos, free);
 
     log_destroy(logger);
     config_destroy(config);

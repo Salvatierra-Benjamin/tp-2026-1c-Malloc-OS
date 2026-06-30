@@ -40,6 +40,18 @@ void *manejador_ks(void *arg)
             eliminar_paquete(info_proceso);
             break;
         }
+        case ENVIO_MEM_ALLOC:
+        {
+            // MEM_ALLOC (PID, SID, TAMAÑO)
+            int pid, sid, tamanio;
+            t_paquete *mem_alloc = recibir_paquete(socket_ks);
+            buffer_read(&pid, mem_alloc->buffer, sizeof(int));
+            buffer_read(&sid, mem_alloc->buffer, sizeof(int));
+            buffer_read(&tamanio, mem_alloc->buffer, sizeof(int));
+            eliminar_paquete(mem_alloc);
+            log_debug(logger, "pid : %d | sid : %d | tamanio : %d", pid, sid, tamanio);
+            break;
+        }
         case -1:
         {
             log_warning(logger, "[KS] se desconecto ks");
@@ -198,4 +210,43 @@ t_contexto_ejecucion *crear_contexto_ejecucion(int pid)
     contexto->tabla_segmentos.segmento = NULL;
     contexto->tabla_segmentos.cantidad_segmentos = 0;
     return contexto;
+}
+
+// huecos
+
+void mergear_huecos(void)
+{
+    t_list_iterator *it = list_iterator_create(lista_huecos);
+    t_hueco *actual = NULL;
+
+    while (list_iterator_has_next(it)) {
+        t_hueco *siguiente = (t_hueco*)list_iterator_next(it);
+
+        if (actual != NULL) {
+            if (actual->base + actual->tamanio == siguiente->base) {
+                // son contiguos — absorber siguiente en actual
+                actual->tamanio += siguiente->tamanio;
+                list_iterator_remove(it);
+                free(siguiente);
+                // no pisamos actual — el nuevo siguiente puede ser también contiguo
+                continue;
+            }
+        }
+
+        actual = siguiente;
+    }
+
+    list_iterator_destroy(it);
+}
+
+void agregar_hueco_por_stick(t_memory_stick *ms)
+{
+    t_hueco *h = malloc(sizeof(t_hueco));
+    h->base    = (uint32_t)stick->base;
+    h->tamanio = (uint32_t)stick->tamanio;
+
+    pthread_mutex_lock(&mutex_lista_huecos);
+    list_add(lista_huecos, h);  // siempre va al final — mayor base
+    mergear_huecos();
+    pthread_mutex_unlock(&mutex_lista_huecos);
 }

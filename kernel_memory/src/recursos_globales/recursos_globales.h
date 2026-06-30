@@ -32,6 +32,15 @@ typedef struct
     int cpu_socket;
 } t_cpu;
 
+typedef struct
+{
+    uint32_t base;
+    uint32_t tamanio;
+} t_hueco;
+
+extern t_list *lista_huecos;
+extern pthread_mutex_t mutex_lista_huecos;
+
 extern t_list *lista_cpu;
 extern pthread_mutex_t mutex_lista_cpu;
 
