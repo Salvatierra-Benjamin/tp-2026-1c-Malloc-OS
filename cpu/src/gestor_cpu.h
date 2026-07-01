@@ -44,12 +44,17 @@ extern int conexion_ms;
 extern int identificador_cpu;
 extern sem_t sem_proceso_nuevo;
 extern sem_t hay_interrupcion;
-extern sem_t finalizacion_procesamiento;
+extern sem_t sem_contexto_recibido;
+extern sem_t sem_contexto_procesado;
+extern sem_t sem_instruccion_recibida;
+extern sem_t sem_instruccion_procesada;
 extern int PID_a_ejecutar;
 extern int PID_Interrupcion;
 extern t_list *lista_memory_sticks;
 extern int flag_syscall;
 extern int TAM_MAX_SEGMENTO;
+extern t_contexto_ejecucion contexto_aux_global;
+extern t_instruccion instruccion_aux_global;
 //  Semaforos:
 extern pthread_mutex_t conexiones_km; // MUTEX
 extern pthread_mutex_t conexiones_ks; // MUTEX

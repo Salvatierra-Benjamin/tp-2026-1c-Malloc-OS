@@ -37,7 +37,28 @@ int main(int argc, char *argv[])
         enviar_paquete(paquete_solicitud_contexto, conexion_km);
         eliminar_paquete(paquete_solicitud_contexto);
 
-        sem_wait(&finalizacion_procesamiento);
+        sem_wait(&sem_contexto_recibido);
+
+        // PASOS PARA PASAR EL CONTEXTO CON EL AUXILIAR :
+        t_contexto_ejecucion contexto_actual;
+
+        // PASO A: Copia superficial de los datos fijos (PID, registros y cantidad_segmentos)
+        contexto_actual = contexto_aux_global;
+
+        // PASO B: Reservar memoria propia para los segmentos locales de la CPU
+        size_t tamano_tabla = sizeof(segmento_t) * contexto_actual.tabla_segmentos.cantidad_segmentos;
+        contexto_actual.tabla_segmentos.segmento = malloc(tamano_tabla);
+
+        // PASO C: Copiar los datos reales de la tabla global a la tabla local
+        memcpy(contexto_actual.tabla_segmentos.segmento, contexto_aux_global.tabla_segmentos.segmento, tamano_tabla);
+
+        sem_post(&sem_contexto_procesado);
+
+        //  3. Acá arranca el ciclo (Fetch -> Decode -> Execute)
+        log_info(cpu_logger, "Iniciando ciclo para el PID: %d", PID_a_ejecutar);
+        Ejecutar_Ciclo_de_Instruccion(&contexto_actual);
+
+        Destruir_Contexto(&contexto_actual); // USAR EN RECIBIR CONTEXTO
     }
 
     log_debug(cpu_logger, "CPU TERMINO.\n");
