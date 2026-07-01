@@ -12,9 +12,14 @@ t_instruccion *linea_a_instruccion(char *linea);
 char *palabra_reservada_a_string(t_palabra_reservada comando);
 t_palabra_reservada string_a_palabra_reservada(char *str);
 t_contexto_ejecucion *crear_contexto_ejecucion(int pid);
+void finalizar_proceso(int pid);
+
+// segmentos
+uint32_t crear_segmento(int pid, int sid, uint32_t tamanio, bool *necesita_compactacion);
+bool eliminar_segmento(int pid, int sid);
 
 // huecos
 void mergear_huecos(); // no requiere mutex
-void agregar_hueco_por_stick(t_memory_stick *ms);
+void agregar_hueco_por_stick(t_memory_stick *stick);
 
 #endif
