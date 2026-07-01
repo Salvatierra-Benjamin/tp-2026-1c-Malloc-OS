@@ -29,6 +29,11 @@ typedef struct
     t_log_level log_level;
 
 } cpu_struct_config;
+typedef struct
+{
+    uint32_t dir_fisica;
+    bool seg_fault;
+} t_mmu_result;
 
 // Declaración Variables Globales:
 extern t_log *cpu_logger;
@@ -39,10 +44,12 @@ extern int conexion_ms;
 extern int identificador_cpu;
 extern sem_t sem_proceso_nuevo;
 extern sem_t hay_interrupcion;
+extern sem_t finalizacion_procesamiento;
 extern int PID_a_ejecutar;
 extern int PID_Interrupcion;
 extern t_list *lista_memory_sticks;
-
+extern int flag_syscall;
+extern int TAM_MAX_SEGMENTO;
 //  Semaforos:
 extern pthread_mutex_t conexiones_km; // MUTEX
 extern pthread_mutex_t conexiones_ks; // MUTEX

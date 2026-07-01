@@ -41,6 +41,7 @@ void *manejador_cpu(void *arg)
             agregar_a_paquete(paquete_contexto, &contexto->registros, sizeof(t_registros));
             agregar_a_paquete(paquete_contexto, &contexto->tabla_segmentos.cantidad_segmentos, sizeof(uint32_t));
             agregar_a_paquete(paquete_contexto, contexto->tabla_segmentos.segmento, sizeof(segmento_t) * (contexto->tabla_segmentos.cantidad_segmentos));
+            agregar_a_paquete(paquete_contexto, struct_config->segment_max_size, sizeof(int));
 
             enviar_paquete(paquete_contexto, socket_cpu);
 
