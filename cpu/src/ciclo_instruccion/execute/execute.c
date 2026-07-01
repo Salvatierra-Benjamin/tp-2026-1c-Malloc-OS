@@ -136,28 +136,33 @@ int pasaje_de_char_a_int(char *palabra)
 
     return num;
 }
-typedef enum
-{
-    LEER,
-    ESCRIBIR
-} t_operacion_memoria;
 
 // Busca el Memory Stick que contiene la dirección física actual
 t_memory_stick *encontrar_stick_por_direccion(t_list *sticks, uint32_t dir_fisica)
 {
-    for (int i = 0; i < list_size(sticks); i++)
+    t_memory_stick *stick_encontrado = NULL;
+    bool encontrado = false; // Este es nuestro flag
+
+    pthread_mutex_lock(&mutex_lista_sticks);
+
+    for (int i = 0; i < list_size(sticks) && !encontrado; i++)
     {
         t_memory_stick *stick = list_get(sticks, i);
-        // Validar si la dirección cae dentro de la base y el límite del stick
+
         if (dir_fisica >= stick->base && dir_fisica < (stick->base + stick->tamanio))
         {
-            return stick;
+            stick_encontrado = stick;
+            encontrado = true; // Activamos el flag para salir del bucle
         }
     }
-    return NULL;
+
+    pthread_mutex_unlock(&mutex_lista_sticks);
+
+    return stick_encontrado;
 }
 
-void operar_en_memoria(uint32_t dir_fisica, void *buffer, uint32_t tamano, t_operacion_memoria op, t_list *memory_sticks)
+// Agregué 'int pid' a la firma de la función
+void operar_en_memoria(int pid, uint32_t dir_fisica, void *buffer, uint32_t tamano, t_operacion_memoria op, t_list *memory_sticks)
 {
     uint32_t bytes_restantes = tamano;
     uint32_t offset_buffer = 0;
@@ -169,33 +174,145 @@ void operar_en_memoria(uint32_t dir_fisica, void *buffer, uint32_t tamano, t_ope
 
         if (stick == NULL)
         {
-            // Manejo de error: Dirección física no mapeada a ningún stick
-            return;
+            log_error(cpu_logger, "PID: %d - ERROR DE MEMORIA: La dirección física %d no pertenece a ningún Memory Stick conectado.", pid, dir_actual);
+            log_error(cpu_logger, "PID: %d - Segmentation Fault en dirección %d", pid, dir_actual);
+            int motivo = AVISO_DE_INTERRUPCION_SEGMENTATION_FAULT;
+            t_paquete *paquete_ks = crear_paquete(DESALOJO_PROCESO);
+            agregar_a_paquete(paquete_ks, &pid, sizeof(int));
+            agregar_a_paquete(paquete_ks, &motivo, sizeof(int));
+            enviar_paquete(paquete_ks, conexion_ks);
+            eliminar_paquete(paquete_ks);
+            liberar_todo();
+            exit(EXIT_FAILURE);
         }
 
         // Calcular cuántos bytes podemos operar en el stick actual
         uint32_t bytes_disponibles_en_stick = (stick->base + stick->tamanio) - dir_actual;
         uint32_t bytes_a_operar = (bytes_restantes < bytes_disponibles_en_stick) ? bytes_restantes : bytes_disponibles_en_stick;
 
-        // Acá deberías serializar y hacer el send() por socket al stick correspondiente
         if (op == LEER)
         {
-            // TODO: Enviar petición de lectura a stick->socket por 'bytes_a_operar' en 'dir_actual'
-            // TODO: Hacer recv() y guardar la respuesta en (buffer + offset_buffer)
-        }
-        else
-        {
-            // TODO: Enviar petición de escritura a stick->socket por 'bytes_a_operar' en 'dir_actual' enviando (buffer + offset_buffer)
-            // TODO: Esperar la confirmación del stick (OK)
-        }
+            // 1. Armar y enviar petición de lectura
+            t_paquete *paquete_lectura = crear_paquete(PETICION_LECTURA_MS);
+            agregar_a_paquete(paquete_lectura, &pid, sizeof(int));
+            agregar_a_paquete(paquete_lectura, &dir_actual, sizeof(uint32_t));
+            int tamanio_a_enviar = (int)bytes_a_operar;
+            agregar_a_paquete(paquete_lectura, &tamanio_a_enviar, sizeof(int));
 
+            enviar_paquete(paquete_lectura, stick->socket);
+            eliminar_paquete(paquete_lectura);
+
+            // 2. Esperar respuesta del MS
+            // PRIMERO: Leemos el código de operación
+            int cod_op = recibir_operacion(stick->socket);
+
+            if (cod_op == RESPUESTA_LECTURA_MS)
+            {
+                // SEGUNDO: Ahora sí, sacamos el payload
+                t_paquete *respuesta_lectura = recibir_paquete(stick->socket);
+
+                // Tercero: Extraemos los datos a nuestro buffer local
+                // Casteamos 'buffer' a (char*) para sumarle el offset en bytes
+                buffer_read((char *)buffer + offset_buffer, respuesta_lectura->buffer, bytes_a_operar);
+
+                eliminar_paquete(respuesta_lectura);
+            }
+            else
+            {
+                log_error(cpu_logger, "Se esperaba RESPUESTA_LECTURA_MS pero llegó %d", cod_op);
+                liberar_todo();
+                exit(EXIT_FAILURE);
+            }
+        }
+        else // op == ESCRIBIR
+        {
+            // 1. Armar y enviar petición de escritura
+            t_paquete *paquete_escritura = crear_paquete(PETICION_ESCRITURA_MS);
+            agregar_a_paquete(paquete_escritura, &pid, sizeof(int));
+            agregar_a_paquete(paquete_escritura, &dir_actual, sizeof(uint32_t));
+            int tamanio_a_enviar = (int)bytes_a_operar;
+            agregar_a_paquete(paquete_escritura, &tamanio_a_enviar, sizeof(int));
+
+            // Agregamos los datos a escribir apuntando al buffer más su offset
+            agregar_a_paquete(paquete_escritura, (char *)buffer + offset_buffer, bytes_a_operar);
+
+            enviar_paquete(paquete_escritura, stick->socket);
+            eliminar_paquete(paquete_escritura);
+
+            // 2. Esperar la confirmación del stick (OK)
+            // PRIMERO: Leemos el código de operación
+            int cod_op = recibir_operacion(stick->socket);
+
+            if (cod_op == RESPUESTA_ESCRITURA_MS)
+            {
+                // SEGUNDO: Sacamos el payload
+                t_paquete *respuesta_ok = recibir_paquete(stick->socket);
+
+                // Tercero: Leemos el PID que nos devuelve por control
+                int pid_confirmacion;
+                buffer_read(&pid_confirmacion, respuesta_ok->buffer, sizeof(int));
+
+                if (pid_confirmacion != pid)
+                {
+                    log_warning(cpu_logger, "El MS confirmó la escritura pero para un PID distinto (%d vs %d)", pid_confirmacion, pid);
+                }
+
+                eliminar_paquete(respuesta_ok);
+            }
+            else
+            {
+                log_error(cpu_logger, "Se esperaba RESPUESTA_ESCRITURA_MS pero llegó %d", cod_op);
+                liberar_todo();
+                exit(EXIT_FAILURE);
+            }
+        }
         // Actualizamos los punteros y contadores para el próximo ciclo (por si saltamos a otro stick)
         bytes_restantes -= bytes_a_operar;
         offset_buffer += bytes_a_operar;
         dir_actual += bytes_a_operar;
     }
 }
+void setear_valor_registro(t_contexto_ejecucion *contexto, char *registro_datos, void *buffer)
+{
+    t_info_registro info = obtener_info_registro(contexto, registro_datos);
 
+    if (info.puntero == NULL)
+        return; // Error
+
+    if (info.tamanio == sizeof(uint8_t))
+    {
+        *(uint8_t *)info.puntero = *(uint8_t *)buffer; // Escribo solo 1 byte
+    }
+    else
+    {
+        *(uint32_t *)info.puntero = *(uint32_t *)buffer; // Escribo 4 bytes
+    }
+}
+int obtener_tamano_registro(char *registro_datos)
+{
+    t_info_registro info = obtener_info_registro(NULL, registro_datos); // No necesitamos el contexto para obtener el tamaño
+
+    if (info.puntero == NULL)
+        return 0; // Error
+
+    return info.tamanio;
+}
+uint32_t obtener_valor_registro_como_entero(t_contexto_ejecucion *contexto, char *nombre_registro_tamanio)
+{
+    t_info_registro info = obtener_info_registro(contexto, nombre_registro_tamanio);
+
+    if (info.puntero == NULL)
+        return 0; // Error
+
+    if (info.tamanio == sizeof(uint8_t))
+    {
+        return (uint32_t)(*(uint8_t *)info.puntero); // Leo 1 byte
+    }
+    else
+    {
+        return *(uint32_t *)info.puntero; // Leo 4 bytes
+    }
+}
 /*
 ===============================================
     FIN FUNCIONES AUXILIARES
@@ -261,95 +378,77 @@ void execute_JNZ(t_contexto_ejecucion *contexto, char *registro, char *instrucci
 }
 
 // =========================================================
-// INSTRUCCIONES DE MEMORIA (MMU) - TODO
+// INSTRUCCIONES DE MEMORIA (MMU)
 // =========================================================
 
 // COPY_MEM AX
 // MOV_IN EDX
 // MOV_OUT EDX
 
-// Variable global o inyectada por configuración
-
-extern t_list *lista_memory_sticks;
+// MOV_IN (Registro Datos): Lee el valor de memoria correspondiente a la Dirección Lógica que se encuentra en el Registro SI y lo almacena en el Registro Datos.
+// MOV_OUT (Registro Datos): Lee el valor del Registro Datos y lo escribe en la dirección física de memoria obtenida a partir de la Dirección Lógica almacenada en el Registro DI.
+// COPY_MEM (Registro Tamaño): Toma la dirección apuntada por el registro SI y copia la cantidad de bytes indicadas en el registro tamaño a la posición de memoria apuntada por el registro DI.
 
 void execute_MOV_IN(t_contexto_ejecucion *contexto, char *registro_datos, char *param2)
 {
     (void)param2;
 
-    uint32_t dir_logica = contexto->registros.SI;                     // Se lee de SI
-    uint32_t tamano_a_leer = obtener_tamano_registro(registro_datos); // Ej: EAX = 4, AX = 1
+    uint32_t dir_logica = contexto->registros.SI;                      // Se lee de SI
+    uint32_t tamanio_a_leer = obtener_tamano_registro(registro_datos); // Ej: EAX = 4, AX = 1
 
-    t_mmu_result mmu = mmu_traducir(dir_logica, tamano_a_leer, contexto, TAM_MAX_SEGMENTO);
+    uint32_t dir_fisica = mmu_traducir(dir_logica, tamanio_a_leer, contexto, TAM_MAX_SEGMENTO);
 
-    if (mmu.seg_fault)
-    {
-        // TODO: Devolver el proceso al Kernel Scheduler con motivo SEG_FAULT
-        return;
-    }
-
-    void *buffer = malloc(tamano_a_leer);
-    operar_en_memoria(mmu.dir_fisica, buffer, tamano_a_leer, LEER, lista_memory_sticks);
+    void *buffer = malloc(tamanio_a_leer);
+    operar_en_memoria(contexto->PID, dir_fisica, buffer, tamanio_a_leer, LEER, lista_memory_sticks);
 
     setear_valor_registro(contexto, registro_datos, buffer); // Asignamos los datos al registro
     free(buffer);
 }
 
-void execute_MOV_OUT(t_contexto_ejecucion *contexto, char *registro_datos)
+void execute_MOV_OUT(t_contexto_ejecucion *contexto, char *registro_datos, char *param2)
 {
+    (void)param2;
+
     uint32_t dir_logica = contexto->registros.DI; // Se escribe en DI
-    uint32_t tamano_a_escribir = obtener_tamano_registro(registro_datos);
+    uint32_t tamanio_a_escribir = obtener_tamano_registro(registro_datos);
 
-    t_mmu_result mmu = mmu_traducir(dir_logica, tamano_a_escribir, contexto, TAM_MAX_SEGMENTO);
+    uint32_t dir_fisica = mmu_traducir(dir_logica, tamanio_a_escribir, contexto, TAM_MAX_SEGMENTO);
 
-    if (mmu.seg_fault)
-    {
-        // TODO: Devolver el proceso al Kernel Scheduler con motivo SEG_FAULT
-        return;
-    }
+    uint32_t valor_a_escribir = leer_registro(contexto, registro_datos);
 
-    void *valor_a_escribir = leer_valor_registro(contexto, registro_datos);
-    operar_en_memoria(mmu.dir_fisica, valor_a_escribir, tamano_a_escribir, ESCRIBIR, lista_memory_sticks);
+    void *buffer = malloc(tamanio_a_escribir);
+    memcpy(buffer, &valor_a_escribir, tamanio_a_escribir);
+
+    operar_en_memoria(contexto->PID, dir_fisica, buffer, tamanio_a_escribir, ESCRIBIR, lista_memory_sticks);
+    free(buffer);
 }
 
-void execute_COPY_MEM(t_contexto_ejecucion *contexto, char *nombre_registro_tamano)
+void execute_COPY_MEM(t_contexto_ejecucion *contexto, char *nombre_registro_tamano, char *param2)
 {
+    (void)param2;
+
     uint32_t dir_logica_origen = contexto->registros.SI;
     uint32_t dir_logica_destino = contexto->registros.DI;
 
     // Obtenemos el valor guardado en el registro que indica cuántos bytes copiar
-    uint32_t tamano = obtener_valor_registro_como_entero(contexto, nombre_registro_tamano);
+    uint32_t tamanio = obtener_valor_registro_como_entero(contexto, nombre_registro_tamano);
 
-    t_mmu_result mmu_origen = mmu_traducir(dir_logica_origen, tamano, contexto, TAM_MAX_SEGMENTO);
-    if (mmu_origen.seg_fault)
-    {
-        // TODO: Devolver el proceso al Kernel Scheduler con motivo SEG_FAULT
-        return;
-    }
+    uint32_t dir_fisica_origen = mmu_traducir(dir_logica_origen, tamanio, contexto, TAM_MAX_SEGMENTO);
 
-    t_mmu_result mmu_destino = mmu_traducir(dir_logica_destino, tamano, contexto, TAM_MAX_SEGMENTO);
-    if (mmu_destino.seg_fault)
-    {
-        // TODO: Devolver el proceso al Kernel Scheduler con motivo SEG_FAULT
-        return;
-    }
+    uint32_t dir_fisica_destino = mmu_traducir(dir_logica_destino, tamanio, contexto, TAM_MAX_SEGMENTO);
 
-    void *buffer = malloc(tamano);
+    void *buffer = malloc(tamanio);
 
     // Primero leemos consolidando los sticks de origen
-    operar_en_memoria(mmu_origen.dir_fisica, buffer, tamano, LEER, lista_memory_sticks);
+    operar_en_memoria(contexto->PID, dir_fisica_origen, buffer, tamanio, LEER, lista_memory_sticks);
 
     // Luego escribimos consolidando los sticks de destino
-    operar_en_memoria(mmu_destino.dir_fisica, buffer, tamano, ESCRIBIR, lista_memory_sticks);
-
+    operar_en_memoria(contexto->PID, dir_fisica_destino, buffer, tamanio, ESCRIBIR, lista_memory_sticks);
     free(buffer);
 }
 
-// MOV_IN (Registro Datos): Lee el valor de memoria correspondiente a la Dirección Lógica que se encuentra en el Registro SI y lo almacena en el Registro Datos.;
-// MOV_OUT (Registro Datos): Lee el valor del Registro Datos y lo escribe en la dirección física de memoria obtenida a partir de la Dirección Lógica almacenada en el Registro DI.;
-// COPY_MEM (Registro Tamaño): Toma la dirección apuntada por el registro SI y copia la cantidad de bytes indicadas en el registro tamaño a la posición de memoria apuntada por el registro DI.;
-
 // =========================================================
-// SYSCALLS - TODO
+// SYSCALLS
 // =========================================================
 
 void execute_MUTEX_CREATE(t_contexto_ejecucion *contexto, char *nombre_mutex, char *param2)

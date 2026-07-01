@@ -54,8 +54,8 @@ void *atencion_km()
             instruccion_aux_global.parametro_2 = NULL;
 
             // 1. Deserializar lo de tamaño fijo (comando y PID)
-            buffer_read(&(instruccion_aux_global->comando), paquete->buffer, sizeof(t_palabra_reservada));
-            buffer_read(&(instruccion_aux_global->PID), paquete->buffer, sizeof(int));
+            buffer_read(&(instruccion_aux_global.comando), paquete->buffer, sizeof(t_palabra_reservada));
+            buffer_read(&(instruccion_aux_global.PID), paquete->buffer, sizeof(int));
 
             // 2. Deserializar parametro_1 (Dinámico)
             int len1;
@@ -63,7 +63,7 @@ void *atencion_km()
             // Si len1 es 0 (o menor/igual a 1 si mandan un string vacío ""), no hacemos malloc
             if (len1 <= 1)
             { // Si el tamaño es 0 no hay nada que limpiar en el buffer, por lo tanto lo setea en NULL.
-                instruccion_aux_global->parametro_1 = NULL;
+                instruccion_aux_global.parametro_1 = NULL;
                 log_warning(cpu_logger, "[CPU] Parámetro 1 no provisto (len=%d). Seteado en NULL.", len1);
                 // Si KM igual mandó 1 byte (el \0), avanzamos el buffer para no desfasarnos
                 if (len1 == 1)
@@ -76,8 +76,8 @@ void *atencion_km()
             }
             else
             {
-                instruccion_aux_global->parametro_1 = malloc(len1);                      // Pedimos el espacio justo
-                buffer_read(instruccion_aux_global->parametro_1, paquete->buffer, len1); // Copiamos el contenido
+                instruccion_aux_global.parametro_1 = malloc(len1);                      // Pedimos el espacio justo
+                buffer_read(instruccion_aux_global.parametro_1, paquete->buffer, len1); // Copiamos el contenido
             }
 
             // 3. Deserializar parametro_2 (Dinámico)
@@ -85,7 +85,7 @@ void *atencion_km()
             buffer_read(&len2, paquete->buffer, sizeof(int));
             if (len2 <= 1)
             {
-                instruccion_aux_global->parametro_2 = NULL;
+                instruccion_aux_global.parametro_2 = NULL;
                 log_warning(cpu_logger, "[CPU] Parámetro 2 no provisto (len=%d). Seteado en NULL.", len2);
                 if (len2 == 1)
                 {
@@ -96,8 +96,8 @@ void *atencion_km()
             }
             else
             {
-                instruccion_aux_global->parametro_2 = malloc(len2);
-                buffer_read(instruccion_aux_global->parametro_2, paquete->buffer, len2);
+                instruccion_aux_global.parametro_2 = malloc(len2);
+                buffer_read(instruccion_aux_global.parametro_2, paquete->buffer, len2);
             }
 
             sem_post(&sem_instruccion_recibida);
@@ -113,9 +113,9 @@ void *atencion_km()
 
             // Seteamos el comando en un estado de error para que el ciclo de instrucción sepa qué hacer.
             // NO SE LIBERA CON FREE () NADA !!! PUNTEROS APUNTANDO A NULL.
-            instruccion_aux_global->comando = ERROR_INSTRUCCION;
-            instruccion_aux_global->parametro_1 = NULL;
-            instruccion_aux_global->parametro_2 = NULL;
+            instruccion_aux_global.comando = ERROR_INSTRUCCION;
+            instruccion_aux_global.parametro_1 = NULL;
+            instruccion_aux_global.parametro_2 = NULL;
             exit(EXIT_FAILURE);
             break;
         }
@@ -139,23 +139,27 @@ void *atencion_km()
             buffer_read(nuevo_ms->puerto, recibir_MS->buffer, size_puerto);
             eliminar_paquete(recibir_MS);
 
-            list_add(lista_memory_sticks, nuevo_ms);
+            nuevo_ms->socket = crear_conexion(nuevo_ms->ip, nuevo_ms->puerto);
 
-            // --- CONEXIÓN AL MEMORY STICK ---
-            conexion_ms = crear_conexion(nuevo_ms->ip, nuevo_ms->puerto);
-            if (conexion_ms == -1)
+            if (nuevo_ms->socket == -1)
             {
                 log_error(cpu_logger, "ERROR AL CREAR CONEXION CPU->MS.");
+                // Asegúrate de liberar la memoria de 'nuevo_ms' antes de salir
+                free(nuevo_ms->ip);
+                free(nuevo_ms->puerto);
+                free(nuevo_ms);
                 liberar_todo();
                 exit(EXIT_FAILURE);
             }
 
-            if (!realizar_handshake(conexion_ms, identificador_cpu, "Memory Stick"))
+            if (!realizar_handshake(nuevo_ms->socket, identificador_cpu, "Memory Stick"))
             {
                 liberar_todo();
                 exit(EXIT_FAILURE);
             }
-
+            pthread_mutex_lock(&mutex_lista_sticks);
+            list_add(lista_memory_sticks, nuevo_ms);
+            pthread_mutex_unlock(&mutex_lista_sticks);
             break;
         }
         default:

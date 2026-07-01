@@ -4,14 +4,7 @@ t_log *cpu_logger;
 cpu_struct_config cpu_config;
 int conexion_km;
 int conexion_ks;
-int conexion_ms;
 int identificador_cpu;
-sem_t sem_proceso_nuevo;
-sem_t hay_interrupcion;
-sem_t sem_contexto_recibido;
-sem_t sem_contexto_procesado;
-sem_t sem_instruccion_recibida;
-sem_t sem_instruccion_procesada;
 int PID_a_ejecutar = -1;
 int PID_Interrupcion = -1;
 t_list *lista_memory_sticks;
@@ -20,10 +13,16 @@ int TAM_MAX_SEGMENTO = -1;
 t_contexto_ejecucion contexto_aux_global;
 t_instruccion instruccion_aux_global;
 //  Semaforos:
-pthread_mutex_t conexiones_km = PTHREAD_MUTEX_INITIALIZER; // MUTEX
-pthread_mutex_t conexiones_ks = PTHREAD_MUTEX_INITIALIZER; // MUTEX
-pthread_mutex_t conexiones_ms = PTHREAD_MUTEX_INITIALIZER; // MUTEX
-sem_t semaphore;                                           // Coordinacion //POR AHORA NO SE USA
+sem_t sem_proceso_nuevo;
+sem_t sem_contexto_recibido;
+sem_t sem_contexto_procesado;
+sem_t sem_instruccion_recibida;
+sem_t sem_instruccion_procesada;
+sem_t hay_interrupcion;
+sem_t semaphore;                                                // Coordinacion //POR AHORA NO SE USA
+pthread_mutex_t mutex_lista_sticks = PTHREAD_MUTEX_INITIALIZER; // MUTEX
+pthread_mutex_t conexiones_km = PTHREAD_MUTEX_INITIALIZER;      // MUTEX
+pthread_mutex_t conexiones_ks = PTHREAD_MUTEX_INITIALIZER;      // MUTEX
 
 void cpu_cargar_config(char *path)
 {
@@ -93,14 +92,13 @@ void cerrar_conexiones()
 {
     close(conexion_ks);
     close(conexion_km);
-    close(conexion_ms);
 }
 
 void liberar_semaforos()
 {
+    pthread_mutex_destroy(&mutex_lista_sticks);
     pthread_mutex_destroy(&conexiones_km);
     pthread_mutex_destroy(&conexiones_ks);
-    pthread_mutex_destroy(&conexiones_ms);
     sem_destroy(&sem_proceso_nuevo);
     sem_destroy(&sem_contexto_recibido);
     sem_destroy(&sem_contexto_procesado);
@@ -126,11 +124,29 @@ void cpu_liberar_log()
     log_destroy(cpu_logger);
 }
 
+void destruir_memory_stick(void *element)
+{
+    t_memory_stick *ms = (t_memory_stick *)element;
+
+    // 1. Cerrar la conexión (socket)
+    if (ms->socket != -1)
+    {
+        close(ms->socket);
+    }
+
+    // 2. Liberar los campos dinámicos
+    free(ms->ip);
+    free(ms->puerto);
+
+    // 3. Liberar la estructura en sí
+    free(ms);
+}
+
 void liberar_todo()
 {
     cerrar_conexiones();
     liberar_semaforos();
     cpu_liberar_config();
     cpu_liberar_log();
-    list_destroy_and_destroy_elements(lista_memory_sticks, free);
+    list_destroy_and_destroy_elements(lista_memory_sticks, destruir_memory_stick);
 }

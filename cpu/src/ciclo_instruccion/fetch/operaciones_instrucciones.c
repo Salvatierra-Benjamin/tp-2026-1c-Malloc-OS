@@ -16,15 +16,15 @@ void Recibir_Instruccion(t_instruccion *nueva_instruccion)
     sem_wait(&sem_instruccion_recibida);
 
     // 2. Copia de campos primitivos (estos se copian valor a valor, sin peligro)
-    nueva_instruccion->comando = instruccion_aux_global->comando;
-    nueva_instruccion->PID = instruccion_aux_global->PID;
+    nueva_instruccion->comando = instruccion_aux_global.comando;
+    nueva_instruccion->PID = instruccion_aux_global.PID;
 
     // 3. Copia profunda (Deep Copy) de los parámetros dinámicos
     // A. Verificamos si existe contenido (!= NULL) para evitar Segmentation Fault.
     // B. Usamos strdup para reservar memoria propia y copiar el valor.
     // C. Si es NULL, asignamos NULL para mantener la integridad.
-    nueva_instruccion->parametro_1 = (instruccion_aux_global->parametro_1 != NULL) ? strdup(instruccion_aux_global->parametro_1) : NULL;
-    nueva_instruccion->parametro_2 = (instruccion_aux_global->parametro_2 != NULL) ? strdup(instruccion_aux_global->parametro_2) : NULL;
+    nueva_instruccion->parametro_1 = (instruccion_aux_global.parametro_1 != NULL) ? strdup(instruccion_aux_global.parametro_1) : NULL;
+    nueva_instruccion->parametro_2 = (instruccion_aux_global.parametro_2 != NULL) ? strdup(instruccion_aux_global.parametro_2) : NULL;
 
     // 4. Avisar al hilo receptor que ya copiamos todo y puede destruir la global
     sem_post(&sem_instruccion_procesada);

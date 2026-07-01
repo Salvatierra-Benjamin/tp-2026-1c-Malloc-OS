@@ -41,9 +41,9 @@ typedef enum
     // ---------------- IO -> SCHEDULER ----------------
     IO_ENVIA_IO = 2000,
 
-    OK_STDIN = 2004, // (PID)
+    OK_STDIN = 2004,  // (PID)
     OK_STDOUT = 2005, // (PID)
-    OK_SLEEP = 2006, // (PID)
+    OK_SLEEP = 2006,  // (PID)
     ENVIAR_DATOS_IO = 2007,
     // PAQUETE_STDIN = 2100,
     // PAQUETE_STDOUT = 2101,
@@ -95,21 +95,21 @@ typedef enum
 
     // ---------------- KS -> KM ----------------
     CREACION_PROCESO = 5000,
-    STDOUT_SOLICITUD_LECTURA = 5001, // int len, char* dir_logica, int tamanio, int pid
-    SUSPENCION_PROCESO = 5002,       // PID
+    STDOUT_SOLICITUD_LECTURA = 5001,      // int len, char* dir_logica, int tamanio, int pid
+    SUSPENCION_PROCESO = 5002,            // PID
     SOLICITUD_DESSUSPENCION_LISTA = 5003, // Lista de PIDS Y PRIORIDADES a dessuspender: [cantidad][pid1][prioridad1][pid2][prioridad2]...[pidN][prioridadN]
-    FIN_PROCESO = 5005, // PID
+    FIN_PROCESO = 5005,                   // PID
 
     // ---------------- KM -> KS ----------------
     DETECCION_CORRUPCION_MEMORIA = 10000,
     AUMENTO_DE_MEMORIA = 10001,
     DESALOJO_POR_COMPACTACION = 10002,
     FIN_COMPACTACION = 10003,
-    OK_STDIN_DATOS_ESCRITOS = 10004, // (len, BYTES ESCRITOS, pid)
-    STDOUT_RESTUESTA_LECTURA = 10005, // (longitud a imprimir, cadena de bytes y pid)
-    OK_MEM_FREE = 10006, // OK_MEM_FREE (PID)
-    OK_MEM_ALLOC = 10007, // OK_MEM_ALLOC (PID)
-    OK_PROCESO_SUSPENDIDO = 10008, // OK_PROCESO_SUSPENDIDO (PID)
+    OK_STDIN_DATOS_ESCRITOS = 10004,   // (len, BYTES ESCRITOS, pid)
+    STDOUT_RESTUESTA_LECTURA = 10005,  // (longitud a imprimir, cadena de bytes y pid)
+    OK_MEM_FREE = 10006,               // OK_MEM_FREE (PID)
+    OK_MEM_ALLOC = 10007,              // OK_MEM_ALLOC (PID)
+    OK_PROCESO_SUSPENDIDO = 10008,     // OK_PROCESO_SUSPENDIDO (PID)
     OK_PROCESO_DES_SUSPENDIDO = 10009, // OK_PROCESO_DES_SUSPENDIDO (PID)
     ERROR_CREACION_PROCESO = 10010,
     OK_CREACION_PROCESO = 10011,
@@ -125,8 +125,8 @@ typedef enum
 
     // ---------------- KS -> CPU ----------------
     ALOJAR_PROCESO = 7000, // KS envia pid a CPU
-    INTERRUPCION = 7001, // KS envia pid a CPU
-    // STDOUT_RESPUESTA_BYTES = 7003, // (longitudAImprimir, cadena de caracteres (bytes) la cual deberá imprimir, PID)
+    INTERRUPCION = 7001,   // KS envia pid a CPU
+                         // STDOUT_RESPUESTA_BYTES = 7003, // (longitudAImprimir, cadena de caracteres (bytes) la cual deberá imprimir, PID)
 
     // ---------------- KM -> CPU ----------------
     CONTEXTO_EJECUCION = 8000, // KM envia [t_registros, t_tabla_de_segmentos]
