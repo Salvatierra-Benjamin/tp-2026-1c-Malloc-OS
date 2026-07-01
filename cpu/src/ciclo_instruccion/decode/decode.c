@@ -9,6 +9,8 @@ t_executor tabla_comandos[] = {
     [SUB] = execute_SUB,
     [JNZ] = execute_JNZ,
     // [COPY_MEM]     = execute_COPY_MEM,
+
+    // --- SYSCALLS --- //
     [MUTEX_CREATE] = execute_MUTEX_CREATE,
     [MUTEX_LOCK] = execute_MUTEX_LOCK,
     [MUTEX_UNLOCK] = execute_MUTEX_UNLOCK,
