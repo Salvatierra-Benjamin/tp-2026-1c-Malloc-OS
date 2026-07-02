@@ -1,8 +1,50 @@
 #include "manejador_ks.h"
+#include <manejador_memory_stick/manejador_memory_stick.h>
 
 // comparador para list_add_sorted — va en el .h o arriba del .c
 static bool comparar_huecos_por_base(t_hueco *a, t_hueco *b) {
     return a->base < b->base;
+}
+
+// Alloc que quedó esperando compactación. Solo lo toca el hilo de manejador_ks
+// (lo setea iniciar_compactacion y lo consume CONFIRMACION_DESALOJO_COMPACTACION),
+// así que no necesita mutex. KS no manda otro MEM_ALLOC mientras compacta.
+static struct {
+    bool activo;
+    int pid;
+    int sid;
+    uint32_t tamanio;
+} alloc_pendiente = { .activo = false };
+
+// referencia a un segmento de un proceso, para ordenar por base al compactar
+typedef struct {
+    int pid;
+    segmento_t *seg;
+} t_seg_ref;
+
+static bool comparar_seg_ref_por_base(void *a, void *b) {
+    return ((t_seg_ref *)a)->seg->dir_base < ((t_seg_ref *)b)->seg->dir_base;
+}
+
+// Envíos a KS chequeando que esté conectado (socket == -1 si nunca conectó o se cayó).
+void enviar_operacion_a_ks(op_code operacion) {
+    pthread_mutex_lock(&mutex_socket_kernel_scheduler);
+    if (socket_kernel_scheduler != -1) {
+        enviar_operacion(socket_kernel_scheduler, operacion);
+    } else {
+        log_warning(logger, "[KM] KS no conectado: se descarta operacion %d", operacion);
+    }
+    pthread_mutex_unlock(&mutex_socket_kernel_scheduler);
+}
+
+void enviar_paquete_a_ks(t_paquete *paquete) {
+    pthread_mutex_lock(&mutex_socket_kernel_scheduler);
+    if (socket_kernel_scheduler != -1) {
+        enviar_paquete(paquete, socket_kernel_scheduler);
+    } else {
+        log_warning(logger, "[KM] KS no conectado: se descarta paquete %d", paquete->codigo_operacion);
+    }
+    pthread_mutex_unlock(&mutex_socket_kernel_scheduler);
 }
 
 static t_hueco *best_fit(uint32_t tamanio) {
@@ -105,7 +147,31 @@ void *manejador_ks(void *arg)
             log_debug(logger, "pid : %d | sid : %d | tamanio : %d", pid, sid, tamanio);
             bool necesita_compactacion = false;
             uint32_t base = crear_segmento(pid, sid, (uint32_t)tamanio, &necesita_compactacion);
-            responder_mem_alloc_a_ks(pid, base, necesita_compactacion);
+            if (base == UINT32_MAX && necesita_compactacion)
+            {
+                iniciar_compactacion(pid, sid, (uint32_t)tamanio);
+                break;
+            }
+            responder_mem_alloc_a_ks(pid, base);
+            break;
+        }
+        case CONFIRMACION_DESALOJO_COMPACTACION:
+        {
+            // KS terminó de desalojar todas las CPUs: nadie accede a memoria hasta FIN_COMPACTACION
+            compactar();
+
+            if (alloc_pendiente.activo)
+            {
+                bool necesita_compactacion = false;
+                uint32_t base = crear_segmento(alloc_pendiente.pid, alloc_pendiente.sid,
+                                               alloc_pendiente.tamanio, &necesita_compactacion);
+                // tras compactar el espacio libre es contiguo: si sigue sin entrar, es falta
+                // de espacio real — no se reintenta otra compactación
+                responder_mem_alloc_a_ks(alloc_pendiente.pid, base);
+                alloc_pendiente.activo = false;
+            }
+
+            enviar_operacion_a_ks(FIN_COMPACTACION);
             break;
         }
         case -1:
@@ -309,33 +375,18 @@ void finalizar_proceso(int pid) {
 
 // segmentos
 
-// Responde a KS el resultado de un MEM_ALLOC según lo que devolvió crear_segmento:
-//   - base != UINT32_MAX                          -> segmento creado OK
-//   - base == UINT32_MAX && necesita_compactacion -> hay espacio total pero fragmentado
-//   - base == UINT32_MAX && !necesita_compactacion -> sin espacio (o PID/SID inválido)
-// El socket a KS se protege con su mutex. Función lista para usar; el flujo de
-// comunicación fino (base/sid a CPU, opcode de error, disparo de compactación) se
-// termina de definir aparte.
-void responder_mem_alloc_a_ks(int pid, uint32_t base, bool necesita_compactacion) {
+// Responde a KS el resultado de un MEM_ALLOC:
+//   - base != UINT32_MAX -> segmento creado OK
+//   - base == UINT32_MAX -> sin espacio (o PID/SID inválido)
+// El caso "fragmentado" ya no llega acá: lo intercepta el caller con iniciar_compactacion.
+void responder_mem_alloc_a_ks(int pid, uint32_t base) {
     if (base != UINT32_MAX) {
         t_paquete *respuesta = crear_paquete(OK_MEM_ALLOC);
         agregar_a_paquete(respuesta, &pid, sizeof(int));
         // PENDIENTE(flujo): cuando se defina la actualización de la tabla de segmentos
         // en CPU, acá se agrega también la base (y/o el sid) del segmento nuevo.
-        pthread_mutex_lock(&mutex_socket_kernel_scheduler);
-        enviar_paquete(respuesta, socket_kernel_scheduler);
-        pthread_mutex_unlock(&mutex_socket_kernel_scheduler);
+        enviar_paquete_a_ks(respuesta);
         eliminar_paquete(respuesta);
-        return;
-    }
-
-    if (necesita_compactacion) {
-        // Espacio suficiente pero fragmentado. NO se dispara DESALOJO_POR_COMPACTACION
-        // todavía: la compactación (desalojo de CPUs vía KS -> compactar -> reintentar
-        // alloc -> FIN_COMPACTACION) no está implementada, y mandarlo dejaría a KS
-        // esperando un FIN_COMPACTACION que nunca llega.
-        // PENDIENTE(compactacion): disparar la compactación y reintentar el alloc.
-        log_warning(logger, "[KM] MEM_ALLOC PID %d: espacio fragmentado, requiere compactacion (pendiente)", pid);
         return;
     }
 
@@ -345,28 +396,135 @@ void responder_mem_alloc_a_ks(int pid, uint32_t base, bool necesita_compactacion
     log_warning(logger, "[KM] MEM_ALLOC PID %d: sin espacio disponible", pid);
 }
 
+// Guarda el alloc que no entró por fragmentación y pide a KS que desaloje las CPUs.
+// La respuesta (CONFIRMACION_DESALOJO_COMPACTACION) la atiende el loop de manejador_ks.
+void iniciar_compactacion(int pid, int sid, uint32_t tamanio) {
+    alloc_pendiente.activo = true;
+    alloc_pendiente.pid = pid;
+    alloc_pendiente.sid = sid;
+    alloc_pendiente.tamanio = tamanio;
+
+    log_info(logger, "[KM] MEM_ALLOC PID %d: espacio fragmentado, se solicita desalojo para compactar", pid);
+
+    enviar_operacion_a_ks(DESALOJO_POR_COMPACTACION);
+}
+
+// Memoria total = fin del último stick (las bases se asignan contiguas y solo se agregan).
+static uint32_t memoria_total(void) {
+    pthread_mutex_lock(&mutex_lista_datos_ms);
+    uint32_t total = 0;
+    if (!list_is_empty(lista_datos_ms)) {
+        t_datos_ms *ultimo = list_get(lista_datos_ms, list_size(lista_datos_ms) - 1);
+        total = ultimo->base + ultimo->tamanio;
+    }
+    pthread_mutex_unlock(&mutex_lista_datos_ms);
+    return total;
+}
+
+// Corre con las CPUs desalojadas (nadie más toca memoria). Desliza todos los segmentos
+// de todos los procesos hacia la base 0 en orden de dirección, moviendo los datos reales
+// entre sticks, y deja un único hueco al final. Al procesar en orden ascendente, el
+// destino de cada segmento nunca pisa datos aún no movidos.
+void compactar(void) {
+    log_debug(logger, "[KM] inicio de compactacion");
+
+    pthread_mutex_lock(&mutex_procesos_memoria);
+
+    t_list *refs = list_create();
+    t_list *procesos = dictionary_elements(procesos_memoria);
+    for (int i = 0; i < list_size(procesos); i++) {
+        t_procesos_memoria *p = list_get(procesos, i);
+        tabla_segmentos_t *tabla = &p->contexto->tabla_segmentos;
+        for (int j = 0; j < tabla->cantidad_segmentos; j++) {
+            t_seg_ref *ref = malloc(sizeof(t_seg_ref));
+            ref->pid = p->contexto->PID;
+            ref->seg = &tabla->segmento[j];
+            list_add(refs, ref);
+        }
+    }
+    list_destroy(procesos);
+
+    list_sort(refs, comparar_seg_ref_por_base);
+
+    uint32_t cursor = 0;
+    bool exito = true;
+
+    for (int i = 0; i < list_size(refs) && exito; i++) {
+        t_seg_ref *ref = list_get(refs, i);
+        segmento_t *seg = ref->seg;
+
+        if (seg->dir_base != cursor) {
+            void *buffer = malloc(seg->tam_seg);
+            exito = leer_rango_global(ref->pid, seg->dir_base, seg->tam_seg, buffer)
+                 && escribir_rango_global(ref->pid, cursor, seg->tam_seg, buffer);
+            free(buffer);
+
+            if (exito) {
+                seg->dir_base = cursor;
+            }
+        }
+        cursor += seg->tam_seg;
+    }
+
+    list_destroy_and_destroy_elements(refs, free);
+    pthread_mutex_unlock(&mutex_procesos_memoria);
+
+    if (!exito) {
+        // un read/write a stick solo falla si el stick murió: mismo tratamiento que
+        // la desconexión (corrupción -> KS hace BSOD), no se tocan los huecos
+        log_error(logger, "[KM] fallo de lectura/escritura durante la compactacion");
+        enviar_operacion_a_ks(DETECCION_CORRUPCION_MEMORIA);
+        return;
+    }
+
+    // todo el espacio libre queda como un único hueco al final
+    uint32_t total = memoria_total();
+    pthread_mutex_lock(&mutex_lista_huecos);
+    list_clean_and_destroy_elements(lista_huecos, free);
+    if (cursor < total) {
+        t_hueco *h = malloc(sizeof(t_hueco));
+        h->base = cursor;
+        h->tamanio = total - cursor;
+        list_add(lista_huecos, h);
+    }
+    pthread_mutex_unlock(&mutex_lista_huecos);
+
+    usleep(parametros->compaction_delay * 1000);
+
+    log_debug(logger, "[KM] fin de compactacion: %u bytes ocupados, %u libres contiguos",
+              cursor, total - cursor);
+}
+
 // UINT32_MAX es error
+// La tabla de segmentos se lee (copia) desde los hilos de CPU bajo mutex_procesos_memoria,
+// así que toda mutación (realloc/write/memmove) va bajo ese mismo mutex. Los locks de
+// procesos y huecos nunca se toman anidados: se trabaja por fases.
 uint32_t crear_segmento(int pid, int sid, uint32_t tamanio, bool *necesita_compactacion) {
     *necesita_compactacion = false;
 
+    // fase 1: validar proceso y sid (bajo lock de procesos)
     char *key = string_itoa(pid);
     pthread_mutex_lock(&mutex_procesos_memoria);
     t_procesos_memoria *proceso = dictionary_get(procesos_memoria, key);
-    pthread_mutex_unlock(&mutex_procesos_memoria);
     free(key);
 
     if (proceso == NULL) {
+        pthread_mutex_unlock(&mutex_procesos_memoria);
         return UINT32_MAX;
     }
 
-    // verificar que el sid no exista ya
     tabla_segmentos_t *tabla = &proceso->contexto->tabla_segmentos;
     for (int i = 0; i < tabla->cantidad_segmentos; i++) {
         if (tabla->segmento[i].id_segmento == sid) {
+            pthread_mutex_unlock(&mutex_procesos_memoria);
             return UINT32_MAX;  // sid duplicado
         }
     }
+    pthread_mutex_unlock(&mutex_procesos_memoria);
+    // el puntero 'proceso' y su tabla siguen válidos: el único hilo que los muta o
+    // libera es este mismo (manejador_ks); los hilos de CPU solo copian
 
+    // fase 2: elegir y consumir hueco (bajo lock de huecos)
     pthread_mutex_lock(&mutex_lista_huecos);
 
     t_hueco *hueco = NULL;
@@ -404,9 +562,21 @@ uint32_t crear_segmento(int pid, int sid, uint32_t tamanio, bool *necesita_compa
 
     pthread_mutex_unlock(&mutex_lista_huecos);
 
+    // fase 3: escribir la tabla (bajo lock de procesos — los CPUs la copian con este lock)
+    pthread_mutex_lock(&mutex_procesos_memoria);
+
     int nuevo_id = tabla->cantidad_segmentos;
     segmento_t *tmp = realloc(tabla->segmento, (nuevo_id + 1) * sizeof(segmento_t));
     if (tmp == NULL) {
+        pthread_mutex_unlock(&mutex_procesos_memoria);
+        // devolver el hueco consumido en fase 2: si no, ese rango se pierde para siempre
+        t_hueco *h = malloc(sizeof(t_hueco));
+        h->base    = base_asignada;
+        h->tamanio = tamanio;
+        pthread_mutex_lock(&mutex_lista_huecos);
+        list_add_sorted(lista_huecos, h, (bool (*)(void *, void *))comparar_huecos_por_base);
+        mergear_huecos();
+        pthread_mutex_unlock(&mutex_lista_huecos);
         return UINT32_MAX;
     }
     tabla->segmento = tmp;
@@ -415,6 +585,8 @@ uint32_t crear_segmento(int pid, int sid, uint32_t tamanio, bool *necesita_compa
     tabla->segmento[nuevo_id].dir_base    = base_asignada;
     tabla->segmento[nuevo_id].tam_seg     = tamanio;
     tabla->cantidad_segmentos++;
+
+    pthread_mutex_unlock(&mutex_procesos_memoria);
 
     // Log obligatorio del enunciado
     log_info(logger, "## PID: %d - Segmento Creado %d - Tamaño: %u", pid, sid, tamanio);
@@ -426,10 +598,10 @@ bool eliminar_segmento(int pid, int sid) {
     char *key = string_itoa(pid);
     pthread_mutex_lock(&mutex_procesos_memoria);
     t_procesos_memoria *proceso = dictionary_get(procesos_memoria, key);
-    pthread_mutex_unlock(&mutex_procesos_memoria);
     free(key);
 
     if (proceso == NULL) {
+        pthread_mutex_unlock(&mutex_procesos_memoria);
         return false;
     }
 
@@ -444,13 +616,14 @@ bool eliminar_segmento(int pid, int sid) {
     }
 
     if (idx == -1) {
+        pthread_mutex_unlock(&mutex_procesos_memoria);
         return false;  // sid no existe
     }
 
     uint32_t base    = tabla->segmento[idx].dir_base;
     uint32_t tamanio = tabla->segmento[idx].tam_seg;
 
-    // eliminar del array preservando orden (memmove)
+    // eliminar del array preservando orden (memmove) — bajo lock: los CPUs copian esta tabla
     int restantes = tabla->cantidad_segmentos - idx - 1;
     if (restantes > 0) {
         memmove(&tabla->segmento[idx],
@@ -458,6 +631,8 @@ bool eliminar_segmento(int pid, int sid) {
                 restantes * sizeof(segmento_t));
     }
     tabla->cantidad_segmentos--;
+
+    pthread_mutex_unlock(&mutex_procesos_memoria);
 
     // liberar el hueco
     t_hueco *h = malloc(sizeof(t_hueco));

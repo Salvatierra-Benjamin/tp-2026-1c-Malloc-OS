@@ -7,6 +7,9 @@ pthread_mutex_t mutex_procesos_memoria;
 t_list *lista_memory_sticks;
 pthread_mutex_t mutex_lista_memory_sticks;
 
+t_list *lista_datos_ms;
+pthread_mutex_t mutex_lista_datos_ms;
+
 int socket_kernel_scheduler;
 pthread_mutex_t mutex_socket_kernel_scheduler;
 
@@ -24,6 +27,9 @@ void iniciar_recursos()
     pthread_mutex_init(&mutex_lista_memory_sticks, NULL);
     lista_memory_sticks = list_create();
 
+    pthread_mutex_init(&mutex_lista_datos_ms, NULL);
+    lista_datos_ms = list_create();
+
     pthread_mutex_init(&mutex_socket_kernel_scheduler, NULL);
     socket_kernel_scheduler = -1;
 
@@ -34,10 +40,33 @@ void iniciar_recursos()
     lista_huecos = list_create();
 }
 
+static void destruir_memory_stick(void *elem)
+{
+    t_memory_stick *ms = (t_memory_stick *)elem;
+    free(ms->ip);
+    free(ms->puerto);
+    free(ms);
+}
+
+static void destruir_datos_ms(void *elem)
+{
+    t_datos_ms *datos = (t_datos_ms *)elem;
+    pthread_mutex_destroy(&datos->mutex_datos);
+    free(datos);
+}
+
+static void destruir_cpu(void *elem)
+{
+    t_cpu *cpu = (t_cpu *)elem;
+    pthread_mutex_destroy(&cpu->mutex_socket);
+    free(cpu);
+}
+
 void liberar_recursos()
 {
     pthread_mutex_destroy(&mutex_procesos_memoria);
     pthread_mutex_destroy(&mutex_lista_memory_sticks);
+    pthread_mutex_destroy(&mutex_lista_datos_ms);
     pthread_mutex_destroy(&mutex_socket_kernel_scheduler);
     pthread_mutex_destroy(&mutex_lista_cpu);
     pthread_mutex_destroy(&mutex_lista_huecos);
@@ -48,8 +77,9 @@ void liberar_recursos()
     free(parametros);
     dictionary_destroy_and_destroy_elements(procesos_memoria, destruir_proceso_memoria);
 
-    list_destroy_and_destroy_elements(lista_memory_sticks, free);
-    list_destroy_and_destroy_elements(lista_cpu, free);
+    list_destroy_and_destroy_elements(lista_memory_sticks, destruir_memory_stick);
+    list_destroy_and_destroy_elements(lista_datos_ms, destruir_datos_ms);
+    list_destroy_and_destroy_elements(lista_cpu, destruir_cpu);
     list_destroy_and_destroy_elements(lista_huecos, free);
 
     log_destroy(logger);

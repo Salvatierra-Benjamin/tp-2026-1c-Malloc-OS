@@ -114,6 +114,7 @@ typedef enum
     ERROR_CREACION_PROCESO = 10010,
     OK_CREACION_PROCESO = 10011,
     RESPUESTA_DESSUSPENCION_LISTA = 10012, // Lista de PIDS Y PRIORIDADES dessuspendidas: [cantidad][pid1][prioridad1][pid2][prioridad2]...[pidN][prioridadN]
+    CONFIRMACION_DESALOJO_COMPACTACION = 10013, // KS -> KM (sin payload): todas las CPUs desalojadas, KM puede compactar. KS lo manda al terminar ks_termina_de_desalojar_por_compactacion.
 
     // ---------------- MS -> KM ----------------
     MEMORY_STICK_SIZE = 6000,

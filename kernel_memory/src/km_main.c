@@ -10,6 +10,10 @@ int main(int argc, char *argv[])
     }
     char *config_name = argv[1];
 
+    // un send() a un socket cerrado del otro lado genera SIGPIPE y mata el proceso;
+    // ignorándolo, send devuelve -1 y el hilo correspondiente maneja la desconexión
+    signal(SIGPIPE, SIG_IGN);
+
     config = config_create(config_name);
     parametros = iniciar_config(config);
     logger = log_create("km.log", "LOGGER - KM", 1, parametros->log_level);

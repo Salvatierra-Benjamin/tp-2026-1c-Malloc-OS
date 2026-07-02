@@ -30,6 +30,7 @@ typedef struct
 {
     int cpu_id;
     int cpu_socket;
+    pthread_mutex_t mutex_socket; // el socket lo escriben dos hilos: manejador_cpu (respuestas) y los hilos de stick (aviso_aumento_memoria)
 } t_cpu;
 
 typedef struct
@@ -37,6 +38,16 @@ typedef struct
     uint32_t base;
     uint32_t tamanio;
 } t_hueco;
+
+// Conexión de datos dedicada hacia un Memory Stick (local a KM: no tocar t_memory_stick,
+// que también lo usa CPU). base/tamanio se copian del stick al conectar y son inmutables.
+typedef struct
+{
+    uint32_t base;
+    uint32_t tamanio;
+    int socket_datos;            // nunca se cierra: el stick hace exit() si un cliente se desconecta
+    pthread_mutex_t mutex_datos; // protege el par completo enviar+recibir sobre socket_datos
+} t_datos_ms;
 
 extern t_list *lista_huecos;
 extern pthread_mutex_t mutex_lista_huecos;
@@ -49,6 +60,9 @@ extern pthread_mutex_t mutex_procesos_memoria;
 
 extern t_list *lista_memory_sticks;
 extern pthread_mutex_t mutex_lista_memory_sticks;
+
+extern t_list *lista_datos_ms; // t_datos_ms [] — conexiones de datos, paralela a lista_memory_sticks
+extern pthread_mutex_t mutex_lista_datos_ms;
 
 extern int socket_kernel_scheduler;
 extern pthread_mutex_t mutex_socket_kernel_scheduler;

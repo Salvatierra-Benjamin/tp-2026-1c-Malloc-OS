@@ -63,11 +63,13 @@ void *seleccion_dispositivo(void *arg)
     }
     case -1:
     {
+        close(socket_cliente);
         break;
     }
     default:
     {
         log_warning(logger, "se conecto un modulo desconocido : %d", socket_cliente);
+        close(socket_cliente);
         break;
     }
     }
