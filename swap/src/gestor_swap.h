@@ -34,10 +34,12 @@ typedef struct
 extern t_log *swap_logger;
 extern swap_config_struct swap_config;
 extern int conexion_km;
-extern FILE * archivo_swap;
+extern FILE *archivo_swap;
 
 // Semaforos:
-extern pthread_mutex_t conexiones_km; // MUTEX
-extern sem_t semaphore;               // Coordinacion //POR AHORA NO SE USA
+extern pthread_mutex_t mutex_escritura; // MUTEX
+extern pthread_mutex_t mutex_lecutra;   // MUTEX
+extern pthread_mutex_t conexiones_km;   // MUTEX
+extern sem_t semaphore;                 // Coordinacion //POR AHORA NO SE USA
 
 #endif
