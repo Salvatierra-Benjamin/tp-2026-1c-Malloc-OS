@@ -4,14 +4,6 @@
 
 void procesar_peticion_lectura(int socket, uint32_t direccion_fisica, int tamanio_a_leer)
 {
-
-    // if ((direccion_fisica + tamanio_a_leer) > tamanio_memoria_ms_ingresada)
-    // {
-    //     log_error(ms_logger, "Violación de segmento. Intento de lectura fuera de límites.");
-    //      enviar_paqueteks()...
-    //     exit(EXIT_FAILURE);
-    // }
-
     // 1. Reservar un buffer temporal para guardar los datos que vamos a leer
     void *datos_leidos = malloc(tamanio_a_leer);
 
