@@ -17,6 +17,7 @@ void finalizar_proceso(int pid);
 // segmentos
 uint32_t crear_segmento(int pid, int sid, uint32_t tamanio, bool *necesita_compactacion);
 bool eliminar_segmento(int pid, int sid);
+void responder_mem_alloc_a_ks(int pid, uint32_t base, bool necesita_compactacion);
 
 // huecos
 void mergear_huecos(); // no requiere mutex

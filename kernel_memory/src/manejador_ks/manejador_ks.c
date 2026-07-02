@@ -104,7 +104,8 @@ void *manejador_ks(void *arg)
             eliminar_paquete(mem_alloc);
             log_debug(logger, "pid : %d | sid : %d | tamanio : %d", pid, sid, tamanio);
             bool necesita_compactacion = false;
-            crear_segmento(pid, sid, (uint32_t)tamanio, &necesita_compactacion);
+            uint32_t base = crear_segmento(pid, sid, (uint32_t)tamanio, &necesita_compactacion);
+            responder_mem_alloc_a_ks(pid, base, necesita_compactacion);
             break;
         }
         case -1:
@@ -308,6 +309,42 @@ void finalizar_proceso(int pid) {
 
 // segmentos
 
+// Responde a KS el resultado de un MEM_ALLOC según lo que devolvió crear_segmento:
+//   - base != UINT32_MAX                          -> segmento creado OK
+//   - base == UINT32_MAX && necesita_compactacion -> hay espacio total pero fragmentado
+//   - base == UINT32_MAX && !necesita_compactacion -> sin espacio (o PID/SID inválido)
+// El socket a KS se protege con su mutex. Función lista para usar; el flujo de
+// comunicación fino (base/sid a CPU, opcode de error, disparo de compactación) se
+// termina de definir aparte.
+void responder_mem_alloc_a_ks(int pid, uint32_t base, bool necesita_compactacion) {
+    if (base != UINT32_MAX) {
+        t_paquete *respuesta = crear_paquete(OK_MEM_ALLOC);
+        agregar_a_paquete(respuesta, &pid, sizeof(int));
+        // PENDIENTE(flujo): cuando se defina la actualización de la tabla de segmentos
+        // en CPU, acá se agrega también la base (y/o el sid) del segmento nuevo.
+        pthread_mutex_lock(&mutex_socket_kernel_scheduler);
+        enviar_paquete(respuesta, socket_kernel_scheduler);
+        pthread_mutex_unlock(&mutex_socket_kernel_scheduler);
+        eliminar_paquete(respuesta);
+        return;
+    }
+
+    if (necesita_compactacion) {
+        // Espacio suficiente pero fragmentado. NO se dispara DESALOJO_POR_COMPACTACION
+        // todavía: la compactación (desalojo de CPUs vía KS -> compactar -> reintentar
+        // alloc -> FIN_COMPACTACION) no está implementada, y mandarlo dejaría a KS
+        // esperando un FIN_COMPACTACION que nunca llega.
+        // PENDIENTE(compactacion): disparar la compactación y reintentar el alloc.
+        log_warning(logger, "[KM] MEM_ALLOC PID %d: espacio fragmentado, requiere compactacion (pendiente)", pid);
+        return;
+    }
+
+    // Sin espacio o PID/SID inválido. Aún no hay opcode de error de alloc en el
+    // protocolo; se acuerda con KS al definir el flujo.
+    // PENDIENTE(flujo): notificar el fallo a KS con el opcode acordado.
+    log_warning(logger, "[KM] MEM_ALLOC PID %d: sin espacio disponible", pid);
+}
+
 // UINT32_MAX es error
 uint32_t crear_segmento(int pid, int sid, uint32_t tamanio, bool *necesita_compactacion) {
     *necesita_compactacion = false;
@@ -378,6 +415,9 @@ uint32_t crear_segmento(int pid, int sid, uint32_t tamanio, bool *necesita_compa
     tabla->segmento[nuevo_id].dir_base    = base_asignada;
     tabla->segmento[nuevo_id].tam_seg     = tamanio;
     tabla->cantidad_segmentos++;
+
+    // Log obligatorio del enunciado
+    log_info(logger, "## PID: %d - Segmento Creado %d - Tamaño: %u", pid, sid, tamanio);
 
     return base_asignada;
 }

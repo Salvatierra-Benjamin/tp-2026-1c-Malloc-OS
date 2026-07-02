@@ -1,4 +1,5 @@
 #include "manejador_memory_stick.h"
+#include <manejador_ks/manejador_ks.h>
 
 void *manejador_memory_stick(void *arg)
 {
@@ -88,6 +89,10 @@ void agregar_memory_stick(int tam_ms, char *ip, char *puerto, int socket_memory_
 
     list_add(lista_memory_sticks, ms);
     pthread_mutex_unlock(&mutex_lista_memory_sticks);
+
+    // El espacio del stick recién conectado pasa a estar disponible como hueco libre.
+    // Sin esto, lista_huecos queda vacía y crear_segmento nunca encuentra dónde asignar.
+    agregar_hueco_por_stick(ms);
 
     aviso_aumento_memoria(ms);
 
