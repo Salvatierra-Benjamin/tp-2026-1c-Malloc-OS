@@ -37,9 +37,10 @@ extern int conexion_km;
 extern FILE *archivo_swap;
 
 // Semaforos:
-extern pthread_mutex_t mutex_escritura; // MUTEX
-extern pthread_mutex_t mutex_lecutra;   // MUTEX
-extern pthread_mutex_t conexiones_km;   // MUTEX
-extern sem_t semaphore;                 // Coordinacion //POR AHORA NO SE USA
+// Un único mutex para el archivo: lecturas y escrituras comparten el mismo
+// FILE* (fseek + fread/fwrite no son atómicos entre sí).
+extern pthread_mutex_t mutex_archivo_swap; // MUTEX
+extern pthread_mutex_t conexiones_km;      // MUTEX
+extern sem_t semaphore;                    // Coordinacion //POR AHORA NO SE USA
 
 #endif

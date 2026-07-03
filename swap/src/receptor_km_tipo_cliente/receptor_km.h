@@ -5,6 +5,6 @@
 #include "iniciador_swap.h"
 
 void receptor_km();
-void *atencion_km();
+void *atencion_km(void *arg);
 
 #endif

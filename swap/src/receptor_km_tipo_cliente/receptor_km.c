@@ -1,5 +1,10 @@
 #include "receptor_km.h"
 #include "../operaciones/operaciones.h"
+
+// Contrato de respuestas SWAP -> KM (KM todavía no lo consume; al implementarlo
+// del lado de KM respetar este formato):
+//   RESPUESTA_ESCRITURA_SWAP: [bloque: int][exito: int (1 ok / 0 error)]
+//   RESPUESTA_LECTURA_SWAP:   [bloque: int][exito: int][datos: BLOCK_SIZE bytes, solo si exito]
 void receptor_km()
 {
     log_debug(swap_logger, "[RECEPTOR_KM_SWAP] Conectando con KM...");
@@ -10,7 +15,7 @@ void receptor_km()
     // Si usás pthread_detach: El hilo principal lanza el receptor y sigue de largo (OJO!!! PUEDE LLEGAR AL FIN DEL PROGRAMA!!!). Es la opción correcta si querés que el módulo haga más de una cosa a la vez (como ser cliente de KM y servidor de CPU al mismo tiempo).
 }
 
-void *atencion_km()
+void *atencion_km(void *arg)
 {
     log_debug(swap_logger, "[RECEPTOR_KM_SWAP] CONECTADO CON KM");
 
@@ -47,21 +52,37 @@ void *atencion_km()
             t_paquete *paquete_peticion = recibir_paquete(conexion_km);
             int bloque;
             buffer_read(&bloque, paquete_peticion->buffer, sizeof(int));
-            void *datos = malloc(swap_config.swap_block_size);
-            buffer_read(datos, paquete_peticion->buffer, swap_config.swap_block_size);
-            eliminar_paquete(paquete_peticion);
 
-            pthread_mutex_lock(&mutex_escritura);
-            escribir_bloque(bloque, datos);
-            pthread_mutex_unlock(&mutex_escritura);
-            free(datos);
+            // El payload tiene que traer el bloque + exactamente BLOCK_SIZE bytes de datos
+            int tamanio_esperado = sizeof(int) + swap_config.swap_block_size;
+            int exito = 0;
+            if (paquete_peticion->buffer->size < tamanio_esperado)
+            {
+                log_error(swap_logger, "Escritura rechazada: payload de %d bytes (se esperaban %d) para el bloque %d",
+                          paquete_peticion->buffer->size, tamanio_esperado, bloque);
+            }
+            else
+            {
+                void *datos = malloc(swap_config.swap_block_size);
+                buffer_read(datos, paquete_peticion->buffer, swap_config.swap_block_size);
+
+                pthread_mutex_lock(&mutex_archivo_swap);
+                exito = escribir_bloque(bloque, datos) > 0;
+                pthread_mutex_unlock(&mutex_archivo_swap);
+                free(datos);
+            }
+            eliminar_paquete(paquete_peticion);
 
             t_paquete *paquete_resp = crear_paquete(RESPUESTA_ESCRITURA_SWAP);
             agregar_a_paquete(paquete_resp, &bloque, sizeof(int));
+            agregar_a_paquete(paquete_resp, &exito, sizeof(int));
             enviar_paquete(paquete_resp, conexion_km);
             eliminar_paquete(paquete_resp);
 
-            log_info(swap_logger, "## Escritura del bloque: %d", bloque);
+            if (exito)
+            {
+                log_info(swap_logger, "## Escritura del bloque: %d", bloque);
+            }
             break;
         }
         case PETICION_LECTURA_SWAP:
@@ -72,13 +93,14 @@ void *atencion_km()
             eliminar_paquete(paquete_peticion);
 
             void *buffer = malloc(swap_config.swap_block_size);
-            pthread_mutex_lock(&mutex_lecutra);
-            int leidos = leer_bloque(bloque, buffer);
-            pthread_mutex_unlock(&mutex_lecutra);
+            pthread_mutex_lock(&mutex_archivo_swap);
+            int exito = leer_bloque(bloque, buffer) > 0;
+            pthread_mutex_unlock(&mutex_archivo_swap);
 
             t_paquete *paquete_resp = crear_paquete(RESPUESTA_LECTURA_SWAP);
             agregar_a_paquete(paquete_resp, &bloque, sizeof(int));
-            if (leidos > 0)
+            agregar_a_paquete(paquete_resp, &exito, sizeof(int));
+            if (exito)
             {
                 agregar_a_paquete(paquete_resp, buffer, swap_config.swap_block_size);
             }
@@ -86,7 +108,10 @@ void *atencion_km()
             eliminar_paquete(paquete_resp);
             free(buffer);
 
-            log_info(swap_logger, "## Lectura del bloque: %d", bloque);
+            if (exito)
+            {
+                log_info(swap_logger, "## Lectura del bloque: %d", bloque);
+            }
             break;
         }
         default:

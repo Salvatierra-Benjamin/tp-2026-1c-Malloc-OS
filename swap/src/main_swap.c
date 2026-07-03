@@ -15,8 +15,10 @@ int main(int argc, char *argv[])
     inicializar_logger();
     imprimir_valores_config_swap();
     inicializar_semaforos_coordinadores();
-    creacion_conexiones_swap();
-    // Abrir el archivo en modo escritura/lectura binaria.
+
+    // El archivo tiene que estar abierto ANTES de conectarse a KM:
+    // receptor_km() bloquea para siempre y las peticiones pueden llegar apenas
+    // se completa el handshake.
     // "w+b" crea el archivo vacío si no existe, o lo trunca a 0 si existe.
     archivo_swap = fopen(swap_config.swap_file_path, "w+b");
     if (archivo_swap == NULL)
@@ -26,7 +28,13 @@ int main(int argc, char *argv[])
     }
 
     // Truncamos/expandimos el archivo al tamaño total indicado en la config
-    ftruncate(fileno(archivo_swap), swap_config.swap_file_size);
+    if (ftruncate(fileno(archivo_swap), swap_config.swap_file_size) != 0)
+    {
+        log_error(swap_logger, "No se pudo dimensionar el archivo de SWAP a %d bytes", swap_config.swap_file_size);
+        exit(EXIT_FAILURE);
+    }
+
+    creacion_conexiones_swap();
 
     log_debug(swap_logger, "SWAP TERMINO.\n");
     liberar_todo();

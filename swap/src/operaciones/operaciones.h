@@ -9,7 +9,8 @@
 #include <pthread.h>
 #include "../iniciador_swap.h"
 
-void escribir_bloque(int numero_bloque, void *datos);
+bool bloque_valido(int numero_bloque);
+int escribir_bloque(int numero_bloque, void *datos);
 int leer_bloque(int numero_bloque, void *buffer);
 
 #endif // OPERACIONES_H
