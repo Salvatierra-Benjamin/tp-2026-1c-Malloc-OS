@@ -41,11 +41,11 @@ void *atencion_km()
 
             agregar_a_paquete(paquete_tamaño_puerto_km, &tamanio_memoria_ms_ingresada, sizeof(int));
 
-            int tamanio_mi_ip = strlen(ms_config.mi_ip)+1;
+            int tamanio_mi_ip = strlen(ms_config.mi_ip) + 1;
             agregar_a_paquete(paquete_tamaño_puerto_km, &tamanio_mi_ip, sizeof(int));
             agregar_a_paquete(paquete_tamaño_puerto_km, ms_config.mi_ip, tamanio_mi_ip);
 
-            int tamanio_puerto = strlen(ms_config.puerto_escucha_cpu)+1;
+            int tamanio_puerto = strlen(ms_config.puerto_escucha_cpu) + 1;
             agregar_a_paquete(paquete_tamaño_puerto_km, &tamanio_puerto, sizeof(int));
             agregar_a_paquete(paquete_tamaño_puerto_km, ms_config.puerto_escucha_cpu, tamanio_puerto);
 
@@ -78,8 +78,9 @@ void *atencion_km()
             eliminar_paquete(paquete_peticion_escritura_ms);
 
             // 4. Procesar la escritura en la memoria física simulada del MS
+            pthread_mutex_lock(&mutex_escritura);
             procesar_peticion_escritura(conexion_km, direccion_fisica, datos, tamanio_a_escribir);
-
+            pthread_mutex_unlock(&mutex_escritura);
             // 5. Responder el OK al Kernel Memory incluyendo el PID como control
             t_paquete *paquete_ok_escritura = crear_paquete(RESPUESTA_ESCRITURA_MS);
             agregar_a_paquete(paquete_ok_escritura, &pid, sizeof(int));
@@ -111,7 +112,9 @@ void *atencion_km()
             eliminar_paquete(paquete_peticion_lectura_ms);
 
             // 3. Procesar la lectura
+            pthread_mutex_lock(&mutex_lecutra);
             procesar_peticion_lectura(conexion_km, direccion_fisica, tamanio_a_leer);
+            pthread_mutex_unlock(&mutex_lecutra);
             break;
         }
         default:

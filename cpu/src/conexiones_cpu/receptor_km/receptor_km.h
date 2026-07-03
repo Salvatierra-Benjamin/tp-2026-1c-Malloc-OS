@@ -5,9 +5,9 @@
 #include "iniciador_cpu.h"
 #include "conexiones_cpu/handshakes/handshakes.h"
 #include "ciclo_instruccion/ciclo_instruccion.h"
+#include "contexto_ejecucion/contexto_ejecucion.h"
+#include "ciclo_instruccion/fetch/operaciones_instrucciones.h"
 void receptor_km();
 void *atencion_km();
-void Recibir_Contexto(t_contexto_ejecucion *contexto, t_buffer *buffer);
-void Loggear_Contexto(t_contexto_ejecucion *contexto_actual);
-void Destruir_Contexto(t_contexto_ejecucion *contexto);
+
 #endif

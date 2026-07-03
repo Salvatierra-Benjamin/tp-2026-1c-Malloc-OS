@@ -1,14 +1,15 @@
 #include "decode.h"
 // comentario borrar
 t_executor tabla_comandos[] = {
+    
     [NOOP] = execute_NOOP,
     [SET] = execute_SET,
-    // [MOV_IN]       = execute_MOV_IN,
-    // [MOV_OUT]      = execute_MOV_OUT,
+    [MOV_IN] = execute_MOV_IN,
+    [MOV_OUT] = execute_MOV_OUT,
     [SUM] = execute_SUM,
     [SUB] = execute_SUB,
     [JNZ] = execute_JNZ,
-    // [COPY_MEM]     = execute_COPY_MEM,
+    [COPY_MEM] = execute_COPY_MEM,
 
     // --- SYSCALLS --- //
     [MUTEX_CREATE] = execute_MUTEX_CREATE,

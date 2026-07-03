@@ -5,7 +5,9 @@ swap_config_struct swap_config;
 int conexion_km;
 FILE *archivo_swap;
 // Semaforos:
-pthread_mutex_t conexiones_km = PTHREAD_MUTEX_INITIALIZER; // MUTEX
+pthread_mutex_t mutex_escritura = PTHREAD_MUTEX_INITIALIZER; // MUTEX
+pthread_mutex_t mutex_lecutra = PTHREAD_MUTEX_INITIALIZER;   // MUTEX
+pthread_mutex_t conexiones_km = PTHREAD_MUTEX_INITIALIZER;   // MUTEX
 sem_t semaphore;
 
 void swap_cargar_config(char *path)
@@ -65,6 +67,9 @@ void cerrar_conexiones()
 
 void liberar_semaforos()
 {
+    pthread_mutex_destroy(&mutex_escritura);
+    pthread_mutex_destroy(&mutex_lecutra);
+    pthread_mutex_destroy(&conexiones_km);
     sem_destroy(&semaphore);
 }
 

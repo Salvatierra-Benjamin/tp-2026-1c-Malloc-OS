@@ -4,6 +4,5 @@
 #include "gestor_cpu.h"
 #include "iniciador_cpu.h"
 
-int MMU_TRADUCCION_FISICA(int dir_logica, uint32_t tam, int *dir_fisica, uint32_t *bytes_validos);
-
+uint32_t mmu_traducir(uint32_t dir_logica, uint32_t bytes_a_operar, t_contexto_ejecucion *contexto, int tam_max_segmento);
 #endif

@@ -51,7 +51,9 @@ void *atencion_km()
             buffer_read(datos, paquete_peticion->buffer, swap_config.swap_block_size);
             eliminar_paquete(paquete_peticion);
 
+            pthread_mutex_lock(&mutex_escritura);
             escribir_bloque(bloque, datos);
+            pthread_mutex_unlock(&mutex_escritura);
             free(datos);
 
             t_paquete *paquete_resp = crear_paquete(RESPUESTA_ESCRITURA_SWAP);
@@ -70,7 +72,9 @@ void *atencion_km()
             eliminar_paquete(paquete_peticion);
 
             void *buffer = malloc(swap_config.swap_block_size);
+            pthread_mutex_lock(&mutex_lecutra);
             int leidos = leer_bloque(bloque, buffer);
+            pthread_mutex_unlock(&mutex_lecutra);
 
             t_paquete *paquete_resp = crear_paquete(RESPUESTA_LECTURA_SWAP);
             agregar_a_paquete(paquete_resp, &bloque, sizeof(int));

@@ -16,4 +16,7 @@ typedef enum
     DI
 } reg_id;
 
+void Recibir_Contexto(t_contexto_ejecucion *contexto, t_buffer *buffer);
+void Loggear_Contexto(t_contexto_ejecucion *contexto_actual);
+void Destruir_Contexto(t_contexto_ejecucion *contexto);
 #endif

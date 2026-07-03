@@ -7,6 +7,8 @@ int socket_servidor_con_cpu;
 int tamanio_memoria_ms_ingresada;
 void *puntero_memoria_ms;
 // Semaforos:
+pthread_mutex_t mutex_escritura = PTHREAD_MUTEX_INITIALIZER; // MUTEX
+pthread_mutex_t mutex_lecutra = PTHREAD_MUTEX_INITIALIZER;   // MUTEX
 pthread_mutex_t conexiones_km = PTHREAD_MUTEX_INITIALIZER;   // MUTEX
 pthread_mutex_t sockets_cliente = PTHREAD_MUTEX_INITIALIZER; // MUTEX
 sem_t semaphore;
@@ -29,7 +31,7 @@ void ms_cargar_config(char *path)
     ms_config.ip_km = strdup(config_get_string_value(config, "IP_KM"));
     ms_config.puerto_km = strdup(config_get_string_value(config, "PUERTO_KM"));
     ms_config.mi_ip = strdup(config_get_string_value(config, "MI_IP"));
-    
+
     config_destroy(config);
 }
 
@@ -70,6 +72,8 @@ void cerrar_conexiones()
 
 void liberar_semaforos()
 {
+    pthread_mutex_destroy(&mutex_escritura);
+    pthread_mutex_destroy(&mutex_lecutra);
     pthread_mutex_destroy(&conexiones_km);
     sem_destroy(&semaphore);
     sem_destroy(&sem_ok_conexion_km);

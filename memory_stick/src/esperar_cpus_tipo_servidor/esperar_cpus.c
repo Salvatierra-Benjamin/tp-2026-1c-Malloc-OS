@@ -50,7 +50,7 @@ void *atencion_cpus(void *socket_cliente_puntero)
             log_debug(ms_logger, "[RECEPTOR_CPUS]Recibido el cpu_id número: %d", cpu_id);
 
             // Conexión de CPU: “## CPU <ID CPU> Conectada”
-            log_info(ms_logger, "“## CPU %d Conectada”" , cpu_id);
+            log_info(ms_logger, "“## CPU %d Conectada”", cpu_id);
             break;
         }
         case PETICION_ESCRITURA_MS:
@@ -77,8 +77,9 @@ void *atencion_cpus(void *socket_cliente_puntero)
             eliminar_paquete(paquete_peticion_escritura_ms);
 
             // 4. Procesar la escritura en la memoria física simulada del MS
+            pthread_mutex_lock(&mutex_escritura);
             procesar_peticion_escritura(socket_cliente, direccion_fisica, datos, tamanio_a_escribir);
-
+            pthread_mutex_unlock(&mutex_escritura);
             // 5. Responder el OK al socket_cliente incluyendo el PID como control
             t_paquete *paquete_ok_escritura = crear_paquete(RESPUESTA_ESCRITURA_MS);
             agregar_a_paquete(paquete_ok_escritura, &pid, sizeof(int));
@@ -86,7 +87,7 @@ void *atencion_cpus(void *socket_cliente_puntero)
             enviar_paquete(paquete_ok_escritura, socket_cliente);
 
             // Escritura: “## Escritura de <CANTIDAD ESCRITA> bytes”
-            log_info(ms_logger,  "## Escritura de %d bytes", tamanio_a_escribir);
+            log_info(ms_logger, "## Escritura de %d bytes", tamanio_a_escribir);
 
             // 6. Limpieza absoluta para evitar memory leaks
             eliminar_paquete(paquete_ok_escritura);
@@ -111,9 +112,11 @@ void *atencion_cpus(void *socket_cliente_puntero)
             eliminar_paquete(paquete_peticion_lectura_ms);
 
             // 3. Procesar la lectura
+            pthread_mutex_lock(&mutex_lecutra);
             procesar_peticion_lectura(socket_cliente, direccion_fisica, tamanio_a_leer);
+            pthread_mutex_unlock(&mutex_lecutra);
             // Lectura: “## Lectura de <CANTIDAD ESCRITA> bytes” // Asumno que se equivocaron en el enunciado
-            log_info(ms_logger,  "## Lectura de %d bytes", tamanio_a_leer);
+            log_info(ms_logger, "## Lectura de %d bytes", tamanio_a_leer);
             break;
         }
         default:
