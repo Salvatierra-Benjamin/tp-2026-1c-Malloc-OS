@@ -7,8 +7,7 @@ int socket_servidor_con_cpu;
 int tamanio_memoria_ms_ingresada;
 void *puntero_memoria_ms;
 // Semaforos:
-pthread_mutex_t mutex_escritura = PTHREAD_MUTEX_INITIALIZER; // MUTEX
-pthread_mutex_t mutex_lecutra = PTHREAD_MUTEX_INITIALIZER;   // MUTEX
+pthread_mutex_t mutex_memoria = PTHREAD_MUTEX_INITIALIZER;   // MUTEX
 pthread_mutex_t conexiones_km = PTHREAD_MUTEX_INITIALIZER;   // MUTEX
 pthread_mutex_t sockets_cliente = PTHREAD_MUTEX_INITIALIZER; // MUTEX
 sem_t semaphore;
@@ -72,8 +71,7 @@ void cerrar_conexiones()
 
 void liberar_semaforos()
 {
-    pthread_mutex_destroy(&mutex_escritura);
-    pthread_mutex_destroy(&mutex_lecutra);
+    pthread_mutex_destroy(&mutex_memoria);
     pthread_mutex_destroy(&conexiones_km);
     sem_destroy(&semaphore);
     sem_destroy(&sem_ok_conexion_km);

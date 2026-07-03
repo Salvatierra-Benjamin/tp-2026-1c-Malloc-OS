@@ -7,6 +7,6 @@
 #include "operaciones_ms/lectura.h"
 
 void receptor_km();
-void *atencion_km();
+void *atencion_km(void *arg);
 
 #endif

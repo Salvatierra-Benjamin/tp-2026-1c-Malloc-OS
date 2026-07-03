@@ -11,7 +11,7 @@ void receptor_km()
     // Si usás pthread_detach: El hilo principal lanza el receptor y sigue de largo (OJO!!! PUEDE LLEGAR AL FIN DEL PROGRAMA!!!). Es la opción correcta si querés que el módulo haga más de una cosa a la vez (como ser cliente de KM y servidor de CPU al mismo tiempo).
 }
 
-void *atencion_km()
+void *atencion_km(void *arg)
 {
     log_debug(ms_logger, "[RECEPTOR_KM_MS] CONECTADO CON KM");
 
@@ -78,9 +78,9 @@ void *atencion_km()
             eliminar_paquete(paquete_peticion_escritura_ms);
 
             // 4. Procesar la escritura en la memoria física simulada del MS
-            pthread_mutex_lock(&mutex_escritura);
+            pthread_mutex_lock(&mutex_memoria);
             procesar_peticion_escritura(conexion_km, direccion_fisica, datos, tamanio_a_escribir);
-            pthread_mutex_unlock(&mutex_escritura);
+            pthread_mutex_unlock(&mutex_memoria);
             // 5. Responder el OK al Kernel Memory incluyendo el PID como control
             t_paquete *paquete_ok_escritura = crear_paquete(RESPUESTA_ESCRITURA_MS);
             agregar_a_paquete(paquete_ok_escritura, &pid, sizeof(int));
@@ -112,9 +112,9 @@ void *atencion_km()
             eliminar_paquete(paquete_peticion_lectura_ms);
 
             // 3. Procesar la lectura
-            pthread_mutex_lock(&mutex_lecutra);
+            pthread_mutex_lock(&mutex_memoria);
             procesar_peticion_lectura(conexion_km, direccion_fisica, tamanio_a_leer);
-            pthread_mutex_unlock(&mutex_lecutra);
+            pthread_mutex_unlock(&mutex_memoria);
             break;
         }
         default:

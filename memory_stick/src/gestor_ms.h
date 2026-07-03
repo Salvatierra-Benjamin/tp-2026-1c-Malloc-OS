@@ -39,8 +39,9 @@ extern int socket_servidor_con_cpu;
 extern int tamanio_memoria_ms_ingresada;
 extern void *puntero_memoria_ms;
 // Semaforos:
-extern pthread_mutex_t mutex_escritura; // MUTEX
-extern pthread_mutex_t mutex_lecutra;   // MUTEX
+// Un único mutex para la memoria: lecturas y escrituras comparten el mismo
+// bloque (memcpy concurrentes sobre la misma zona son un data race).
+extern pthread_mutex_t mutex_memoria;   // MUTEX
 extern pthread_mutex_t conexiones_km;   // MUTEX
 extern pthread_mutex_t sockets_cliente; // MUTEX
 extern sem_t semaphore;                 // Coordinacion //POR AHORA NO SE USA
