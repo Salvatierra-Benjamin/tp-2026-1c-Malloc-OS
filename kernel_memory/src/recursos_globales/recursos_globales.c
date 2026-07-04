@@ -16,6 +16,11 @@ pthread_mutex_t mutex_socket_kernel_scheduler;
 int socket_swap;
 pthread_mutex_t mutex_socket_swap;
 
+int tam_bloque_swap;
+int cantidad_bloques_swap;
+bool *bloques_swap_ocupados;
+pthread_mutex_t mutex_bloques_swap;
+
 t_list *lista_procesos_suspendidos;
 pthread_mutex_t mutex_lista_procesos_suspendidos;
 
@@ -42,6 +47,11 @@ void iniciar_recursos()
     pthread_mutex_init(&mutex_socket_swap, NULL);
     socket_swap = -1;
 
+    pthread_mutex_init(&mutex_bloques_swap, NULL);
+    tam_bloque_swap = 0;
+    cantidad_bloques_swap = 0;
+    bloques_swap_ocupados = NULL;
+
     pthread_mutex_init(&mutex_lista_cpu, NULL);
     lista_cpu = list_create();
 
@@ -67,6 +77,14 @@ static void destruir_datos_ms(void *elem)
     free(datos);
 }
 
+static void destruir_proceso_suspendido(void *elem)
+{
+    t_proceso_suspendido *ps = (t_proceso_suspendido *)elem;
+    destruir_proceso_memoria(ps->proceso);
+    list_destroy_and_destroy_elements(ps->bloques, free);
+    free(ps);
+}
+
 static void destruir_cpu(void *elem)
 {
     t_cpu *cpu = (t_cpu *)elem;
@@ -81,9 +99,12 @@ void liberar_recursos()
     pthread_mutex_destroy(&mutex_lista_datos_ms);
     pthread_mutex_destroy(&mutex_socket_kernel_scheduler);
     pthread_mutex_destroy(&mutex_socket_swap);
+    pthread_mutex_destroy(&mutex_bloques_swap);
     pthread_mutex_destroy(&mutex_lista_cpu);
     pthread_mutex_destroy(&mutex_lista_huecos);
     pthread_mutex_destroy(&mutex_lista_procesos_suspendidos);
+
+    free(bloques_swap_ocupados);
 
     free(parametros->allocation_strategy);
     free(parametros->puerto_escucha);
@@ -95,7 +116,7 @@ void liberar_recursos()
     list_destroy_and_destroy_elements(lista_datos_ms, destruir_datos_ms);
     list_destroy_and_destroy_elements(lista_cpu, destruir_cpu);
     list_destroy_and_destroy_elements(lista_huecos, free);
-    list_destroy_and_destroy_elements(lista_procesos_suspendidos, free);
+    list_destroy_and_destroy_elements(lista_procesos_suspendidos, destruir_proceso_suspendido);
 
     log_destroy(logger);
     config_destroy(config);

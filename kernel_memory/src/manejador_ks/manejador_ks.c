@@ -1,5 +1,6 @@
 #include "manejador_ks.h"
 #include <manejador_memory_stick/manejador_memory_stick.h>
+#include <manejador_swap/manejador_swap.h>
 
 // comparador para list_add_sorted — va en el .h o arriba del .c
 static bool comparar_huecos_por_base(t_hueco *a, t_hueco *b) {
@@ -179,7 +180,18 @@ void *manejador_ks(void *arg)
             t_paquete *suspender_pid_paquete = recibir_paquete(socket_ks);
             int pid;
             buffer_read(&pid, suspender_pid_paquete->buffer, sizeof(int));
-            bool exito = suspender_proceso(pid);
+            eliminar_paquete(suspender_pid_paquete);
+
+            if (suspender_proceso(pid))
+            {
+                t_paquete *ok = crear_paquete(OK_PROCESO_SUSPENDIDO);
+                agregar_a_paquete(ok, &pid, sizeof(int));
+                enviar_paquete_a_ks(ok);
+                eliminar_paquete(ok);
+            }
+            // PENDIENTE(flujo): no hay opcode de error de suspensión; acordar con KS
+            // qué responder si falla (pid inexistente / swap caído).
+            // siempre habrá bloques libres suficientes
             break;
         }
         case -1:
@@ -342,16 +354,119 @@ t_contexto_ejecucion *crear_contexto_ejecucion(int pid)
     return contexto;
 }
 
-// suspender proceso
+// bloques de swap que ocupa un segmento (cada segmento arranca en bloque nuevo, spec)
+static int bloques_para(uint32_t tam_seg)
+{
+    return (tam_seg + tam_bloque_swap - 1) / tam_bloque_swap;
+}
+
+// Suspende un proceso: vuelca todos sus segmentos a SWAP, libera su memoria principal
+// y lo mueve de procesos_memoria a lista_procesos_suspendidos. Corre en el hilo de
+// manejador_ks. El contenido se escribe a swap ANTES de liberar nada: si algo falla,
+// el proceso queda intacto en memoria y se devuelven los bloques reservados.
 bool suspender_proceso(int pid)
 {
+    // fase 1: buscar el proceso (sin sacarlo del diccionario todavía)
     char *key = string_itoa(pid);
-    bool exito;
     pthread_mutex_lock(&mutex_procesos_memoria);
-    t_procesos_memoria *proceso_suspender = dictionary_get(procesos_memoria, key);
-    dictionary_remove(procesos_memoria, key);
+    t_procesos_memoria *proceso = dictionary_get(procesos_memoria, key);
     pthread_mutex_unlock(&mutex_procesos_memoria);
-    return exito;
+    // el puntero sigue válido fuera del lock: solo este hilo muta o libera procesos
+    // (misma garantía documentada en crear_segmento)
+
+    if (proceso == NULL)
+    {
+        free(key);
+        log_warning(logger, "[KM] SUSPENSION PID %d: proceso inexistente", pid);
+        return false;
+    }
+
+    if (tam_bloque_swap == 0)
+    {
+        free(key);
+        log_warning(logger, "[KM] SUSPENSION PID %d: swap nunca se conecto", pid);
+        return false;
+    }
+
+    // fase 2: reservar todos los bloques necesarios de una (o nada)
+    tabla_segmentos_t *tabla = &proceso->contexto->tabla_segmentos;
+
+    int bloques_necesarios = 0;
+    for (int i = 0; i < tabla->cantidad_segmentos; i++)
+        bloques_necesarios += bloques_para(tabla->segmento[i].tam_seg);
+
+    t_list *bloques = reservar_bloques_swap(bloques_necesarios);
+    if (bloques == NULL)
+    {
+        free(key);
+        log_warning(logger, "[KM] SUSPENSION PID %d: sin espacio en swap (%d bloques) | reconfigurar swap para mas espacio", pid, bloques_necesarios);
+        return false;
+    }
+
+    // fase 3: volcar cada segmento a swap; la memoria queda intacta hasta que todo salga bien
+    bool exito = true;
+    int bloque_idx = 0;
+    for (int i = 0; i < tabla->cantidad_segmentos && exito; i++)
+    {
+        segmento_t *seg = &tabla->segmento[i];
+        int cant = bloques_para(seg->tam_seg);
+
+        // calloc: el último bloque va relleno con ceros hasta tam_bloque_swap
+        void *buffer = calloc(cant, tam_bloque_swap);
+        exito = leer_rango_global(pid, seg->dir_base, seg->tam_seg, buffer);
+
+        for (int b = 0; b < cant && exito; b++)
+        {
+            int *nro = list_get(bloques, bloque_idx + b);
+            exito = escribir_bloque_swap(*nro, buffer + b * tam_bloque_swap);
+            /*
+            buffer se guarda de manera contigua
+            buffer + b * tam_bloque_swap lee la parte del buffer que entra en el bloque
+            */
+        }
+        free(buffer);
+        bloque_idx += cant;
+    }
+
+    if (!exito)
+    {
+        liberar_bloques_swap(bloques);
+        free(key);
+        log_error(logger, "[KM] SUSPENSION PID %d: fallo el volcado a swap, el proceso queda en memoria", pid);
+        return false;
+    }
+
+    // fase 4: liberar la memoria principal del proceso
+    pthread_mutex_lock(&mutex_lista_huecos);
+    for (int i = 0; i < tabla->cantidad_segmentos; i++)
+    {
+        t_hueco *h = malloc(sizeof(t_hueco));
+        h->base    = tabla->segmento[i].dir_base;
+        h->tamanio = tabla->segmento[i].tam_seg;
+        list_add_sorted(lista_huecos, h, (bool (*)(void *, void *))comparar_huecos_por_base);
+    }
+    mergear_huecos();
+    pthread_mutex_unlock(&mutex_lista_huecos);
+
+    // fase 5: mover el proceso del diccionario a la lista de suspendidos
+    pthread_mutex_lock(&mutex_procesos_memoria);
+    dictionary_remove(procesos_memoria, key); // sin destruir: la metadata se conserva
+    pthread_mutex_unlock(&mutex_procesos_memoria);
+    free(key);
+
+    t_proceso_suspendido *suspendido = malloc(sizeof(t_proceso_suspendido));
+    suspendido->pid = pid;
+    suspendido->proceso = proceso;
+    suspendido->bloques = bloques;
+
+    pthread_mutex_lock(&mutex_lista_procesos_suspendidos);
+    list_add(lista_procesos_suspendidos, suspendido);
+    pthread_mutex_unlock(&mutex_lista_procesos_suspendidos);
+
+    log_debug(logger, "[KM] PID %d suspendido: %d segmentos en %d bloques de swap",
+              pid, tabla->cantidad_segmentos, bloques_necesarios);
+
+    return true;
 }
 
 // finalizar proceso

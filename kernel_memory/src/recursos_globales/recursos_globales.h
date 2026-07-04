@@ -39,6 +39,19 @@ typedef struct
     uint32_t tamanio;
 } t_hueco;
 
+// Proceso fuera de memoria principal: la metadata (instrucciones, contexto, tabla de
+// segmentos) se conserva acá; el contenido de los segmentos vive en bloques de SWAP.
+// 'bloques' (int*) sigue el orden de la tabla de segmentos: cada segmento ocupa sus
+// ceil(tam_seg / tam_bloque_swap) bloques consecutivos de la lista — un bloque nunca
+// se comparte entre segmentos (spec). dir_base de los segmentos queda obsoleta hasta
+// la des-suspensión.
+typedef struct
+{
+    int pid;
+    t_procesos_memoria *proceso;
+    t_list *bloques;
+} t_proceso_suspendido;
+
 // Conexión de datos dedicada hacia un Memory Stick (local a KM: no tocar t_memory_stick,
 // que también lo usa CPU). base/tamanio se copian del stick al conectar y son inmutables.
 typedef struct
@@ -70,8 +83,18 @@ extern pthread_mutex_t mutex_lista_procesos_suspendidos;
 extern int socket_kernel_scheduler;
 extern pthread_mutex_t mutex_socket_kernel_scheduler;
 
+// socket_swap se usa sincrónico: el par completo petición+respuesta va bajo
+// mutex_socket_swap (el hilo manejador_swap termina tras recibir BLOCK_SIZE,
+// no queda ningún lector permanente). -1 = swap no conectado o caído.
 extern int socket_swap;
 extern pthread_mutex_t mutex_socket_swap;
+
+// Estado de bloques de SWAP. tam_bloque_swap y cantidad_bloques_swap se escriben una
+// sola vez (agregar_swap) antes de publicar socket_swap; después son de solo lectura.
+extern int tam_bloque_swap;         // 0 mientras swap no haya conectado
+extern int cantidad_bloques_swap;
+extern bool *bloques_swap_ocupados; // bitmap [cantidad_bloques_swap]
+extern pthread_mutex_t mutex_bloques_swap;
 
 extern t_log *logger;
 extern t_config *config;
