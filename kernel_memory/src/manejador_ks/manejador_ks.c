@@ -174,6 +174,14 @@ void *manejador_ks(void *arg)
             enviar_operacion_a_ks(FIN_COMPACTACION);
             break;
         }
+        case SUSPENCION_PROCESO:
+        {
+            t_paquete *suspender_pid_paquete = recibir_paquete(socket_ks);
+            int pid;
+            buffer_read(&pid, suspender_pid_paquete->buffer, sizeof(int));
+            bool exito = suspender_proceso(pid);
+            break;
+        }
         case -1:
         {
             log_warning(logger, "[KS] se desconecto ks");
@@ -332,6 +340,18 @@ t_contexto_ejecucion *crear_contexto_ejecucion(int pid)
     contexto->tabla_segmentos.segmento = NULL;
     contexto->tabla_segmentos.cantidad_segmentos = 0;
     return contexto;
+}
+
+// suspender proceso
+bool suspender_proceso(int pid)
+{
+    char *key = string_itoa(pid);
+    bool exito;
+    pthread_mutex_lock(&mutex_procesos_memoria);
+    t_procesos_memoria *proceso_suspender = dictionary_get(procesos_memoria, key);
+    dictionary_remove(procesos_memoria, key);
+    pthread_mutex_unlock(&mutex_procesos_memoria);
+    return exito;
 }
 
 // finalizar proceso

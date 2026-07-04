@@ -2,19 +2,23 @@
 
 void *manejador_swap(void *arg)
 {
-    int socket_swap = *(int *)arg;
+    int socket_swap_local = *(int *)arg;
     free(arg);
+
+    pthread_mutex_lock(&mutex_socket_swap);
+    socket_swap = socket_swap_local;
+    pthread_mutex_unlock(&mutex_socket_swap);
 
     int ejecutando = 1;
 
     while (ejecutando)
     {
-        int op_code = recibir_operacion(socket_swap);
+        int op_code = recibir_operacion(socket_swap_local);
         switch (op_code)
         {
         case BLOCK_SIZE:
         {
-            t_paquete *block_size_total_swap = recibir_paquete(socket_swap);
+            t_paquete *block_size_total_swap = recibir_paquete(socket_swap_local);
             int tam_bloque;
             buffer_read(&tam_bloque, block_size_total_swap->buffer, sizeof(int));
             int tam_swap;
@@ -36,7 +40,7 @@ void *manejador_swap(void *arg)
         }
         }
     }
-    close(socket_swap);
+    close(socket_swap_local);
     return NULL;
 }
 

@@ -18,6 +18,8 @@ t_palabra_reservada string_a_palabra_reservada(char *str);
 t_contexto_ejecucion *crear_contexto_ejecucion(int pid);
 void finalizar_proceso(int pid);
 
+bool suspender_proceso(int pid);
+
 // segmentos
 uint32_t crear_segmento(int pid, int sid, uint32_t tamanio, bool *necesita_compactacion);
 bool eliminar_segmento(int pid, int sid);
