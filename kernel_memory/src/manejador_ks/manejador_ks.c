@@ -96,6 +96,103 @@ static uint32_t espacio_total_libre(void) {
     return total;
 }
 
+// Reincorpora el rango [base, base+tamanio) como hueco libre (ordenado + merge).
+static void devolver_hueco(uint32_t base, uint32_t tamanio) {
+    t_hueco *h = malloc(sizeof(t_hueco));
+    h->base    = base;
+    h->tamanio = tamanio;
+
+    pthread_mutex_lock(&mutex_lista_huecos);
+    list_add_sorted(lista_huecos, h, (bool (*)(void *, void *))comparar_huecos_por_base);
+    mergear_huecos();
+    pthread_mutex_unlock(&mutex_lista_huecos);
+}
+
+// Elige y consume un hueco según ALLOCATION_STRATEGY. Devuelve la base asignada o
+// UINT32_MAX si ningún hueco alcanza; en ese caso *necesita_compactacion indica si
+// el espacio total libre alcanzaría (o sea, el problema es la fragmentación).
+static uint32_t asignar_espacio(uint32_t tamanio, bool *necesita_compactacion) {
+    *necesita_compactacion = false;
+
+    pthread_mutex_lock(&mutex_lista_huecos);
+
+    t_hueco *hueco = NULL;
+    if (strcmp(parametros->allocation_strategy, "BEST") == 0) {
+        hueco = best_fit(tamanio);
+    } else {
+        hueco = worst_fit(tamanio);
+    }
+
+    if (hueco == NULL) {
+        if (espacio_total_libre() >= tamanio) {
+            *necesita_compactacion = true;
+        }
+        pthread_mutex_unlock(&mutex_lista_huecos);
+        return UINT32_MAX;
+    }
+
+    uint32_t base_asignada = hueco->base;
+
+    if (hueco->tamanio == tamanio) {
+        t_list_iterator *it = list_iterator_create(lista_huecos);
+        while (list_iterator_has_next(it)) {
+            t_hueco *h = list_iterator_next(it);
+            if (h->base == base_asignada) {
+                list_iterator_remove(it);
+                free(h);
+                break;
+            }
+        }
+        list_iterator_destroy(it);
+    } else {
+        hueco->base    += tamanio;
+        hueco->tamanio -= tamanio;
+    }
+
+    pthread_mutex_unlock(&mutex_lista_huecos);
+    return base_asignada;
+}
+
+// Traduce una dirección lógica a física para STDIN/STDOUT. Esquema de las pruebas de
+// la cátedra: nro_segmento = dir / SEGMENT_MAX_SIZE, offset = dir % SEGMENT_MAX_SIZE.
+// Valida que [offset, offset+tamanio) entre en el segmento (si no: segfault lógico).
+// La física devuelta es estable: compactación y suspensión corren en este mismo hilo,
+// así que nadie mueve segmentos entre la traducción y el acceso.
+static bool traducir_direccion_logica(int pid, uint32_t dir_logica, uint32_t tamanio, uint32_t *dir_fisica)
+{
+    int nro_segmento = dir_logica / parametros->segment_max_size;
+    uint32_t offset = dir_logica % parametros->segment_max_size;
+
+    char *key = string_itoa(pid);
+    pthread_mutex_lock(&mutex_procesos_memoria);
+    t_procesos_memoria *proceso = dictionary_get(procesos_memoria, key);
+    free(key);
+
+    if (proceso == NULL)
+    {
+        pthread_mutex_unlock(&mutex_procesos_memoria);
+        return false;
+    }
+
+    tabla_segmentos_t *tabla = &proceso->contexto->tabla_segmentos;
+    segmento_t *seg = NULL;
+    for (int i = 0; i < tabla->cantidad_segmentos; i++)
+    {
+        if (tabla->segmento[i].id_segmento == nro_segmento)
+        {
+            seg = &tabla->segmento[i];
+            break;
+        }
+    }
+
+    bool valido = (seg != NULL && tamanio > 0 && offset + tamanio <= seg->tam_seg);
+    if (valido)
+        *dir_fisica = seg->dir_base + offset;
+
+    pthread_mutex_unlock(&mutex_procesos_memoria);
+    return valido;
+}
+
 void *manejador_ks(void *arg)
 {
     int socket_ks = *(int *)arg;
@@ -130,7 +227,16 @@ void *manejador_ks(void *arg)
             int prioridad;
             buffer_read(&prioridad, info_proceso->buffer, sizeof(int));
 
-            creacion_proceso(pid, path, prioridad);
+            // respuesta [pid]: OK_CREACION_PROCESO o ERROR_CREACION_PROCESO
+            // (contrato asumido — KS todavía no implementa el lado receptor)
+            // int y no op_code: la variable local 'op_code' del loop sombrea al typedef
+            int resultado = creacion_proceso(pid, path, prioridad)
+                                ? OK_CREACION_PROCESO
+                                : ERROR_CREACION_PROCESO;
+            t_paquete *respuesta_creacion = crear_paquete(resultado);
+            agregar_a_paquete(respuesta_creacion, &pid, sizeof(int));
+            enviar_paquete_a_ks(respuesta_creacion);
+            eliminar_paquete(respuesta_creacion);
 
             free(path);
             eliminar_paquete(info_proceso);
@@ -194,6 +300,158 @@ void *manejador_ks(void *arg)
             // siempre habrá bloques libres suficientes
             break;
         }
+        case STDIN_SOLICITUD_ESCRITURA:
+        {
+            // STDIN: KS ya tiene los datos que IO leyó del teclado; KM los escribe en
+            // los sticks. [pid][dir_logica][tamanio][datos] -> OK_STDIN_DATOS_ESCRITOS
+            // [pid] o ERROR_STDIN [pid].
+            t_paquete *solicitud = recibir_paquete(socket_ks);
+            int pid, tamanio;
+            uint32_t dir_logica;
+            buffer_read(&pid, solicitud->buffer, sizeof(int));
+            buffer_read(&dir_logica, solicitud->buffer, sizeof(uint32_t));
+            buffer_read(&tamanio, solicitud->buffer, sizeof(int));
+
+            uint32_t dir_fisica;
+            bool exito = tamanio > 0 && traducir_direccion_logica(pid, dir_logica, (uint32_t)tamanio, &dir_fisica);
+
+            if (exito)
+            {
+                void *datos = malloc(tamanio);
+                buffer_read(datos, solicitud->buffer, tamanio);
+                exito = escribir_rango_global(pid, dir_fisica, (uint32_t)tamanio, datos);
+                free(datos);
+            }
+            eliminar_paquete(solicitud);
+
+            if (!exito)
+                log_warning(logger, "[KM] STDIN PID %d: acceso invalido (dir logica %u, tam %d)",
+                            pid, dir_logica, tamanio);
+
+            t_paquete *respuesta = crear_paquete(exito ? OK_STDIN_DATOS_ESCRITOS : ERROR_STDIN);
+            agregar_a_paquete(respuesta, &pid, sizeof(int));
+            enviar_paquete_a_ks(respuesta);
+            eliminar_paquete(respuesta);
+            break;
+        }
+        case STDOUT_SOLICITUD_LECTURA:
+        {
+            // STDOUT: KS pide los datos a imprimir; KM los lee de los sticks.
+            // [pid][dir_logica][tamanio] -> STDOUT_RESTUESTA_LECTURA [pid][tamanio][datos]
+            // o ERROR_STDOUT [pid].
+            t_paquete *solicitud = recibir_paquete(socket_ks);
+            int pid, tamanio;
+            uint32_t dir_logica;
+            buffer_read(&pid, solicitud->buffer, sizeof(int));
+            buffer_read(&dir_logica, solicitud->buffer, sizeof(uint32_t));
+            buffer_read(&tamanio, solicitud->buffer, sizeof(int));
+            eliminar_paquete(solicitud);
+
+            uint32_t dir_fisica;
+            void *datos = NULL;
+            bool exito = tamanio > 0 && traducir_direccion_logica(pid, dir_logica, (uint32_t)tamanio, &dir_fisica);
+
+            if (exito)
+            {
+                datos = malloc(tamanio);
+                exito = leer_rango_global(pid, dir_fisica, (uint32_t)tamanio, datos);
+            }
+
+            if (exito)
+            {
+                t_paquete *respuesta = crear_paquete(STDOUT_RESTUESTA_LECTURA);
+                agregar_a_paquete(respuesta, &pid, sizeof(int));
+                agregar_a_paquete(respuesta, &tamanio, sizeof(int));
+                agregar_a_paquete(respuesta, datos, tamanio);
+                enviar_paquete_a_ks(respuesta);
+                eliminar_paquete(respuesta);
+            }
+            else
+            {
+                log_warning(logger, "[KM] STDOUT PID %d: acceso invalido (dir logica %u, tam %d)",
+                            pid, dir_logica, tamanio);
+                t_paquete *error = crear_paquete(ERROR_STDOUT);
+                agregar_a_paquete(error, &pid, sizeof(int));
+                enviar_paquete_a_ks(error);
+                eliminar_paquete(error);
+            }
+            free(datos);
+            break;
+        }
+        case ENVIO_MEM_FREE:
+        {
+            // MEM_FREE (PID, SID) — se reusa el opcode CPU->KS, mismo criterio que
+            // ENVIO_MEM_ALLOC. Syscall: se responde siempre (OK/ERROR_MEM_FREE [pid]).
+            t_paquete *mem_free = recibir_paquete(socket_ks);
+            int pid, sid;
+            buffer_read(&pid, mem_free->buffer, sizeof(int));
+            buffer_read(&sid, mem_free->buffer, sizeof(int));
+            eliminar_paquete(mem_free);
+
+            bool exito = eliminar_segmento(pid, sid);
+            if (exito)
+                log_debug(logger, "[KM] MEM_FREE PID %d: segmento %d liberado", pid, sid);
+            else
+                log_warning(logger, "[KM] MEM_FREE PID %d SID %d: rechazado (pid o sid inexistente)", pid, sid);
+
+            t_paquete *respuesta = crear_paquete(exito ? OK_MEM_FREE : ERROR_MEM_FREE);
+            agregar_a_paquete(respuesta, &pid, sizeof(int));
+            enviar_paquete_a_ks(respuesta);
+            eliminar_paquete(respuesta);
+            break;
+        }
+        case FIN_PROCESO:
+        {
+            t_paquete *fin_paquete = recibir_paquete(socket_ks);
+            int pid;
+            buffer_read(&pid, fin_paquete->buffer, sizeof(int));
+            eliminar_paquete(fin_paquete);
+
+            finalizar_proceso(pid);
+            break;
+        }
+        case SOLICITUD_DESSUSPENCION_LISTA:
+        {
+            // [cantidad][pid1][prioridad1]...[pidN][prioridadN]
+            t_paquete *solicitud = recibir_paquete(socket_ks);
+            int cantidad;
+            buffer_read(&cantidad, solicitud->buffer, sizeof(int));
+
+            int *pids_ok = malloc(cantidad * sizeof(int));
+            int *prioridades_ok = malloc(cantidad * sizeof(int));
+            int n_ok = 0;
+
+            for (int i = 0; i < cantidad; i++)
+            {
+                int pid, prioridad;
+                buffer_read(&pid, solicitud->buffer, sizeof(int));
+                buffer_read(&prioridad, solicitud->buffer, sizeof(int));
+
+                if (dessuspender_proceso(pid, prioridad))
+                {
+                    pids_ok[n_ok] = pid;
+                    prioridades_ok[n_ok] = prioridad;
+                    n_ok++;
+                }
+            }
+            eliminar_paquete(solicitud);
+
+            // se responde siempre, aun con cantidad 0: KS necesita saber que el pedido
+            // terminó (los que no aparecen siguen suspendidos y se reintentan después)
+            t_paquete *respuesta = crear_paquete(RESPUESTA_DESSUSPENCION_LISTA);
+            agregar_a_paquete(respuesta, &n_ok, sizeof(int));
+            for (int i = 0; i < n_ok; i++)
+            {
+                agregar_a_paquete(respuesta, &pids_ok[i], sizeof(int));
+                agregar_a_paquete(respuesta, &prioridades_ok[i], sizeof(int));
+            }
+            enviar_paquete_a_ks(respuesta);
+            eliminar_paquete(respuesta);
+
+            free(pids_ok);
+            free(prioridades_ok);
+            break;
+        }
         case -1:
         {
             log_warning(logger, "[KS] se desconecto ks");
@@ -214,36 +472,64 @@ void *manejador_ks(void *arg)
     return NULL;
 }
 
-void creacion_proceso(int pid, char *path, int prioridad)
+// Devuelve true si el proceso quedó creado. Falla (sin efectos) si el pid ya existe
+// (en memoria o suspendido — dictionary_put pisaría el viejo y se perdería) o si el
+// script no se puede abrir.
+bool creacion_proceso(int pid, char *path, int prioridad)
 {
-    // list_lineas = dividir_archivo_por_linea(path_archivo)
+    // guard: pid duplicado en memoria
+    char *key = string_itoa(pid);
+    pthread_mutex_lock(&mutex_procesos_memoria);
+    bool ya_existe = dictionary_has_key(procesos_memoria, key);
+    pthread_mutex_unlock(&mutex_procesos_memoria);
+
+    // guard: pid duplicado suspendido (al des-suspender colisionaría en el diccionario)
+    if (!ya_existe)
+    {
+        pthread_mutex_lock(&mutex_lista_procesos_suspendidos);
+        for (int i = 0; i < list_size(lista_procesos_suspendidos) && !ya_existe; i++)
+        {
+            t_proceso_suspendido *ps = list_get(lista_procesos_suspendidos, i);
+            ya_existe = (ps->pid == pid);
+        }
+        pthread_mutex_unlock(&mutex_lista_procesos_suspendidos);
+    }
+
+    if (ya_existe)
+    {
+        free(key);
+        log_error(logger, "[KM] CREACION PID %d: ya existe un proceso con ese pid", pid);
+        return false;
+    }
+
     char *ruta_absoluta = armar_ruta(path);
     t_list *lineas = dividir_archivo_por_lineas(ruta_absoluta);
+
+    if (lineas == NULL)
+    {
+        log_error(logger, "[KM] CREACION PID %d: no se pudo abrir el script %s", pid, ruta_absoluta);
+        free(ruta_absoluta);
+        free(key);
+        return false;
+    }
     free(ruta_absoluta);
 
-    // list_instrucciones = convertir_list_lineas_en_list_instrucciones(list_lineas)
     t_list *instrucciones = convertir_lineas_en_instrucciones(lineas);
     list_destroy_and_destroy_elements(lineas, free);
-    
-    // contexto_ejecucion = crear_contexto_ejecucion()
+
     t_procesos_memoria *proceso = malloc(sizeof(t_procesos_memoria));
     proceso->instrucciones = instrucciones;
     proceso->contexto = crear_contexto_ejecucion(pid);
     proceso->prioridad = prioridad;
 
-    // crear proceso_memoria y añadir al diccionario (vinculado a pid) (NO OLVIDAD MUTEX)
-    char *key = string_itoa(pid);
-
     pthread_mutex_lock(&mutex_procesos_memoria);
     dictionary_put(procesos_memoria, key, proceso);
     pthread_mutex_unlock(&mutex_procesos_memoria);
-
     free(key);
 
     log_debug(logger, "[KS] PATH : %s", path);
     log_info(logger, "## PID: %d - Proceso Creado", pid);
-
-    // pendiente liberacion de memoria aca (instrucciones, procesos)
+    return true;
 }
 
 char *armar_ruta(char *ruta_relativa)
@@ -437,16 +723,8 @@ bool suspender_proceso(int pid)
     }
 
     // fase 4: liberar la memoria principal del proceso
-    pthread_mutex_lock(&mutex_lista_huecos);
     for (int i = 0; i < tabla->cantidad_segmentos; i++)
-    {
-        t_hueco *h = malloc(sizeof(t_hueco));
-        h->base    = tabla->segmento[i].dir_base;
-        h->tamanio = tabla->segmento[i].tam_seg;
-        list_add_sorted(lista_huecos, h, (bool (*)(void *, void *))comparar_huecos_por_base);
-    }
-    mergear_huecos();
-    pthread_mutex_unlock(&mutex_lista_huecos);
+        devolver_hueco(tabla->segmento[i].dir_base, tabla->segmento[i].tam_seg);
 
     // fase 5: mover el proceso del diccionario a la lista de suspendidos
     pthread_mutex_lock(&mutex_procesos_memoria);
@@ -469,7 +747,130 @@ bool suspender_proceso(int pid)
     return true;
 }
 
-// finalizar proceso
+// Des-suspende un proceso: asigna memoria nueva a todos sus segmentos, restaura el
+// contenido desde SWAP y lo devuelve a procesos_memoria. Espejo de suspender_proceso,
+// todo-o-nada: si algún segmento no consigue hueco o falla swap, se devuelven los
+// huecos consumidos y el proceso queda suspendido intacto (los bloques NO se liberan:
+// el contenido sigue en swap para reintentar cuando KS vuelva a pedirlo).
+bool dessuspender_proceso(int pid, int prioridad)
+{
+    // fase 1: buscar el suspendido (sin sacarlo de la lista todavía)
+    pthread_mutex_lock(&mutex_lista_procesos_suspendidos);
+    t_proceso_suspendido *suspendido = NULL;
+    int idx_suspendido = -1;
+    for (int i = 0; i < list_size(lista_procesos_suspendidos); i++)
+    {
+        t_proceso_suspendido *ps = list_get(lista_procesos_suspendidos, i);
+        if (ps->pid == pid)
+        {
+            suspendido = ps;
+            idx_suspendido = i;
+            break;
+        }
+    }
+    pthread_mutex_unlock(&mutex_lista_procesos_suspendidos);
+    // puntero e índice válidos fuera del lock: solo este hilo muta la lista
+
+    if (suspendido == NULL)
+    {
+        log_warning(logger, "[KM] DESSUSPENSION PID %d: no esta suspendido", pid);
+        return false;
+    }
+
+    tabla_segmentos_t *tabla = &suspendido->proceso->contexto->tabla_segmentos;
+
+    // fase 2: asignar memoria a todos los segmentos. Las bases nuevas van a un array
+    // temporal: la tabla no se toca hasta que todo salga bien.
+    uint32_t *bases_nuevas = malloc(tabla->cantidad_segmentos * sizeof(uint32_t));
+    int asignados = 0;
+    bool exito = true;
+
+    for (int i = 0; i < tabla->cantidad_segmentos && exito; i++)
+    {
+        bool necesita_compactacion = false;
+        bases_nuevas[i] = asignar_espacio(tabla->segmento[i].tam_seg, &necesita_compactacion);
+        if (bases_nuevas[i] == UINT32_MAX)
+        {
+            // sin hueco: el proceso sigue suspendido y no aparece en la respuesta a KS.
+            // Si fue por fragmentación, una compactación futura (MEM_ALLOC) lo destraba.
+            log_warning(logger, "[KM] DESSUSPENSION PID %d: sin espacio para segmento de %u bytes%s",
+                        pid, tabla->segmento[i].tam_seg,
+                        necesita_compactacion ? " (fragmentacion)" : "");
+            exito = false;
+        }
+        else
+        {
+            asignados++;
+        }
+    }
+
+    // fase 3: restaurar el contenido desde swap (bloques en el mismo orden en que
+    // suspender_proceso los escribió: cada segmento ocupa sus bloques consecutivos)
+    int bloque_idx = 0;
+    for (int i = 0; i < tabla->cantidad_segmentos && exito; i++)
+    {
+        segmento_t *seg = &tabla->segmento[i];
+        int cant = bloques_para(seg->tam_seg);
+
+        void *buffer = malloc(cant * tam_bloque_swap);
+        for (int b = 0; b < cant && exito; b++)
+        {
+            int *nro = list_get(suspendido->bloques, bloque_idx + b);
+            exito = leer_bloque_swap(*nro, buffer + b * tam_bloque_swap);
+        }
+
+        // solo tam_seg bytes: el padding con ceros del último bloque se descarta
+        if (exito)
+            exito = escribir_rango_global(pid, bases_nuevas[i], seg->tam_seg, buffer);
+
+        free(buffer);
+        bloque_idx += cant;
+    }
+
+    if (!exito)
+    {
+        // rollback: devolver los huecos ya consumidos; swap queda intacto
+        for (int i = 0; i < asignados; i++)
+            devolver_hueco(bases_nuevas[i], tabla->segmento[i].tam_seg);
+        free(bases_nuevas);
+        log_warning(logger, "[KM] DESSUSPENSION PID %d: fallo, sigue suspendido", pid);
+        return false;
+    }
+
+    // fase 4: commit — bases nuevas a la tabla (bajo lock: los CPUs copian tablas con él)
+    pthread_mutex_lock(&mutex_procesos_memoria);
+    for (int i = 0; i < tabla->cantidad_segmentos; i++)
+        tabla->segmento[i].dir_base = bases_nuevas[i];
+    pthread_mutex_unlock(&mutex_procesos_memoria);
+    free(bases_nuevas);
+
+    // KS pudo cambiar la prioridad mientras estaba suspendido: manda la vigente
+    suspendido->proceso->prioridad = prioridad;
+
+    liberar_bloques_swap(suspendido->bloques);
+
+    pthread_mutex_lock(&mutex_lista_procesos_suspendidos);
+    list_remove(lista_procesos_suspendidos, idx_suspendido);
+    pthread_mutex_unlock(&mutex_lista_procesos_suspendidos);
+
+    char *key = string_itoa(pid);
+    pthread_mutex_lock(&mutex_procesos_memoria);
+    dictionary_put(procesos_memoria, key, suspendido->proceso);
+    pthread_mutex_unlock(&mutex_procesos_memoria);
+    free(key);
+
+    log_debug(logger, "[KM] PID %d des-suspendido: %d segmentos restaurados",
+              pid, tabla->cantidad_segmentos);
+
+    free(suspendido);
+
+    return true;
+}
+
+// Finaliza un proceso EN MEMORIA: libera sus huecos y destruye su metadata.
+// No busca en lista_procesos_suspendidos a propósito: por planificación, EXIT solo
+// se alcanza desde EXEC (un suspendido vuelve por SUSP_READY -> READY -> EXEC antes
+// de poder terminar), así que un FIN_PROCESO de un pid suspendido sería un bug de KS.
 void finalizar_proceso(int pid) {
     char *key = string_itoa(pid);
     pthread_mutex_lock(&mutex_procesos_memoria);
@@ -478,23 +879,15 @@ void finalizar_proceso(int pid) {
     free(key);
 
     if (proceso == NULL) {
+        log_warning(logger, "[KM] FIN_PROCESO PID %d: no esta en memoria (¿suspendido o inexistente?)", pid);
         return;
     }
 
     tabla_segmentos_t *tabla = &proceso->contexto->tabla_segmentos;
 
     // insertar huecos de todos los segmentos
-    pthread_mutex_lock(&mutex_lista_huecos);
-    for (int i = 0; i < tabla->cantidad_segmentos; i++) 
-    {
-        t_hueco *h = malloc(sizeof(t_hueco));
-        h->base    = tabla->segmento[i].dir_base;
-        h->tamanio = tabla->segmento[i].tam_seg;
-        list_add_sorted(lista_huecos, h,
-            (bool(*)(void*, void*)) comparar_huecos_por_base);
-    }
-    mergear_huecos();  // una sola vez al final
-    pthread_mutex_unlock(&mutex_lista_huecos);
+    for (int i = 0; i < tabla->cantidad_segmentos; i++)
+        devolver_hueco(tabla->segmento[i].dir_base, tabla->segmento[i].tam_seg);
 
     // eliminar el proceso del diccionario y liberar memoria
     key = string_itoa(pid);
@@ -506,29 +899,29 @@ void finalizar_proceso(int pid) {
     if (removido != NULL) {
         destruir_proceso_memoria(removido);
     }
+
+    log_debug(logger, "[KM] PID %d finalizado: memoria liberada", pid);
 }
 
 // segmentos
 
-// Responde a KS el resultado de un MEM_ALLOC:
-//   - base != UINT32_MAX -> segmento creado OK
-//   - base == UINT32_MAX -> sin espacio (o PID/SID inválido)
-// El caso "fragmentado" ya no llega acá: lo intercepta el caller con iniciar_compactacion.
+// Responde a KS el resultado de un MEM_ALLOC. Siempre responde algo: es una syscall
+// y el proceso queda esperando el resultado (KS debe re-despacharlo o finalizarlo).
+//   - base != UINT32_MAX -> OK_MEM_ALLOC [pid]
+//   - base == UINT32_MAX -> ERROR_MEM_ALLOC [pid] (sin espacio aun tras compactar,
+//     tamaño inválido por SEGMENT_MAX_SIZE, o PID/SID inválido)
+// El caso "fragmentado" no llega acá: lo intercepta el caller con iniciar_compactacion.
 void responder_mem_alloc_a_ks(int pid, uint32_t base) {
-    if (base != UINT32_MAX) {
-        t_paquete *respuesta = crear_paquete(OK_MEM_ALLOC);
-        agregar_a_paquete(respuesta, &pid, sizeof(int));
-        // PENDIENTE(flujo): cuando se defina la actualización de la tabla de segmentos
-        // en CPU, acá se agrega también la base (y/o el sid) del segmento nuevo.
-        enviar_paquete_a_ks(respuesta);
-        eliminar_paquete(respuesta);
-        return;
+    if (base == UINT32_MAX) {
+        log_warning(logger, "[KM] MEM_ALLOC PID %d: rechazado, se responde ERROR_MEM_ALLOC", pid);
     }
 
-    // Sin espacio o PID/SID inválido. Aún no hay opcode de error de alloc en el
-    // protocolo; se acuerda con KS al definir el flujo.
-    // PENDIENTE(flujo): notificar el fallo a KS con el opcode acordado.
-    log_warning(logger, "[KM] MEM_ALLOC PID %d: sin espacio disponible", pid);
+    t_paquete *respuesta = crear_paquete(base != UINT32_MAX ? OK_MEM_ALLOC : ERROR_MEM_ALLOC);
+    agregar_a_paquete(respuesta, &pid, sizeof(int));
+    // PENDIENTE(flujo): cuando se defina la actualización de la tabla de segmentos
+    // en CPU, acá se agrega también la base (y/o el sid) del segmento nuevo.
+    enviar_paquete_a_ks(respuesta);
+    eliminar_paquete(respuesta);
 }
 
 // Guarda el alloc que no entró por fragmentación y pide a KS que desaloje las CPUs.
@@ -637,6 +1030,13 @@ void compactar(void) {
 uint32_t crear_segmento(int pid, int sid, uint32_t tamanio, bool *necesita_compactacion) {
     *necesita_compactacion = false;
 
+    // guard: tamaño inválido o mayor al máximo configurado (SEGMENT_MAX_SIZE)
+    if (tamanio == 0 || tamanio > (uint32_t)parametros->segment_max_size) {
+        log_warning(logger, "[KM] MEM_ALLOC PID %d SID %d: tamanio %u invalido (SEGMENT_MAX_SIZE=%d)",
+                    pid, sid, tamanio, parametros->segment_max_size);
+        return UINT32_MAX;
+    }
+
     // fase 1: validar proceso y sid (bajo lock de procesos)
     char *key = string_itoa(pid);
     pthread_mutex_lock(&mutex_procesos_memoria);
@@ -659,43 +1059,11 @@ uint32_t crear_segmento(int pid, int sid, uint32_t tamanio, bool *necesita_compa
     // el puntero 'proceso' y su tabla siguen válidos: el único hilo que los muta o
     // libera es este mismo (manejador_ks); los hilos de CPU solo copian
 
-    // fase 2: elegir y consumir hueco (bajo lock de huecos)
-    pthread_mutex_lock(&mutex_lista_huecos);
-
-    t_hueco *hueco = NULL;
-    if (strcmp(parametros->allocation_strategy, "BEST") == 0) {
-        hueco = best_fit(tamanio);
-    } else {
-        hueco = worst_fit(tamanio);
-    }
-
-    if (hueco == NULL) {
-        if (espacio_total_libre() >= tamanio) {
-            *necesita_compactacion = true;
-        }
-        pthread_mutex_unlock(&mutex_lista_huecos);
+    // fase 2: elegir y consumir hueco
+    uint32_t base_asignada = asignar_espacio(tamanio, necesita_compactacion);
+    if (base_asignada == UINT32_MAX) {
         return UINT32_MAX;
     }
-
-    uint32_t base_asignada = hueco->base;
-
-    if (hueco->tamanio == tamanio) {
-        t_list_iterator *it = list_iterator_create(lista_huecos);
-        while (list_iterator_has_next(it)) {
-            t_hueco *h = list_iterator_next(it);
-            if (h->base == base_asignada) {
-                list_iterator_remove(it);
-                free(h);
-                break;
-            }
-        }
-        list_iterator_destroy(it);
-    } else {
-        hueco->base    += tamanio;
-        hueco->tamanio -= tamanio;
-    }
-
-    pthread_mutex_unlock(&mutex_lista_huecos);
 
     // fase 3: escribir la tabla (bajo lock de procesos — los CPUs la copian con este lock)
     pthread_mutex_lock(&mutex_procesos_memoria);
@@ -705,13 +1073,7 @@ uint32_t crear_segmento(int pid, int sid, uint32_t tamanio, bool *necesita_compa
     if (tmp == NULL) {
         pthread_mutex_unlock(&mutex_procesos_memoria);
         // devolver el hueco consumido en fase 2: si no, ese rango se pierde para siempre
-        t_hueco *h = malloc(sizeof(t_hueco));
-        h->base    = base_asignada;
-        h->tamanio = tamanio;
-        pthread_mutex_lock(&mutex_lista_huecos);
-        list_add_sorted(lista_huecos, h, (bool (*)(void *, void *))comparar_huecos_por_base);
-        mergear_huecos();
-        pthread_mutex_unlock(&mutex_lista_huecos);
+        devolver_hueco(base_asignada, tamanio);
         return UINT32_MAX;
     }
     tabla->segmento = tmp;
@@ -769,15 +1131,7 @@ bool eliminar_segmento(int pid, int sid) {
 
     pthread_mutex_unlock(&mutex_procesos_memoria);
 
-    // liberar el hueco
-    t_hueco *h = malloc(sizeof(t_hueco));
-    h->base    = base;
-    h->tamanio = tamanio;
-
-    pthread_mutex_lock(&mutex_lista_huecos);
-    list_add_sorted(lista_huecos, h, (bool(*)(void*, void*)) comparar_huecos_por_base);
-    mergear_huecos();
-    pthread_mutex_unlock(&mutex_lista_huecos);
+    devolver_hueco(base, tamanio);
 
     return true;
 }

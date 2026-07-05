@@ -8,7 +8,7 @@ void *manejador_ks(void *arg);
 // envíos a KS con mutex y chequeo de conexión (socket == -1 => descarta y loguea)
 void enviar_operacion_a_ks(op_code operacion);
 void enviar_paquete_a_ks(t_paquete *paquete);
-void creacion_proceso(int PID, char* PATH, int prioridad);
+bool creacion_proceso(int PID, char* PATH, int prioridad);
 t_list *dividir_archivo_por_lineas(char *path);
 char *armar_ruta(char *ruta_relativa);
 t_list *convertir_lineas_en_instrucciones(t_list *lineas);
@@ -19,6 +19,7 @@ t_contexto_ejecucion *crear_contexto_ejecucion(int pid);
 void finalizar_proceso(int pid);
 
 bool suspender_proceso(int pid);
+bool dessuspender_proceso(int pid, int prioridad);
 
 // segmentos
 uint32_t crear_segmento(int pid, int sid, uint32_t tamanio, bool *necesita_compactacion);

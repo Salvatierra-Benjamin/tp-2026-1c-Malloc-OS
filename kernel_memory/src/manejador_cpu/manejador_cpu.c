@@ -1,4 +1,5 @@
 #include "manejador_cpu.h"
+#include <manejador_ks/manejador_ks.h> // palabra_reservada_a_string
 
 // Envía por el socket de la CPU tomando su mutex si la CPU ya está identificada
 // (antes de ENVIO_CPU_ID nadie más conoce este socket, no hay contención).
@@ -120,6 +121,23 @@ void *manejador_cpu(void *arg)
             eliminar_paquete(p_ins);
             break;
         }
+        case ACTUALIZAR_CONTEXTO_EJECUCION:
+        {
+            // CPU manda [pid][t_registros][cantidad_segmentos][segmentos...] en syscall
+            // y en desalojo por interrupción. La tabla de segmentos se IGNORA a propósito:
+            // la copia de la CPU puede estar vieja (compactación o alloc en paralelo la
+            // desactualizan) y la tabla autoritativa es la de KM — acá solo se persisten
+            // los registros (PC incluido).
+            t_paquete *paquete_ctx = recibir_paquete(socket_cpu);
+            int pid;
+            t_registros registros;
+            buffer_read(&pid, paquete_ctx->buffer, sizeof(int));
+            buffer_read(&registros, paquete_ctx->buffer, sizeof(t_registros));
+            eliminar_paquete(paquete_ctx);
+
+            actualizar_contexto(pid, &registros);
+            break;
+        }
         case -1:
         {
             log_warning(logger, "[CPU] se deconecto cpu");
@@ -164,6 +182,30 @@ t_cpu *conexion_cpu(int cpu_id, int cpu_socket)
 
     log_info(logger, "## CPU %d Conectada", cpu_id);
     return cpu;
+}
+
+// Persiste los registros que devuelve la CPU (syscall o desalojo). El proceso puede
+// no existir si KS lo finalizó/suspendió en paralelo: se loguea y se descarta — la
+// CPU no espera respuesta.
+void actualizar_contexto(int pid, t_registros *registros)
+{
+    char *key = string_itoa(pid);
+    pthread_mutex_lock(&mutex_procesos_memoria);
+    t_procesos_memoria *proceso = (t_procesos_memoria *)dictionary_get(procesos_memoria, key);
+
+    if (proceso == NULL)
+    {
+        pthread_mutex_unlock(&mutex_procesos_memoria);
+        free(key);
+        log_warning(logger, "[CPU] actualizacion de contexto descartada: PID %d no esta en memoria", pid);
+        return;
+    }
+
+    proceso->contexto->registros = *registros;
+    pthread_mutex_unlock(&mutex_procesos_memoria);
+    free(key);
+
+    log_debug(logger, "[CPU] contexto actualizado PID %d (PC=%u)", pid, registros->PC);
 }
 
 t_contexto_ejecucion *solicitar_contexto(int pid)
@@ -230,11 +272,34 @@ t_instruccion *solicitar_instruccion(int pid, uint32_t pc)
     // copia bajo el lock, mismo motivo que solicitar_contexto
     t_instruccion *copia = malloc(sizeof(t_instruccion));
     copia->comando = original->comando;
-    copia->PID = original->PID;
+    // el PID del original nunca se inicializa (linea_a_instruccion no lo setea):
+    // se completa acá con el pid del pedido, que es el único confiable
+    copia->PID = pid;
     copia->parametro_1 = original->parametro_1 != NULL ? string_duplicate(original->parametro_1) : NULL;
     copia->parametro_2 = original->parametro_2 != NULL ? string_duplicate(original->parametro_2) : NULL;
 
     pthread_mutex_unlock(&mutex_procesos_memoria);
     free(key);
+
+    // Log obligatorio del enunciado (con los argumentos que la instrucción tenga)
+    char *args = string_new();
+    if (copia->parametro_1 != NULL)
+    {
+        string_append(&args, " ");
+        string_append(&args, copia->parametro_1);
+    }
+    if (copia->parametro_2 != NULL)
+    {
+        string_append(&args, " ");
+        string_append(&args, copia->parametro_2);
+    }
+    log_info(logger, "## PID: %d - Obtener instrucción: %u - Instrucción: %s%s",
+             pid, pc, palabra_reservada_a_string(copia->comando), args);
+    free(args);
+
+    // retardo configurable por pedido de instrucción — fuera de la sección crítica:
+    // dentro del lock serializaría a todas las CPUs contra mutex_procesos_memoria
+    usleep(parametros->instruction_delay * 1000);
+
     return copia;
 }

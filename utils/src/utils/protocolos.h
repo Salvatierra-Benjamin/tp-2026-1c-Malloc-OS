@@ -95,9 +95,10 @@ typedef enum
 
     // ---------------- KS -> KM ----------------
     CREACION_PROCESO = 5000,
-    STDOUT_SOLICITUD_LECTURA = 5001,      // int len, char* dir_logica, int tamanio, int pid
+    STDOUT_SOLICITUD_LECTURA = 5001,      // (contrato asumido 04/07) [pid:int][dir_logica:uint32][tamanio:int] — KM traduce lógica->física y lee de los sticks
     SUSPENCION_PROCESO = 5002,            // PID
     SOLICITUD_DESSUSPENCION_LISTA = 5003, // Lista de PIDS Y PRIORIDADES a dessuspender: [cantidad][pid1][prioridad1][pid2][prioridad2]...[pidN][prioridadN]
+    STDIN_SOLICITUD_ESCRITURA = 5004,     // (contrato asumido 04/07) [pid:int][dir_logica:uint32][tamanio:int][datos] — KS ya recibió los datos de IO; KM traduce y escribe en los sticks
     FIN_PROCESO = 5005,                   // PID
 
     // ---------------- KM -> KS ----------------
@@ -105,8 +106,8 @@ typedef enum
     AUMENTO_DE_MEMORIA = 10001,
     DESALOJO_POR_COMPACTACION = 10002,
     FIN_COMPACTACION = 10003,
-    OK_STDIN_DATOS_ESCRITOS = 10004,   // (len, BYTES ESCRITOS, pid)
-    STDOUT_RESTUESTA_LECTURA = 10005,  // (longitud a imprimir, cadena de bytes y pid)
+    OK_STDIN_DATOS_ESCRITOS = 10004,   // (contrato asumido 04/07) [pid:int] — escritura de STDIN completada en los sticks
+    STDOUT_RESTUESTA_LECTURA = 10005,  // (contrato asumido 04/07) [pid:int][tamanio:int][datos] — datos leídos para imprimir
     OK_MEM_FREE = 10006,               // OK_MEM_FREE (PID)
     OK_MEM_ALLOC = 10007,              // OK_MEM_ALLOC (PID)
     OK_PROCESO_SUSPENDIDO = 10008,     // OK_PROCESO_SUSPENDIDO (PID)
@@ -115,6 +116,10 @@ typedef enum
     OK_CREACION_PROCESO = 10011,
     RESPUESTA_DESSUSPENCION_LISTA = 10012, // Lista de PIDS Y PRIORIDADES dessuspendidas: [cantidad][pid1][prioridad1][pid2][prioridad2]...[pidN][prioridadN]
     CONFIRMACION_DESALOJO_COMPACTACION = 10013, // KS -> KM (sin payload): todas las CPUs desalojadas, KM puede compactar. KS lo manda al terminar ks_termina_de_desalojar_por_compactacion.
+    ERROR_MEM_ALLOC = 10014, // KM -> KS (PID): el MEM_ALLOC falló (sin espacio aun tras compactar, tamaño inválido, o PID/SID inválido). La syscall necesita respuesta siempre: sin esto el proceso queda colgado esperando.
+    ERROR_MEM_FREE = 10015,  // KM -> KS (PID): el MEM_FREE falló (PID o SID inexistente). Mismo criterio que ERROR_MEM_ALLOC: syscall = respuesta siempre.
+    ERROR_STDIN = 10016,     // KM -> KS (PID): escritura de STDIN inválida (pid/segmento inexistente o fuera de límites — segfault lógico)
+    ERROR_STDOUT = 10017,    // KM -> KS (PID): lectura de STDOUT inválida (idem ERROR_STDIN)
 
     // ---------------- MS -> KM ----------------
     MEMORY_STICK_SIZE = 6000,

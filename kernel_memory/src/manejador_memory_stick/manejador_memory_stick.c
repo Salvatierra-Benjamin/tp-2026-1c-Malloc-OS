@@ -200,6 +200,9 @@ bool leer_rango_global(int pid, uint32_t direccion, uint32_t tamanio, void *dest
         leido += tam_pedido;
     }
 
+    // Log obligatorio del enunciado (solo si la operación completa salió bien)
+    log_info(logger, "## PID: %d - Lectura - Dir. Física: %u - Tamaño: %u", pid, direccion, tamanio);
+
     return true;
 }
 
@@ -255,6 +258,9 @@ bool escribir_rango_global(int pid, uint32_t direccion, uint32_t tamanio, void *
 
         escrito += tam_pedido;
     }
+
+    // Log obligatorio del enunciado (solo si la operación completa salió bien)
+    log_info(logger, "## PID: %d - Escritura - Dir. Física: %u - Tamaño: %u", pid, direccion, tamanio);
 
     return true;
 }
