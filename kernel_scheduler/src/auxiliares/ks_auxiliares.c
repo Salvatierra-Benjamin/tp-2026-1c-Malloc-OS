@@ -139,6 +139,36 @@ bool finalizar_proceso(int pid) {
 	return true;
 }
 
+int asignar_pid(void) {
+	pthread_mutex_lock(&mutex_siguiente_pid);
+	int pid = siguiente_pid++;
+	pthread_mutex_unlock(&mutex_siguiente_pid);
+	return pid;
+}
+
+void registrar_creacion_pendiente(int pid, char* path, int prioridad) {
+	t_creacion_pendiente* pendiente = malloc(sizeof(t_creacion_pendiente));
+	pendiente->pid = pid;
+	pendiente->path = strdup(path);
+	pendiente->prioridad = prioridad;
+
+	pthread_mutex_lock(&mutex_creaciones_pendientes);
+	list_add(creaciones_pendientes, pendiente);
+	pthread_mutex_unlock(&mutex_creaciones_pendientes);
+}
+
+t_creacion_pendiente* sacar_creacion_pendiente(int pid) {
+	bool _tiene_pid(void* ptr) {
+		return ((t_creacion_pendiente*)ptr)->pid == pid;
+	}
+
+	pthread_mutex_lock(&mutex_creaciones_pendientes);
+	t_creacion_pendiente* pendiente = list_remove_by_condition(creaciones_pendientes, _tiene_pid);
+	pthread_mutex_unlock(&mutex_creaciones_pendientes);
+
+	return pendiente;
+}
+
 t_pcb* crear_proceso(int pid, char* path, int prioridad) {
 	t_pcb* nuevo_pcb = malloc(sizeof(t_pcb));
 	if (nuevo_pcb == NULL) {
@@ -379,6 +409,18 @@ void ks_pasar_a_block(t_pcb* pcb) {
 	pthread_mutex_unlock(&array_queues[pcb->prioridad].mutex_block);
 
 	log_cambio_estado(pcb, EXEC, BLOCK);
+
+	// liberar la CPU que lo estaba ejecutando
+	pthread_mutex_lock(&mutex_cpus);
+	for (int i = 0; i < list_size(cpus); i++) {
+		t_cpu* cpu = list_get(cpus, i);
+		if (cpu->pcb_ejecutando == pcb) {
+			cpu->pcb_ejecutando = NULL;
+			break;
+		}
+	}
+	pthread_mutex_unlock(&mutex_cpus);
+	pcb->cpu_fd = -1;
 
 	// timer de mediano plazo: si sigue en BLOCK tras SUSPENSION_TIMEOUT pasa a SUSP_BLOCK
 	pthread_t hilo_suspension;

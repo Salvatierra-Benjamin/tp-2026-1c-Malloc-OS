@@ -95,6 +95,13 @@ typedef struct {
 	pthread_mutex_t mutex;
 } t_mutex_kernel;
 
+// CREACION PENDIENTE (solicitud enviada a KM, esperando OK/ERROR_CREACION_PROCESO)
+typedef struct {
+	int pid;
+	char* path;
+	int prioridad;
+} t_creacion_pendiente;
+
 // VARIABLES GLOBALES
 extern t_log* ks_logger;
 extern t_ks_config ks_config;
@@ -121,6 +128,9 @@ extern t_list* procs_exit;
 
 extern t_list* mutexes_kernel;
 
+extern t_list* creaciones_pendientes;
+extern int siguiente_pid;
+
 // MUTEX
 extern pthread_mutex_t mutex_cpus;
 extern pthread_mutex_t mutex_ios_sleep;
@@ -133,6 +143,9 @@ extern pthread_mutex_t mutex_exit;
 extern pthread_mutex_t mutex_array_queues;
 
 extern pthread_mutex_t mutex_mutexes_kernel;
+
+extern pthread_mutex_t mutex_creaciones_pendientes;
+extern pthread_mutex_t mutex_siguiente_pid;
 
 extern pthread_mutex_t mutex_compactacion;
 

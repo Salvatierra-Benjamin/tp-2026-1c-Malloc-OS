@@ -87,9 +87,13 @@ void enviar_stdout_io(int io_fd, char* cadena_de_bytes, int len, int pid) {
 }
 
 // ! -------------------------------- KS -> KM ------------------------------------------------------------------------------------------------
-void enviar_solicitud_creacion_proceso_km(char* archivo_instrucciones, int prioridad) {
+void enviar_solicitud_creacion_proceso_km(int pid, char* archivo_instrucciones, int prioridad) {
+	// KM espera [pid][path_size][path con '\0'][prioridad] (manejador_ks.c de KM)
 	t_paquete* paquete_creacion_proceso = crear_paquete(CREACION_PROCESO);
-	agregar_a_paquete(paquete_creacion_proceso, archivo_instrucciones, strlen(archivo_instrucciones) + 1);
+	int path_size = strlen(archivo_instrucciones) + 1;
+	agregar_a_paquete(paquete_creacion_proceso, &pid, sizeof(int));
+	agregar_a_paquete(paquete_creacion_proceso, &path_size, sizeof(int));
+	agregar_a_paquete(paquete_creacion_proceso, archivo_instrucciones, path_size);
 	agregar_a_paquete(paquete_creacion_proceso, &prioridad, sizeof(int));
 	enviar_paquete(paquete_creacion_proceso, socket_km);
 	eliminar_paquete(paquete_creacion_proceso);

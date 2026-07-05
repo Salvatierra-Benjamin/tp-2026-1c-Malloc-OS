@@ -169,6 +169,8 @@ void crear_listas() {
 	// procs_susp_block = list_create();
 	// procs_susp_ready = list_create();
 	procs_exit = list_create();
+
+	creaciones_pendientes = list_create();
 }
 
 void ks_liberar_config(void) {
@@ -211,10 +213,11 @@ void* ks_conexion_loop(void* _arg) {
 
 			t_paquete* contenido = recibir_paquete(fd);
 
-			int len_tipo_io;
-			buffer_read(&len_tipo_io, contenido->buffer, sizeof(int)); // LEEMOS CUANTO MIDE
-			char* tipo_io = malloc(len_tipo_io);					   // PEDIMOS EL ESPACIO JUSTO
-			buffer_read(tipo_io, contenido->buffer, len_tipo_io);	   // COPIAMOS EL CONTENIDO
+			// IO manda el tipo como bytes crudos, sin longitud adelante ni '\0' (receptor_ks.c de IO)
+			int len_tipo_io = contenido->buffer->size;
+			char* tipo_io = malloc(len_tipo_io + 1);
+			buffer_read(tipo_io, contenido->buffer, len_tipo_io);
+			tipo_io[len_tipo_io] = '\0';
 
 			t_io* io = crear_io(fd, tipo_io);
 
@@ -233,29 +236,25 @@ void* ks_conexion_loop(void* _arg) {
 		} else if (op == HANDSHAKE_CPU) {
 			log_debug(ks_logger, "Se conecto un nuevo CPU");
 
-			enviar_ok_conexion(fd);
-
-			int op_id = recibir_operacion(fd);
-
-			if (op_id != CPU_IDENTIFICACION) {
-				log_error(ks_logger, "Se conecto un nuevo CPU, pero no envio CPU_IDENTIFICACION");
-				close(fd);
-				continue;
-			}
-
+			// CPU manda HANDSHAKE_CPU como paquete con su id adentro y espera
+			// HANDSHAKE_OK, no KS_OK_CONEXION (realizar_handshake_ks en handshakes.c de CPU)
 			t_paquete* contenido = recibir_paquete(fd);
 
 			int id_cpu = -1;
 			buffer_read(&id_cpu, contenido->buffer, sizeof(int));
+			eliminar_paquete(contenido);
+
+			enviar_operacion(fd, HANDSHAKE_OK);
 
 			t_cpu* cpu = crear_cpu(id_cpu, fd);
-			eliminar_paquete(contenido);
 
 			pthread_mutex_lock(&mutex_cpus);
 			list_add(cpus, cpu);
 			pthread_mutex_unlock(&mutex_cpus);
 
 			log_conexion_cpu(id_cpu);
+
+			sem_post(&sem_cpu_libre); // CPU nueva = CPU libre para el corto plazo
 
 			// NO recibir_paquete aca
 			pthread_t hilo_cpu;
@@ -339,8 +338,8 @@ int main(int argc, char* argv[]) {			   //  ~ ./bin/kernel_scheduler [Archivo Co
 
 	log_debug(ks_logger, "Planificadores de corto y mediano plazo iniciados");
 
-	// creo el proceso inicial (PID, path, prioridad), Hardcodeo el PID 0 y la mayor prioridad (0)
-	crear_proceso(0, argv[2], 0);
+	// el proceso inicial se solicita a KM desde ks_conexion_km, después del handshake
+	// (KM tiene que confirmarlo con OK_CREACION_PROCESO antes de que exista el pcb)
 
 	// dormir el main para siempre
 	for (;;)

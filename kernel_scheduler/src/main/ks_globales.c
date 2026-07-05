@@ -27,6 +27,9 @@ t_list* procs_exit = NULL;
 
 t_list* mutexes_kernel = NULL;
 
+t_list* creaciones_pendientes = NULL;
+int siguiente_pid = 0;
+
 // MUTEX
 pthread_mutex_t mutex_cpus = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mutex_ios_sleep = PTHREAD_MUTEX_INITIALIZER;
@@ -39,6 +42,9 @@ pthread_mutex_t mutex_exit = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mutex_array_queues = PTHREAD_MUTEX_INITIALIZER;
 
 pthread_mutex_t mutex_mutexes_kernel = PTHREAD_MUTEX_INITIALIZER;
+
+pthread_mutex_t mutex_creaciones_pendientes = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t mutex_siguiente_pid = PTHREAD_MUTEX_INITIALIZER;
 
 pthread_mutex_t mutex_compactacion = PTHREAD_MUTEX_INITIALIZER;
 

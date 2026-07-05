@@ -86,14 +86,40 @@ t_pcb* ks_obtener_siguiente_ready_prioritario(void) {
 }
 
 void ks_enviar_a_exec(t_pcb* pcb) {
+	// buscar una CPU libre y asignarle el proceso
+	pthread_mutex_lock(&mutex_cpus);
+	t_cpu* cpu_libre = NULL;
+	for (int i = 0; i < list_size(cpus); i++) {
+		t_cpu* cpu = list_get(cpus, i);
+		if (cpu->pcb_ejecutando == NULL) {
+			cpu_libre = cpu;
+			break;
+		}
+	}
+	if (cpu_libre != NULL) {
+		cpu_libre->pcb_ejecutando = pcb;
+		pcb->cpu_fd = cpu_libre->fd;
+	}
+	pthread_mutex_unlock(&mutex_cpus);
+
+	if (cpu_libre == NULL) {
+		// no debería pasar (el corto plazo esperó sem_cpu_libre): devolverlo a ready prioritario
+		log_error(ks_logger, "ks_enviar_a_exec: no hay CPU libre para el PID %d, vuelve a READY", pcb->pid);
+		pcb->estado = READY;
+		pthread_mutex_lock(&array_queues[pcb->prioridad].mutex_ready_prioritario);
+		queue_push(array_queues[pcb->prioridad].queue_ready_prioritario, pcb);
+		pthread_mutex_unlock(&array_queues[pcb->prioridad].mutex_ready_prioritario);
+		sem_post(&sem_ready);
+		return;
+	}
+
 	pcb->estado = EXEC;
 
 	pthread_mutex_lock(&mutex_exec);
 	list_add(procs_exec, pcb);
 	pthread_mutex_unlock(&mutex_exec);
 
-	// TODO: buscar cpu libre
-	// TODO: enviar dispatch
+	enviar_alojar_proceso_cpu(pcb); // ALOJAR_PROCESO [pid] -> CPU
 
 	log_cambio_estado(pcb, READY, EXEC);
 }

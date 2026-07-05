@@ -278,15 +278,24 @@ void* ks_maneja_cpu(void* arg) {
 			log_syscall_recibida(cpu->pcb_ejecutando, "INIT_PROC");
 			t_paquete* contenido = recibir_paquete(cpu->fd);
 
-			char* archivo_insrucciones = NULL;
-			buffer_read(&archivo_insrucciones, contenido->buffer, sizeof(char*));
+			// CPU manda [pid_creador][tam_path][path con '\0'][prioridad] (execute_INIT_PROC)
+			int pid_creador;
+			buffer_read(&pid_creador, contenido->buffer, sizeof(int));
+
+			int tam_path;
+			buffer_read(&tam_path, contenido->buffer, sizeof(int));
+
+			char* archivo_instrucciones = malloc(tam_path + 1);
+			buffer_read(archivo_instrucciones, contenido->buffer, tam_path + 1); // el '\0' viene incluido
 
 			int prioridad;
 			buffer_read(&prioridad, contenido->buffer, sizeof(int));
 
-			enviar_solicitud_creacion_proceso_km(archivo_insrucciones, prioridad);
+			int nuevo_pid = asignar_pid();
+			registrar_creacion_pendiente(nuevo_pid, archivo_instrucciones, prioridad);
+			enviar_solicitud_creacion_proceso_km(nuevo_pid, archivo_instrucciones, prioridad);
 
-			free(archivo_insrucciones);
+			free(archivo_instrucciones);
 			eliminar_paquete(contenido);
 			break;
 		}
@@ -295,6 +304,7 @@ void* ks_maneja_cpu(void* arg) {
 			log_syscall_recibida(cpu->pcb_ejecutando, "EXIT");
 			finalizar_proceso(cpu->pcb_ejecutando->pid); // finalizar_proceso ya loguea el fin
 			cpu->pcb_ejecutando = NULL;
+			sem_post(&sem_cpu_libre);
 			break;
 		}
 
@@ -313,11 +323,15 @@ void* ks_maneja_cpu(void* arg) {
 
 				t_pcb* pcb = buscar_pcb_por_pid(pid);
 				ks_termina_de_desalojar_un_pcb_general(pcb);
+				cpu->pcb_ejecutando = NULL;
+				sem_post(&sem_cpu_libre);
 			} else if (motivo_interrupcion == AVISO_DE_INTERRUPCION_SEGMENTATION_FAULT) {
 				log_debug(ks_logger, "Se desalojo el proceso %d, por motivo de AVISO_DE_INTERRUPCION_SEGMENTATION_FAULT", pid);
 
 				t_pcb* pcb = buscar_pcb_por_pid(pid);
 				ks_termina_de_desalojar_un_pcb_seg_fault(pcb);
+				cpu->pcb_ejecutando = NULL;
+				sem_post(&sem_cpu_libre);
 
 				// ? Se tiene que desconectar la cpu, y eso lo manejo en el swicth cuando se desconecta (case -1).
 			} else {

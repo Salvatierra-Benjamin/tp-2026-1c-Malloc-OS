@@ -30,14 +30,21 @@ void* ks_conexion_km(void* _arg) {
 		return NULL;
 	}
 
-	if (op != KM_OK_CONEXION) {
-		log_error(ks_logger, "Handshake invalido. Esperaba KM_OK_CONEXION (%d), llegó %d", KM_OK_CONEXION, op);
+	// KM responde HANDSHAKE_OK genérico (manejador_global.c), no KM_OK_CONEXION
+	if (op != HANDSHAKE_OK) {
+		log_error(ks_logger, "Handshake invalido. Esperaba HANDSHAKE_OK (%d), llegó %d", HANDSHAKE_OK, op);
 		close(socket_km);
 		return NULL;
 	}
 
 	log_conexion_km(); // Loguear conexión a Kernel Memory
 	// log_debug(ks_logger, "Handshake con Kernel Memory OK");
+
+	// proceso inicial: se solicita recién acá porque necesita la conexión con KM establecida.
+	// El pcb se crea cuando KM responda OK_CREACION_PROCESO.
+	int pid_inicial = asignar_pid();
+	registrar_creacion_pendiente(pid_inicial, ks_config.path_proceso_inicial, 0);
+	enviar_solicitud_creacion_proceso_km(pid_inicial, ks_config.path_proceso_inicial, 0);
 
 	// Loop de comunicación con KM
 	while (1) {
@@ -167,47 +174,40 @@ void* ks_conexion_km(void* _arg) {
 			break;
 		}
 
-		case ERROR_CREACION_PROCESO: { // ERROR_CREACION_PROCESO (PID, MOTIVO)
+		case ERROR_CREACION_PROCESO: { // KM rechaza la creación: [pid]
 			t_paquete* contenido = recibir_paquete(socket_km);
 
 			int pid;
 			buffer_read(&pid, contenido->buffer, sizeof(int));
 
-			int len_path;
-			buffer_read(&len_path, contenido->buffer, sizeof(int)); // LEEMOS CUANTO MIDE
-			char* path = malloc(len_path);							// PEDIMOS EL ESPACIO JUSTO
-			buffer_read(path, contenido->buffer, len_path);			// COPIAMOS EL CONTENIDO
+			t_creacion_pendiente* pendiente = sacar_creacion_pendiente(pid);
+			if (pendiente != NULL) {
+				log_error(ks_logger, "KM no pudo crear el proceso PID %d (%s)", pid, pendiente->path);
+				free(pendiente->path);
+				free(pendiente);
+			} else {
+				log_error(ks_logger, "KM no pudo crear el proceso PID %d (sin solicitud pendiente)", pid);
+			}
 
-			int prioridad;
-			buffer_read(&prioridad, contenido->buffer, sizeof(int));
-
-			int len_motivo;
-			buffer_read(&len_motivo, contenido->buffer, sizeof(int)); // LEEMOS CUANTO MIDE
-			char* motivo = malloc(len_motivo);						  // PEDIMOS EL ESPACIO JUSTO
-			buffer_read(motivo, contenido->buffer, len_motivo);		  // COPIAMOS EL CONTENIDO
-
-			log_error(ks_logger, "Error al crear proceso con PID %d en Kernel Memory por el siguiente motivo: %s", pid, motivo);
-
-			free(motivo);
 			eliminar_paquete(contenido);
 			break;
 		}
 
-		case OK_CREACION_PROCESO: { // OK_CREACION_PROCESO (PID, PATH)
+		case OK_CREACION_PROCESO: { // KM confirma la creación: [pid]
 			t_paquete* contenido = recibir_paquete(socket_km);
 
 			int pid;
 			buffer_read(&pid, contenido->buffer, sizeof(int));
 
-			int len_path;
-			buffer_read(&len_path, contenido->buffer, sizeof(int)); // LEEMOS CUANTO MIDE
-			char* path = malloc(len_path);							// PEDIMOS EL ESPACIO JUSTO
-			buffer_read(path, contenido->buffer, len_path);			// COPIAMOS EL CONTENIDO
-
-			int prioridad;
-			buffer_read(&prioridad, contenido->buffer, sizeof(int));
-
-			crear_proceso(pid, path, prioridad);
+			t_creacion_pendiente* pendiente = sacar_creacion_pendiente(pid);
+			if (pendiente == NULL) {
+				log_warning(ks_logger, "KM confirmo la creacion del PID %d pero no habia solicitud pendiente", pid);
+			} else {
+				crear_proceso(pendiente->pid, pendiente->path, pendiente->prioridad);
+				sem_post(&sem_ready); // hay un proceso nuevo en READY para el corto plazo
+				free(pendiente->path);
+				free(pendiente);
+			}
 
 			eliminar_paquete(contenido);
 			break;

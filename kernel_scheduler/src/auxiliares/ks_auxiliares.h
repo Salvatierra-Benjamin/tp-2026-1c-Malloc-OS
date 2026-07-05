@@ -23,6 +23,10 @@ void liberar_mutex(void);
 void ks_liberar_array_queues(void);
 
 // PCB
+int asignar_pid(void);
+void registrar_creacion_pendiente(int pid, char* path, int prioridad);
+t_creacion_pendiente* sacar_creacion_pendiente(int pid);
+
 bool finalizar_proceso(int pid);
 
 t_pcb* crear_proceso(int pid, char* path, int prioridad);
