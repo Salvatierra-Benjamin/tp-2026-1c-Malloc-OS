@@ -29,4 +29,20 @@ t_pcb* crear_proceso(int pid, char* path, int prioridad);
 
 t_pcb* buscar_pcb_por_pid(int pid);
 
+void ks_pasar_a_block(t_pcb* pcb);
+
+char* estado_a_string(estados estado);
+
+// CPU / IO
+t_cpu* crear_cpu(int id, int fd);
+void finalizar_cpu(t_cpu* cpu);
+t_io* crear_io(int fd, char* tipo_io);
+t_io* io_libre(char* tipo_io);
+
+// SEMAFOROS
+void inicializar_semaforos(void);
+void destruir_semaforos(void);
+
+void liberar_listas_matando_procesos_bsod(void);
+
 #endif

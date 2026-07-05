@@ -24,17 +24,19 @@ static algoritmos ks_algoritmo_from_string(char* str) {
 	return INVALIDO;
 }
 
-void* ks_parsear_algoritmos(char* raw) {
+void ks_parsear_algoritmos(char* raw) {
 	if (!raw) {
 		cantidad_algoritmos = 0;
 		array_queues = NULL;
 		return;
 	}
 
-	// saco corchetes
-	char* limpio = string_duplicate(raw);
-	string_replace(&limpio, "[", "");
-	string_replace(&limpio, "]", "");
+	// saco corchetes (string_replace devuelve una copia nueva, no modifica in-place)
+	char* con_corchetes = string_duplicate(raw);
+	char* sin_apertura = string_replace(con_corchetes, "[", "");
+	char* limpio = string_replace(sin_apertura, "]", "");
+	free(con_corchetes);
+	free(sin_apertura);
 
 	// separo por coma
 	char** tokens = string_split(limpio, ",");
@@ -75,12 +77,12 @@ void* ks_parsear_algoritmos(char* raw) {
 	free(limpio);
 }
 
-void* ks_solo_un_algoritmo(algoritmos alg) {
+void ks_solo_un_algoritmo(algoritmos alg) {
 	int i = 0; // prioridad
+	cantidad_algoritmos = 1;
 	array_queues = malloc(sizeof(t_elemento_array_algoritmos));
 
 	// llenar array
-	string_trim(&tokens[i]);
 	array_queues[i].alg = alg;
 
 	// crear queue vacía asociada con su mutex correspondiente
@@ -112,10 +114,11 @@ bool ks_cargar_config(char* path_config, char* path_proceso_inicial) {
 	ks_config.puerto_escucha = strdup(config_get_string_value(config, "PUERTO_ESCUCHA"));
 	ks_config.algoritmo = ks_algoritmo_from_string(config_get_string_value(config, "PLANIFICATION_ALGORITHM"));
 
+	// estas funciones llenan los globales array_queues / cantidad_algoritmos
 	if (ks_config.algoritmo == FIFO || ks_config.algoritmo == RR) {
-		ks_config.algoritmo_queues = ks_solo_un_algoritmo(ks_config.algoritmo);
+		ks_solo_un_algoritmo(ks_config.algoritmo);
 	} else {
-		ks_config.algoritmo_queues = ks_parsear_algoritmos(config_get_string_value(config, "QUEUES_ALGORITHMS"));
+		ks_parsear_algoritmos(config_get_string_value(config, "QUEUES_ALGORITHMS"));
 	}
 
 	ks_config.rr_quantum = config_get_int_value(config, "RR_QUANTUM");
@@ -199,20 +202,11 @@ void* ks_conexion_loop(void* _arg) {
 
 			enviar_ok_conexion(fd);
 
-			pthread_t hilo_io;
-
-			int* socket_ptr = malloc(sizeof(int));
-			if (socket_ptr == NULL) {
+			int op_datos = recibir_operacion(fd);
+			if (op_datos != ENVIAR_DATOS_IO) {
+				log_error(ks_logger, "Se conecto un nuevo IO, pero no envio ENVIAR_DATOS_IO");
 				close(fd);
-				return;
-			}
-			*socket_ptr = fd;
-
-			if (op != ENVIAR_DATOS_IO) {
-				log_error(ks_logger, "Se conecto un nuevo CPU, pero no envio CPU_IDENTIFICACION");
-				eliminar_paquete(contenido);
-				close(fd);
-				break;
+				continue;
 			}
 
 			t_paquete* contenido = recibir_paquete(fd);
@@ -222,16 +216,16 @@ void* ks_conexion_loop(void* _arg) {
 			char* tipo_io = malloc(len_tipo_io);					   // PEDIMOS EL ESPACIO JUSTO
 			buffer_read(tipo_io, contenido->buffer, len_tipo_io);	   // COPIAMOS EL CONTENIDO
 
-			t_io* io = crear_io(socket_ptr, tipo_io);
+			t_io* io = crear_io(fd, tipo_io);
 
+			free(tipo_io);
 			eliminar_paquete(contenido);
 
+			pthread_t hilo_io;
 			if (pthread_create(&hilo_io, NULL, ks_maneja_io, io) != 0) {
 				log_error(ks_logger, "no se inicia el hilo io");
-				free(socket_ptr);
-				free(io);
 				close(fd);
-				return;
+				continue;
 			}
 
 			pthread_detach(hilo_io);
@@ -241,29 +235,25 @@ void* ks_conexion_loop(void* _arg) {
 
 			enviar_ok_conexion(fd);
 
-			int* socket_ptr = malloc(sizeof(int));
-			*socket_ptr = fd;
-			if (socket_ptr == NULL) {
-				close(fd);
-				return;
-			}
+			int op_id = recibir_operacion(fd);
 
-			int op = recibir_operacion(fd);
-
-			if (op != CPU_IDENTIFICACION) {
+			if (op_id != CPU_IDENTIFICACION) {
 				log_error(ks_logger, "Se conecto un nuevo CPU, pero no envio CPU_IDENTIFICACION");
-				eliminar_paquete(contenido);
 				close(fd);
-				break;
+				continue;
 			}
 
 			t_paquete* contenido = recibir_paquete(fd);
 
-			int id_cpu = NULL;
-			buffer_read(&id_cpu, contenido->buffer, sizeof(char*));
+			int id_cpu = -1;
+			buffer_read(&id_cpu, contenido->buffer, sizeof(int));
 
-			t_cpu* cpu = crear_cpu(id_cpu, socket_ptr);
+			t_cpu* cpu = crear_cpu(id_cpu, fd);
 			eliminar_paquete(contenido);
+
+			pthread_mutex_lock(&mutex_cpus);
+			list_add(cpus, cpu);
+			pthread_mutex_unlock(&mutex_cpus);
 
 			log_conexion_cpu(id_cpu);
 
@@ -272,9 +262,8 @@ void* ks_conexion_loop(void* _arg) {
 
 			if (pthread_create(&hilo_cpu, NULL, ks_maneja_cpu, cpu) != 0) {
 				log_error(ks_logger, "no se inicia el hilo cpu");
-				free(socket_ptr);
 				close(fd);
-				return;
+				continue;
 			}
 			pthread_detach(hilo_cpu);
 			log_debug(ks_logger, "Se detachea el hilo_cpu");

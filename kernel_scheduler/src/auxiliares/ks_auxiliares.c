@@ -1,6 +1,8 @@
 #include "ks_auxiliares.h"
 
 #include "../main/ks_main.h"
+#include "../mensajes/ks_mensajes.h"
+#include "../planificadores/ks_planificador_mediano.h" // ks_timer_suspension
 
 void liberar_io(void* io_original) {
 	t_io* io = (t_io*)io_original;
@@ -125,7 +127,7 @@ bool finalizar_proceso(int pid) {
 	if (pcb == NULL) {
 		return false; // No se encontró el proceso con el PID dado
 	}
-	pcb->estado = EXIT; // Cambia el estado del proceso a "EXIT"
+	pcb->estado = EXIT_ESTADO; // Cambia el estado del proceso a "EXIT"
 	pthread_mutex_lock(&mutex_exit);
 	list_add(procs_exit, pcb); // Agrega el proceso a la lista de procesos en estado EXIT
 	pthread_mutex_unlock(&mutex_exit);
@@ -150,14 +152,14 @@ t_pcb* crear_proceso(int pid, char* path, int prioridad) {
 	nuevo_pcb->cpu_fd = -1;					   // Inicialmente no asignado a ningún CPU
 	nuevo_pcb->io_fd = -1;					   // Inicialmente no asignado a ningún IO
 
-	log_creacion_proceso(pid, path, prioridad);
+	log_creacion_proceso(nuevo_pcb);
 
-	log_cambio_estado(nuevo_pcb, (estados NEW), (estados READY));
+	log_cambio_estado(nuevo_pcb, NEW, READY);
 
 	nuevo_pcb->estado = READY; // Estado inicial del proceso es "READY" (saltea NEW)
 
 	pthread_mutex_lock(&array_queues[prioridad].mutex_ready);
-	queue_push(array_queues[prioridad].queue, nuevo_pcb); // Agrega el proceso a la cola correspondiente según su prioridad
+	queue_push(array_queues[prioridad].queue_ready, nuevo_pcb); // Agrega el proceso a la cola correspondiente según su prioridad
 	pthread_mutex_unlock(&array_queues[prioridad].mutex_ready);
 
 	return nuevo_pcb;
@@ -186,17 +188,17 @@ t_io* crear_io(int fd, char* tipo_io) {
 	nuevo_io->fd = fd;
 
 	if (strcmp(tipo_io, "SLEEP") == 0) {
-		mutex_lock(&mutex_ios_sleep);
+		pthread_mutex_lock(&mutex_ios_sleep);
 		list_add(ios_sleep, nuevo_io);
-		mutex_unlock(&mutex_ios_sleep);
+		pthread_mutex_unlock(&mutex_ios_sleep);
 	} else if (strcmp(tipo_io, "STDIN") == 0) {
-		mutex_lock(&mutex_ios_stdin);
+		pthread_mutex_lock(&mutex_ios_stdin);
 		list_add(ios_stdin, nuevo_io);
-		mutex_unlock(&mutex_ios_stdin);
+		pthread_mutex_unlock(&mutex_ios_stdin);
 	} else if (strcmp(tipo_io, "STDOUT") == 0) {
-		mutex_lock(&mutex_ios_stdout);
+		pthread_mutex_lock(&mutex_ios_stdout);
 		list_add(ios_stdout, nuevo_io);
-		mutex_unlock(&mutex_ios_stdout);
+		pthread_mutex_unlock(&mutex_ios_stdout);
 	}
 
 	log_debug(ks_logger, "IO de tipo %s creada con fd %d", tipo_io, fd);
@@ -244,10 +246,10 @@ void finalizar_cpu(t_cpu* cpu) {
 		cpu->pcb_ejecutando->io_fd = -1;
 		cpu->pcb_ejecutando->estado = READY; // Cambia el estado del proceso a "READY" para que pueda ser planificado nuevamente
 
-		log_cambio_estado(cpu->pcb_ejecutando, (estados EXEC), (estados READY));
+		log_cambio_estado(cpu->pcb_ejecutando, EXEC, READY);
 
 		pthread_mutex_lock(&array_queues[cpu->pcb_ejecutando->prioridad].mutex_ready);
-		queue_push(array_queues[cpu->pcb_ejecutando->prioridad].queue, cpu->pcb_ejecutando); // Agrega el proceso de vuelta a la cola de ready correspondiente
+		queue_push(array_queues[cpu->pcb_ejecutando->prioridad].queue_ready, cpu->pcb_ejecutando); // Agrega el proceso de vuelta a la cola de ready correspondiente
 		pthread_mutex_unlock(&array_queues[cpu->pcb_ejecutando->prioridad].mutex_ready);
 
 		cpu->pcb_ejecutando = NULL;
@@ -268,36 +270,45 @@ void finalizar_cpu(t_cpu* cpu) {
 void ks_liberar_array_queues(void) {
 	if (array_queues) {
 		for (int i = 0; i < cantidad_algoritmos; i++) {
-			queue_destroy(array_queues[i].queue);
+			queue_destroy(array_queues[i].queue_ready);
 		}
 
 		free(array_queues);
 	}
 }
 
-t_person* find_by_name_contains(t_list* people, char* substring) {
-	bool _name_contains(void* ptr) {
-		t_person* person = (t_person*)ptr;
-		return string_contains(person->name, substring);
-	}
-	return list_find(people, _name_contains);
-}
-
 t_pcb* buscar_pcb_por_pid(int pid) {
+	bool _pcb_tiene_pid(void* ptr) {
+		t_pcb* pcb = (t_pcb*)ptr;
+		return pcb->pid == pid;
+	}
+
 	t_pcb* encontrado = NULL;
 
 	for (int i = 0; i < cantidad_algoritmos; i++) {
-
-		bool _pcb_tiene_pid(void* ptr) {
-			t_pcb* pcb = (t_pcb*)ptr;
-			return pcb->id == pid;
-		}
-
-		encontrado = list_find(array_queues[i].queue, _pcb_tiene_pid);
-
-		if (encontrado != NULL) {
+		pthread_mutex_lock(&array_queues[i].mutex_ready);
+		encontrado = list_find(array_queues[i].queue_ready->elements, _pcb_tiene_pid);
+		pthread_mutex_unlock(&array_queues[i].mutex_ready);
+		if (encontrado != NULL)
 			return encontrado;
-		}
+
+		pthread_mutex_lock(&array_queues[i].mutex_block);
+		encontrado = list_find(array_queues[i].list_block, _pcb_tiene_pid);
+		pthread_mutex_unlock(&array_queues[i].mutex_block);
+		if (encontrado != NULL)
+			return encontrado;
+
+		pthread_mutex_lock(&array_queues[i].mutex_susp_block);
+		encontrado = list_find(array_queues[i].list_susp_block, _pcb_tiene_pid);
+		pthread_mutex_unlock(&array_queues[i].mutex_susp_block);
+		if (encontrado != NULL)
+			return encontrado;
+
+		pthread_mutex_lock(&array_queues[i].mutex_susp_ready);
+		encontrado = list_find(array_queues[i].list_susp_ready, _pcb_tiene_pid);
+		pthread_mutex_unlock(&array_queues[i].mutex_susp_ready);
+		if (encontrado != NULL)
+			return encontrado;
 	}
 
 	pthread_mutex_lock(&mutex_exec);
@@ -331,7 +342,7 @@ char* estado_a_string(estados estado) {
 		return "SUSP_BLOCK";
 	case SUSP_READY:
 		return "SUSP_READY";
-	case EXIT:
+	case EXIT_ESTADO:
 		return "EXIT";
 	default:
 		return "UNKNOWN";
@@ -363,9 +374,16 @@ void ks_pasar_a_block(t_pcb* pcb) {
 	pcb->estado = BLOCK;
 	pcb->tiempo_inicio_block = time(NULL);
 
+	pthread_mutex_lock(&array_queues[pcb->prioridad].mutex_block);
 	list_add(array_queues[pcb->prioridad].list_block, pcb);
+	pthread_mutex_unlock(&array_queues[pcb->prioridad].mutex_block);
 
-	log_cambio_estado(pcb, (estados EXEC), (estados BLOCK));
+	log_cambio_estado(pcb, EXEC, BLOCK);
+
+	// timer de mediano plazo: si sigue en BLOCK tras SUSPENSION_TIMEOUT pasa a SUSP_BLOCK
+	pthread_t hilo_suspension;
+	pthread_create(&hilo_suspension, NULL, ks_timer_suspension, pcb);
+	pthread_detach(hilo_suspension);
 
 	sem_post(&sem_cpu_libre);
 }

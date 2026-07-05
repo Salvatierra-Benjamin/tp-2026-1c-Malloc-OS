@@ -1,6 +1,8 @@
 #include "ks_logs.h"
 
+#include "../auxiliares/ks_auxiliares.h"		   // estado_a_string
 #include "../main/ks_main.h"
+#include "../planificadores/ks_planificador_corto.h" // ks_verificar_desalojo_prioridad
 
 #include <stdlib.h>
 #include <string.h>

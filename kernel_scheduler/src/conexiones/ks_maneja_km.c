@@ -4,11 +4,14 @@
 
 #include "../auxiliares/ks_auxiliares.h"
 #include "../logs/ks_logs.h"
+#include "../mensajes/ks_mensajes.h"
+#include "../planificadores/ks_planificador_corto.h"
+#include "../planificadores/ks_planificador_mediano.h"
 
 void* ks_conexion_km(void* _arg) {
 	(void)_arg;
 
-	int socket_km = crear_conexion(ks_config.ip_km, ks_config.puerto_km);
+	socket_km = crear_conexion(ks_config.ip_km, ks_config.puerto_km);
 
 	if (socket_km < 0) {
 		log_error(ks_logger, "No pude conectar a Kernel Memory %s:%s", ks_config.ip_km, ks_config.puerto_km);
@@ -57,7 +60,7 @@ void* ks_conexion_km(void* _arg) {
 		}
 
 		case AUMENTO_DE_MEMORIA: { // AUMENTO_DE_MEMORIA (TAMAÑO)
-			t_paquete* contenido = recibir_paquete(fd);
+			t_paquete* contenido = recibir_paquete(socket_km);
 
 			int tamanio;
 			buffer_read(&tamanio, contenido->buffer, sizeof(int));
@@ -106,23 +109,25 @@ void* ks_conexion_km(void* _arg) {
 			break;
 		}
 
-		case OK_STDIN_DATOS_ESCRITOS: {
+		case STDOUT_RESTUESTA_LECTURA: { // KM -> KS: [pid][tamanio][datos] (contrato en protocolos.h)
 			t_paquete* contenido = recibir_paquete(socket_km);
-
-			int len1;
-			buffer_read(&len1, contenido->buffer, sizeof(int)); // LEEMOS CUANTO MIDE
-
-			char* cadena_de_bytes = malloc(len1);					// PEDIMOS EL ESPACIO JUSTO
-			buffer_read(&cadena_de_bytes, contenido->buffer, len1); // COPIAMOS EL CONTENIDO DEL BUFFER
 
 			int pid;
 			buffer_read(&pid, contenido->buffer, sizeof(int));
 
+			int len1;
+			buffer_read(&len1, contenido->buffer, sizeof(int)); // LEEMOS CUANTO MIDE
+
+			char* cadena_de_bytes = malloc(len1);				   // PEDIMOS EL ESPACIO JUSTO
+			buffer_read(cadena_de_bytes, contenido->buffer, len1); // COPIAMOS EL CONTENIDO DEL BUFFER
+
 			t_io* io = io_libre("STDOUT");
 
 			if (io == NULL) {
-				log_warning(ks_logger, "No hay IOs libres para el proceso %d en la cpu %d, reintente el STDOUT luego", cpu->pcb_ejecutando, cpu->id_cpu);
-				return; // ? Lo mantengo??? O pongo break???
+				log_warning(ks_logger, "No hay IOs STDOUT libres para el proceso %d, se descarta el STDOUT", pid);
+				free(cadena_de_bytes);
+				eliminar_paquete(contenido);
+				break; // return mataba el hilo de conexión con KM entero
 			}
 
 			enviar_stdout_io(io->fd, cadena_de_bytes, len1, pid);
@@ -231,11 +236,10 @@ void* ks_conexion_km(void* _arg) {
 
 		case -1: {
 			log_warning(ks_logger, "[KM] se desconecto km");
-			ejecutando = 0;
 			return NULL;
 		}
 		default: {
-			log_warning(ks_logger, "[KM] operacion desconocida: %d", op_code);
+			log_warning(ks_logger, "[KM] operacion desconocida: %d", cod_op);
 			break;
 		}
 		}

@@ -1,7 +1,12 @@
 #include "ks_maneja_cpu.h"
 
+#include "../auxiliares/ks_auxiliares.h"
 #include "../logs/ks_logs.h"
 #include "../main/ks_main.h"
+#include "../mensajes/ks_mensajes.h"
+#include "../planificadores/ks_planificador_corto.h"
+
+t_mutex_kernel* ks_buscar_mutex(char* nombre); // definida al final de este archivo
 
 void* ks_maneja_cpu(void* arg) {
 	t_cpu* cpu = (t_cpu*)arg;
@@ -184,7 +189,7 @@ void* ks_maneja_cpu(void* arg) {
 		case ENVIO_SLEEP: // SLEEP (Tiempo)
 		{
 			log_syscall_recibida(cpu->pcb_ejecutando, "SLEEP");
-			t_paquete* contenido = recibir_paquete(fd);
+			t_paquete* contenido = recibir_paquete(cpu->fd);
 
 			int tiempo;
 			buffer_read(&tiempo, contenido->buffer, sizeof(int));
@@ -192,8 +197,9 @@ void* ks_maneja_cpu(void* arg) {
 			t_io* io = io_libre("SLEEP");
 
 			if (io == NULL) {
-				log_warning(ks_logger, "No hay IOs libres para el proceso %d en la cpu %d, reintente el SLEEP luego", cpu->pcb_ejecutando, cpu->id_cpu);
-				return; // ? Lo mantengo???
+				log_warning(ks_logger, "No hay IOs SLEEP libres para el proceso %d en la cpu %d, se descarta el SLEEP", cpu->pcb_ejecutando->pid, cpu->id);
+				eliminar_paquete(contenido);
+				break;
 			}
 
 			cpu->pcb_ejecutando->io_fd = io->fd;
@@ -211,29 +217,21 @@ void* ks_maneja_cpu(void* arg) {
 			log_syscall_recibida(cpu->pcb_ejecutando, "STDOUT");
 			t_paquete* contenido = recibir_paquete(cpu->fd);
 
+			// CPU manda [pid:int][dir_logica:uint32][tamanio:uint32] (execute_STDOUT)
 			int pid;
 			buffer_read(&pid, contenido->buffer, sizeof(int));
 
-			char* dir_fisica = NULL;
-			buffer_read(&dir_fisica, contenido->buffer, sizeof(char*));
+			uint32_t dir_logica;
+			buffer_read(&dir_logica, contenido->buffer, sizeof(uint32_t));
 
-			int tamanio;
-			buffer_read(&tamanio, contenido->buffer, sizeof(int));
-
-			t_io* io = io_libre("STDOUT");
-
-			if (io == NULL) {
-				log_warning(ks_logger, "No hay IOs libres para el proceso %d en la cpu %d, reintente el STDOUT luego", cpu->pcb_ejecutando, cpu->id_cpu);
-				return; // ? Lo mantengo??? O pongo break???
-			}
-
-			cpu->pcb_ejecutando->io_fd = io->fd;
+			uint32_t tamanio;
+			buffer_read(&tamanio, contenido->buffer, sizeof(uint32_t));
 
 			ks_pasar_a_block(cpu->pcb_ejecutando);
 
-			enviar_bytes_stdin(pid, len, dir_fisica, tamanio);
+			// la IO STDOUT se reserva recién cuando KM devuelve los datos (STDOUT_RESTUESTA_LECTURA)
+			enviar_solicitud_stdout_km(pid, dir_logica, (int)tamanio);
 
-			free(dir_fisica);
 			eliminar_paquete(contenido);
 			break;
 		}
@@ -243,26 +241,33 @@ void* ks_maneja_cpu(void* arg) {
 			log_syscall_recibida(cpu->pcb_ejecutando, "STDIN");
 			t_paquete* contenido = recibir_paquete(cpu->fd);
 
-			char* dir_logica = NULL;
-			buffer_read(&dir_logica, contenido->buffer, sizeof(char*));
+			// CPU manda [pid:int][dir_logica:uint32][tamanio:uint32] (execute_STDIN)
+			int pid;
+			buffer_read(&pid, contenido->buffer, sizeof(int));
 
-			int tamanio;
-			buffer_read(&tamanio, contenido->buffer, sizeof(int));
+			uint32_t dir_logica;
+			buffer_read(&dir_logica, contenido->buffer, sizeof(uint32_t));
+
+			uint32_t tamanio;
+			buffer_read(&tamanio, contenido->buffer, sizeof(uint32_t));
 
 			t_io* io = io_libre("STDIN");
 
 			if (io == NULL) {
-				log_warning(ks_logger, "No hay IOs libres para el proceso %d en la cpu %d, reintente el STDIN luego", cpu->pcb_ejecutando, cpu->id_cpu);
-				return; // ? Lo mantengo???
+				log_warning(ks_logger, "No hay IOs STDIN libres para el proceso %d en la cpu %d, se descarta el STDIN", cpu->pcb_ejecutando->pid, cpu->id);
+				eliminar_paquete(contenido);
+				break;
 			}
 
 			cpu->pcb_ejecutando->io_fd = io->fd;
 
 			ks_pasar_a_block(cpu->pcb_ejecutando);
 
-			enviar_stdin_io(io->fd, dir_logica, tamanio);
+			// TODO(KS): guardar dir_logica del STDIN pendiente (¿en el pcb?) para poder armar
+			// STDIN_SOLICITUD_ESCRITURA (enviar_bytes_stdin) cuando la IO devuelva OK_STDIN con los datos
+			(void)dir_logica;
+			enviar_stdin_io(io->fd, (int)tamanio, pid);
 
-			free(dir_logica);
 			eliminar_paquete(contenido);
 
 			break;
@@ -288,8 +293,8 @@ void* ks_maneja_cpu(void* arg) {
 
 		case ENVIO_EXIT: {
 			log_syscall_recibida(cpu->pcb_ejecutando, "EXIT");
-			log_fin_proceso(cpu->pcb_ejecutando, "EXIT");
-			finalizar_proceso(cpu->pcb_ejecutando);
+			finalizar_proceso(cpu->pcb_ejecutando->pid); // finalizar_proceso ya loguea el fin
+			cpu->pcb_ejecutando = NULL;
 			break;
 		}
 
@@ -306,12 +311,12 @@ void* ks_maneja_cpu(void* arg) {
 			if (motivo_interrupcion == AVISO_DE_INTERRUPCION_DESALOJO) {
 				log_debug(ks_logger, "Se desalojo el proceso %d, por motivo de AVISO_DE_INTERRUPCION_DESALOJO", pid);
 
-				t_pcb* pcb = ks_buscar_pcb_por_pid(pid);
-				ks_termina_de_desalojar_general(pcb);
+				t_pcb* pcb = buscar_pcb_por_pid(pid);
+				ks_termina_de_desalojar_un_pcb_general(pcb);
 			} else if (motivo_interrupcion == AVISO_DE_INTERRUPCION_SEGMENTATION_FAULT) {
 				log_debug(ks_logger, "Se desalojo el proceso %d, por motivo de AVISO_DE_INTERRUPCION_SEGMENTATION_FAULT", pid);
 
-				t_pcb* pcb = ks_buscar_pcb_por_pid(pid);
+				t_pcb* pcb = buscar_pcb_por_pid(pid);
 				ks_termina_de_desalojar_un_pcb_seg_fault(pcb);
 
 				// ? Se tiene que desconectar la cpu, y eso lo manejo en el swicth cuando se desconecta (case -1).
@@ -368,19 +373,19 @@ void* ks_maneja_cpu(void* arg) {
 			// }
 
 		case -1: {
-			log_warning(logger, "[CPU %d] se desconecto cpu", cpu->id);
+			log_warning(ks_logger, "[CPU %d] se desconecto cpu", cpu->id);
 			ejecutando = 0;
 			// TODO: eliminar cpu de la lista de cpus, y manejar al proc que se esta ejecutando en esa cpu (pasarlo a ready o a block segun corresponda)
 			finalizar_cpu(cpu);
 			break;
 		}
 		default: {
-			log_warning(logger, "[CPU %d] operacion desconocida: %d", cpu->id, op_code);
+			log_warning(ks_logger, "[CPU %d] operacion desconocida: %d", cpu->id, op_code);
 			break;
 		}
 		}
 	}
-	close(fd);
+	close(cpu->fd);
 	return NULL;
 }
 

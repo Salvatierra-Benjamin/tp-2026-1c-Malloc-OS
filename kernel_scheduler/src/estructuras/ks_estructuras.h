@@ -2,6 +2,7 @@
 #define KS_ESTRUCTURAS_H
 
 #include <pthread.h>
+#include <semaphore.h>
 #include <stdbool.h>
 #include <stdint.h>
 
@@ -9,6 +10,30 @@
 #include <commons/collections/queue.h>
 #include <commons/log.h>
 #include <time.h>
+
+// ESTADOS
+typedef enum {
+	NEW = 0,
+	READY = 1,
+	EXEC = 2,
+	BLOCK = 3,
+	SUSP_BLOCK = 4,
+	SUSP_READY = 5,
+	EXIT_ESTADO = 6 // "EXIT" colisiona con la instruccion EXIT de protocolos.h
+} estados;
+
+// PCB
+typedef struct {
+	int pid;
+	char* path;
+	int prioridad;
+	int prioridad_original;
+	int cpu_fd;
+	int io_fd;
+	estados estado;
+	time_t tiempo_inicio_block;
+	time_t tiempo_inicio_suspendido;
+} t_pcb;
 
 // CPU
 typedef struct {
@@ -62,30 +87,6 @@ typedef struct {
 	t_log_level log_level;
 } t_ks_config;
 
-// ESTADOS
-typedef enum {
-	NEW = 0,
-	READY = 1,
-	EXEC = 2,
-	BLOCK = 3,
-	SUSP_BLOCK = 4,
-	SUSP_READY = 5,
-	EXIT = 6
-} estados;
-
-// PCB
-typedef struct {
-	int pid;
-	char* path;
-	int prioridad;
-	int prioridad_original;
-	int cpu_fd;
-	int io_fd;
-	estados estado;
-	time_t tiempo_inicio_block;
-	time_t tiempo_inicio_suspendido;
-} t_pcb;
-
 typedef struct {
 	char* nombre;
 	bool tomado;
@@ -99,6 +100,7 @@ extern t_log* ks_logger;
 extern t_ks_config ks_config;
 
 extern int ks_server_fd;
+extern int socket_km;
 
 extern t_elemento_array_algoritmos* array_queues;
 extern int cantidad_algoritmos;

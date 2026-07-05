@@ -2,6 +2,7 @@
 #include "../auxiliares/ks_auxiliares.h"
 #include "../logs/ks_logs.h"
 #include "../main/ks_main.h"
+#include "../mensajes/ks_mensajes.h"
 #include <time.h>
 #include <unistd.h>
 
@@ -11,15 +12,15 @@
 // TRANSICIONES
 bool pasar_a_block(t_pcb* pcb) {
 	pthread_mutex_lock(&mutex_exec);
-	t_pcb* pcb_removido = list_remove_element(procs_exec, pcb);
+	bool removido = list_remove_element(procs_exec, pcb);
 	pthread_mutex_unlock(&mutex_exec);
 
-	if ((pcb == NULL) || (pcb_removido == NULL)) {
+	if ((pcb == NULL) || !removido) {
 		liberar_proceso(pcb);
 		return false;
 	}
 
-	log_cambio_estado(pcb, (estados EXEC), (estados BLOCK));
+	log_cambio_estado(pcb, EXEC, BLOCK);
 
 	pcb->estado = BLOCK;
 	pcb->tiempo_inicio_block = time(NULL);
@@ -53,7 +54,7 @@ void ks_pasar_a_susp_block(t_pcb* pcb) {
 	list_add(array_queues[prio].list_susp_block, pcb);
 	pthread_mutex_unlock(&array_queues[prio].mutex_susp_block);
 
-	log_cambio_estado(pcb, (estados BLOCK), (estados SUSP_BLOCK));
+	log_cambio_estado(pcb, BLOCK, SUSP_BLOCK);
 
 	enviar_aviso_suspension_km(pcb->pid);
 
@@ -72,7 +73,7 @@ void ks_pasar_a_susp_ready(t_pcb* pcb) {
 	list_add(array_queues[prio].list_susp_ready, pcb);
 	pthread_mutex_unlock(&array_queues[prio].mutex_susp_ready);
 
-	log_cambio_estado(pcb, (estados SUSP_BLOCK), (estados SUSP_READY));
+	log_cambio_estado(pcb, SUSP_BLOCK, SUSP_READY);
 }
 void ks_pasar_a_ready_desde_susp_ready(t_pcb* pcb) {
 	int prio = pcb->prioridad;
@@ -87,7 +88,7 @@ void ks_pasar_a_ready_desde_susp_ready(t_pcb* pcb) {
 	queue_push(array_queues[prio].queue_ready, pcb);
 	pthread_mutex_unlock(&array_queues[prio].mutex_ready);
 
-	log_cambio_estado(pcb, (estados SUSP_READY), (estados READY));
+	log_cambio_estado(pcb, SUSP_READY, READY);
 }
 
 void ks_pasar_a_ready_desde_susp_ready_pid(int pid, int prioridad) {
@@ -107,7 +108,7 @@ void ks_pasar_a_ready_desde_susp_ready_pid(int pid, int prioridad) {
 	queue_push(array_queues[prioridad].queue_ready, pcb);
 	pthread_mutex_unlock(&array_queues[prioridad].mutex_ready);
 
-	log_cambio_estado(pcb, (estados SUSP_READY), (estados READY));
+	log_cambio_estado(pcb, SUSP_READY, READY);
 
 	sem_post(&sem_ready); // ?
 }
@@ -116,7 +117,7 @@ void ks_pasar_a_ready_desde_susp_ready_pid(int pid, int prioridad) {
 void* ks_timer_suspension(void* arg) {
 	t_pcb* pcb = (t_pcb*)arg;
 
-	sleep(ks_config.suspension_timeout);
+	usleep((useconds_t)ks_config.suspension_timeout * 1000); // SUSPENSION_TIMEOUT viene en ms
 
 	pthread_mutex_lock(&array_queues[pcb->prioridad].mutex_block);
 	if (pcb->estado != BLOCK) {
@@ -135,22 +136,14 @@ void ks_empezar_a_intentar_desuspender(void) {
 	t_list* lista_a_desuspender = list_create();
 
 	for (int i = 0; i < cantidad_algoritmos; i++) {
+		pthread_mutex_lock(&array_queues[i].mutex_susp_ready);
 
-		while (1) {
-			pthread_mutex_lock(&array_queues[i].mutex_susp_ready);
-
-			if (list_is_empty(array_queues[i].list_susp_ready)) {
-				pthread_mutex_unlock(&array_queues[i].mutex_susp_ready);
-				log_debug(ks_logger, "No hay procesos en SUSP_READY para intentar desuspender en la prioridad %d", i);
-				break;
-			}
-
-			t_pcb* pcb = list_get(array_queues[i].list_susp_ready, 0);
-
+		for (int j = 0; j < list_size(array_queues[i].list_susp_ready); j++) {
+			t_pcb* pcb = list_get(array_queues[i].list_susp_ready, j);
 			list_add(lista_a_desuspender, pcb);
-
-			pthread_mutex_unlock(&array_queues[i].mutex_susp_ready);
 		}
+
+		pthread_mutex_unlock(&array_queues[i].mutex_susp_ready);
 	}
 
 	// le envio la lista a KM para que intente desuspenderlos, y cuando me confirme cuales pudo desuspender, los paso a READY

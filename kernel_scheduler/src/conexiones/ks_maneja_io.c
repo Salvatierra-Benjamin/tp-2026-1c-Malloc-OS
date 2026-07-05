@@ -3,23 +3,22 @@
 #include "../auxiliares/ks_auxiliares.h"
 #include "../logs/ks_logs.h"
 #include "../main/ks_main.h"
-#include "../planificadores/ks_planificador_corto_plazo.h"
+#include "../planificadores/ks_planificador_corto.h"
 
 void* ks_maneja_io(void* arg) {
-	t_cpu* cpu = (t_cpu*)arg;
-	free(arg);
+	// main pasa un t_io*; NO liberarlo acá, vive en las listas ios_*
+	t_io* io = (t_io*)arg;
 
-	log_debug(ks_logger, "Entra en ks_maneja_io (fd = %d)", cpu->fd);
-	log_conexion_io((t_io*)arg);
+	log_debug(ks_logger, "Entra en ks_maneja_io (fd = %d)", io->fd);
 
 	int ejecutando = 1;
 
 	while (ejecutando) {
-		int op_code = recibir_operacion(cpu->fd);
+		int op_code = recibir_operacion(io->fd);
 		switch (op_code) {
 		case OK_SLEEP: // OK_SLEEP  (PID)
 		{
-			t_paquete* contenido = recibir_paquete(cpu->fd);
+			t_paquete* contenido = recibir_paquete(io->fd);
 
 			int pid;
 			buffer_read(&pid, contenido->buffer, sizeof(int));
@@ -38,7 +37,7 @@ void* ks_maneja_io(void* arg) {
 
 		case OK_STDIN: // OK_STDIN(pid)
 		{
-			t_paquete* contenido = recibir_paquete(cpu->fd);
+			t_paquete* contenido = recibir_paquete(io->fd);
 
 			int bytes;
 			buffer_read(&bytes, contenido->buffer, sizeof(int));
@@ -54,8 +53,9 @@ void* ks_maneja_io(void* arg) {
 				log_fin_io(pcb);
 			}
 
-			// enviar a KM
-			enviar_bytes_stdin(pcb, bytes);
+			// TODO(KS): flujo STDIN incompleto — OK_STDIN no trae los datos leídos ni KS
+			// recuerda la dirección lógica del pedido. Cuando esté eso, llamar:
+			// enviar_bytes_stdin(pid, dir_logica, tamanio, datos);  (STDIN_SOLICITUD_ESCRITURA a KM)
 
 			eliminar_paquete(contenido);
 			break;
@@ -63,7 +63,7 @@ void* ks_maneja_io(void* arg) {
 
 		case OK_STDOUT: // OK_STDOUT_RESPUESTA_BYTES (PID)
 		{
-			t_paquete* contenido = recibir_paquete(cpu->fd);
+			t_paquete* contenido = recibir_paquete(io->fd);
 
 			int pid;
 			buffer_read(&pid, contenido->buffer, sizeof(int));
@@ -91,7 +91,7 @@ void* ks_maneja_io(void* arg) {
 		}
 		}
 	}
-	close(cpu->fd);
+	close(io->fd);
 	return NULL;
 }
 
@@ -113,7 +113,7 @@ void ks_desbloquear_proceso(t_pcb* pcb) {
 		queue_push(array_queues[pcb->prioridad].queue_ready, pcb);
 		pthread_mutex_unlock(&array_queues[pcb->prioridad].mutex_ready);
 
-		log_cambio_estado(pcb, (estados BLOCK), (estados READY));
+		log_cambio_estado(pcb, BLOCK, READY);
 
 		// sem_post(&sem_ready);
 		return;
@@ -135,7 +135,7 @@ void ks_desbloquear_proceso(t_pcb* pcb) {
 		list_add(array_queues[pcb->prioridad].list_susp_ready, pcb);
 		pthread_mutex_unlock(&array_queues[pcb->prioridad].mutex_susp_ready);
 
-		log_cambio_estado(pcb, (estados SUSP_BLOCK), (estados SUSP_READY));
+		log_cambio_estado(pcb, SUSP_BLOCK, SUSP_READY);
 
 		sem_post(&sem_memoria_disponible);
 	}

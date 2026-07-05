@@ -1,7 +1,7 @@
 #ifndef KS_MANEJA_KM_H
 #define KS_MANEJA_KM_H
 
-#include "ks_estructuras.h"
+#include "../estructuras/ks_estructuras.h"
 
 #include <pthread.h>
 #include <stdlib.h>

@@ -25,7 +25,7 @@
 */
 
 // ! -------------------------------- KS RTA GRAL DE OK CONEXIÓN ------------------------------------------------------------------------------------------------
-void enviar_ok_conexion(fd) {
+void enviar_ok_conexion(int fd) {
 	enviar_operacion(fd, KS_OK_CONEXION);
 }
 
@@ -44,12 +44,13 @@ void enviar_interrupcion_cpu(int cpu_fd, int pid) {
 	eliminar_paquete(paquete_interrupcion);
 }
 
-// void enviar_interrupcion_compactacion_cpu(int cpu_fd, int pid) {
-// 	t_paquete* paquete_interrupcion = crear_paquete(SOLICITUD_DESALOJO_COMPACTACION_MEMORIA);
-// 	agregar_a_paquete(paquete_interrupcion, &pid, sizeof(int));
-// 	enviar_paquete(paquete_interrupcion, cpu_fd);
-// 	eliminar_paquete(paquete_interrupcion);
-// }
+// CPU solo atiende INTERRUPCION (receptor_ks.c); el opcode SOLICITUD_DESALOJO_COMPACTACION_MEMORIA no existe en protocolos.h
+void enviar_interrupcion_compactacion_cpu(int cpu_fd, int pid) {
+	t_paquete* paquete_interrupcion = crear_paquete(INTERRUPCION);
+	agregar_a_paquete(paquete_interrupcion, &pid, sizeof(int));
+	enviar_paquete(paquete_interrupcion, cpu_fd);
+	eliminar_paquete(paquete_interrupcion);
+}
 
 // void enviar_interrupcion_cpu(int cpu_fd, int pid, char* motivo) {
 // 	t_paquete* paquete_interrupcion = crear_paquete(INTERRUPCION);
@@ -101,14 +102,25 @@ void enviar_fin_proceso_km(int pid) {
 	eliminar_paquete(paquete_fin_proceso);
 }
 
-void enviar_bytes_stdin(int pid, int len, char* dir_logica, int tamanio) {
-	t_paquete* paquete_stdin = crear_paquete(STDOUT_SOLICITUD_LECTURA);
-	agregar_a_paquete(paquete_stdin, &len, sizeof(int));
-	agregar_a_paquete(paquete_stdin, dir_logica, len);
-	agregar_a_paquete(paquete_stdin, &tamanio, sizeof(int));
+// STDIN_SOLICITUD_ESCRITURA (KS->KM): [pid][dir_logica][tamanio][datos] (contrato en protocolos.h)
+void enviar_bytes_stdin(int pid, uint32_t dir_logica, int tamanio, void* datos) {
+	t_paquete* paquete_stdin = crear_paquete(STDIN_SOLICITUD_ESCRITURA);
 	agregar_a_paquete(paquete_stdin, &pid, sizeof(int));
+	agregar_a_paquete(paquete_stdin, &dir_logica, sizeof(uint32_t));
+	agregar_a_paquete(paquete_stdin, &tamanio, sizeof(int));
+	agregar_a_paquete(paquete_stdin, datos, tamanio);
 	enviar_paquete(paquete_stdin, socket_km);
 	eliminar_paquete(paquete_stdin);
+}
+
+// STDOUT_SOLICITUD_LECTURA (KS->KM): [pid][dir_logica][tamanio] (contrato en protocolos.h)
+void enviar_solicitud_stdout_km(int pid, uint32_t dir_logica, int tamanio) {
+	t_paquete* paquete_stdout = crear_paquete(STDOUT_SOLICITUD_LECTURA);
+	agregar_a_paquete(paquete_stdout, &pid, sizeof(int));
+	agregar_a_paquete(paquete_stdout, &dir_logica, sizeof(uint32_t));
+	agregar_a_paquete(paquete_stdout, &tamanio, sizeof(int));
+	enviar_paquete(paquete_stdout, socket_km);
+	eliminar_paquete(paquete_stdout);
 }
 
 void enviar_aviso_suspension_km(int pid) {

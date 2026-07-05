@@ -15,4 +15,6 @@
 // firma correcta para pthread
 void* ks_maneja_io(void* arg);
 
+void ks_desbloquear_proceso(t_pcb* pcb);
+
 #endif
