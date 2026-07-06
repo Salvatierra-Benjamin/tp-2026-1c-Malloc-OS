@@ -43,6 +43,15 @@ void finalizar_cpu(t_cpu* cpu);
 t_io* crear_io(int fd, char* tipo_io);
 t_io* io_libre(char* tipo_io);
 
+int ks_indice_cola(int prioridad);
+
+void ks_pedir_io_sleep(int pid, int tiempo);
+void ks_liberar_io_sleep(t_io* io);
+void ks_pedir_io_stdin(int pid, uint32_t dir_logica, int tamanio);
+void ks_liberar_io_stdin(t_io* io);
+void ks_pedir_io_stdout(int pid, void* datos, int len);
+void ks_liberar_io_stdout(t_io* io);
+
 // SEMAFOROS
 void inicializar_semaforos(void);
 void destruir_semaforos(void);

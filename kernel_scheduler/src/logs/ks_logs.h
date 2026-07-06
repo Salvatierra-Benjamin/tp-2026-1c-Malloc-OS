@@ -17,7 +17,7 @@ void log_mutex_tomado(t_pcb* pcb, char* nombre_mutex);
 void log_mutex_liberado(t_pcb* pcb, char* nombre_mutex);
 
 // CORREGIDO: Quitados los enteros sobrantes que no usa el .c
-void log_cambio_prioridad(t_pcb* pcb);
+void log_cambio_prioridad(t_pcb* pcb, int prioridad_anterior);
 
 void log_desalojo_quantum(t_pcb* pcb);
 void log_desalojo_prioridad(t_pcb* pcb_desalojado, t_pcb* pcb_nuevo);

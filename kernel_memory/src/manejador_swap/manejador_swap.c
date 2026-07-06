@@ -53,6 +53,7 @@ void agregar_swap(int tam_bloque, int tam_swap)
 
 t_list *reservar_bloques_swap(int cantidad)
 {
+    // metodo de asignacion indexada - lista de bloques correspondientes a un archivo
     t_list *bloques = list_create(); // bloques a reservar : [0,3,5,7] por ejemplo
 
     pthread_mutex_lock(&mutex_bloques_swap);

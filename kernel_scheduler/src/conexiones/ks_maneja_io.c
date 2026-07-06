@@ -3,6 +3,7 @@
 #include "../auxiliares/ks_auxiliares.h"
 #include "../logs/ks_logs.h"
 #include "../main/ks_main.h"
+#include "../mensajes/ks_mensajes.h"
 #include "../planificadores/ks_planificador_corto.h"
 
 void* ks_maneja_io(void* arg) {
@@ -31,31 +32,35 @@ void* ks_maneja_io(void* arg) {
 				log_fin_io(pcb);
 			}
 
+			// La IO terminó: se libera (o toma el próximo SLEEP encolado).
+			ks_liberar_io_sleep(io);
+
 			eliminar_paquete(contenido);
 			break;
 		}
 
-		case OK_STDIN: // OK_STDIN(pid)
+		case OK_STDIN: // IO -> KS: payload = [datos] (tamaño = lo pedido). pid/dir los tengo en la IO
 		{
 			t_paquete* contenido = recibir_paquete(io->fd);
 
-			int bytes;
-			buffer_read(&bytes, contenido->buffer, sizeof(int));
+			int pid = io->pid_pendiente;
+			uint32_t dir_logica = io->stdin_dir_logica;
+			int tamanio = io->stdin_tamanio;
 
-			int pid;
-			buffer_read(&pid, contenido->buffer, sizeof(int));
+			// Leo lo que IO capturó del teclado y se lo mando a KM para que lo
+			// escriba en la memoria del proceso (dir_logica).
+			void* datos = malloc(tamanio);
+			buffer_read(datos, contenido->buffer, tamanio);
 
-			t_pcb* pcb = buscar_pcb_por_pid(pid);
+			// OJO: NO se desbloquea acá. El proceso vuelve a READY recién cuando KM
+			// confirma la escritura con OK_STDIN_DATOS_ESCRITOS (ks_maneja_km).
+			enviar_bytes_stdin(pid, dir_logica, tamanio, datos);
 
-			if (pcb != NULL) {
-				ks_desbloquear_proceso(pcb);
-				log_debug(ks_logger, "Proceso %d desbloqueado del STDIN", pid);
-				log_fin_io(pcb);
-			}
+			free(datos);
 
-			// TODO(KS): flujo STDIN incompleto — OK_STDIN no trae los datos leídos ni KS
-			// recuerda la dirección lógica del pedido. Cuando esté eso, llamar:
-			// enviar_bytes_stdin(pid, dir_logica, tamanio, datos);  (STDIN_SOLICITUD_ESCRITURA a KM)
+			// La IO ya leyó (su trabajo terminó, aunque el proceso se desbloquee
+			// recién con OK_STDIN_DATOS_ESCRITOS): se libera o toma el próximo STDIN.
+			ks_liberar_io_stdin(io);
 
 			eliminar_paquete(contenido);
 			break;
@@ -75,6 +80,9 @@ void* ks_maneja_io(void* arg) {
 				log_debug(ks_logger, "Proceso %d desbloqueado del STDOUT", pid);
 				log_fin_io(pcb);
 			}
+
+			// La IO terminó de imprimir: se libera (o toma el próximo STDOUT encolado).
+			ks_liberar_io_stdout(io);
 
 			eliminar_paquete(contenido);
 			break;
@@ -103,19 +111,19 @@ void ks_desbloquear_proceso(t_pcb* pcb) {
 			return aux->pid == pcb->pid;
 		}
 
-		pthread_mutex_lock(&array_queues[pcb->prioridad].mutex_block);
-		list_remove_by_condition(array_queues[pcb->prioridad].list_block, _es_pcb);
-		pthread_mutex_unlock(&array_queues[pcb->prioridad].mutex_block);
+		pthread_mutex_lock(&array_queues[ks_indice_cola(pcb->prioridad)].mutex_block);
+		list_remove_by_condition(array_queues[ks_indice_cola(pcb->prioridad)].list_block, _es_pcb);
+		pthread_mutex_unlock(&array_queues[ks_indice_cola(pcb->prioridad)].mutex_block);
 
 		pcb->estado = READY;
 
-		pthread_mutex_lock(&array_queues[pcb->prioridad].mutex_ready);
-		queue_push(array_queues[pcb->prioridad].queue_ready, pcb);
-		pthread_mutex_unlock(&array_queues[pcb->prioridad].mutex_ready);
+		pthread_mutex_lock(&array_queues[ks_indice_cola(pcb->prioridad)].mutex_ready);
+		queue_push(array_queues[ks_indice_cola(pcb->prioridad)].queue_ready, pcb);
+		pthread_mutex_unlock(&array_queues[ks_indice_cola(pcb->prioridad)].mutex_ready);
 
 		log_cambio_estado(pcb, BLOCK, READY);
 
-		// sem_post(&sem_ready);
+		sem_post(&sem_ready); // sin esto el corto plazo no vuelve a planificar al proceso
 		return;
 	}
 
@@ -124,16 +132,18 @@ void ks_desbloquear_proceso(t_pcb* pcb) {
 			t_pcb* aux = ptr;
 			return aux->pid == pcb->pid;
 		}
-		pthread_mutex_lock(&array_queues[pcb->prioridad].mutex_susp_block);
-		list_remove_by_condition(array_queues[pcb->prioridad].list_susp_block, _es_pcb);
-		pthread_mutex_unlock(&array_queues[pcb->prioridad].mutex_susp_block);
+		pthread_mutex_lock(&array_queues[ks_indice_cola(pcb->prioridad)].mutex_susp_block);
+		list_remove_by_condition(array_queues[ks_indice_cola(pcb->prioridad)].list_susp_block, _es_pcb);
+		pthread_mutex_unlock(&array_queues[ks_indice_cola(pcb->prioridad)].mutex_susp_block);
 
 		pcb->estado = SUSP_READY;
-		pcb->tiempo_inicio_suspendido = time(NULL);
+		// NO se re-setea tiempo_inicio_suspendido: se mantiene el instante en que el
+		// proceso se SUSPENDIÓ (BLOCK→SUSP_BLOCK) para ordenar la des-suspensión por
+		// "mayor tiempo suspendido" (spec). Pisarlo acá mediría solo el tiempo en SUSP_READY.
 
-		pthread_mutex_lock(&array_queues[pcb->prioridad].mutex_susp_ready);
-		list_add(array_queues[pcb->prioridad].list_susp_ready, pcb);
-		pthread_mutex_unlock(&array_queues[pcb->prioridad].mutex_susp_ready);
+		pthread_mutex_lock(&array_queues[ks_indice_cola(pcb->prioridad)].mutex_susp_ready);
+		list_add(array_queues[ks_indice_cola(pcb->prioridad)].list_susp_ready, pcb);
+		pthread_mutex_unlock(&array_queues[ks_indice_cola(pcb->prioridad)].mutex_susp_ready);
 
 		log_cambio_estado(pcb, SUSP_BLOCK, SUSP_READY);
 

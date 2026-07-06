@@ -25,9 +25,9 @@ bool pasar_a_block(t_pcb* pcb) {
 	pcb->estado = BLOCK;
 	pcb->tiempo_inicio_block = time(NULL);
 
-	pthread_mutex_lock(&array_queues[pcb->prioridad].mutex_block);
-	list_add(array_queues[pcb->prioridad].list_block, pcb);
-	pthread_mutex_unlock(&array_queues[pcb->prioridad].mutex_block);
+	pthread_mutex_lock(&array_queues[ks_indice_cola(pcb->prioridad)].mutex_block);
+	list_add(array_queues[ks_indice_cola(pcb->prioridad)].list_block, pcb);
+	pthread_mutex_unlock(&array_queues[ks_indice_cola(pcb->prioridad)].mutex_block);
 
 	pthread_t hilo_suspend;
 	t_pcb* pcb_copia = pcb;
@@ -41,18 +41,18 @@ void ks_pasar_a_susp_block(t_pcb* pcb) {
 	int prio = pcb->prioridad;
 
 	// sacar de BLOCK
-	pthread_mutex_lock(&array_queues[prio].mutex_block);
-	list_remove_element(array_queues[prio].list_block, pcb);
-	pthread_mutex_unlock(&array_queues[prio].mutex_block);
+	pthread_mutex_lock(&array_queues[ks_indice_cola(prio)].mutex_block);
+	list_remove_element(array_queues[ks_indice_cola(prio)].list_block, pcb);
+	pthread_mutex_unlock(&array_queues[ks_indice_cola(prio)].mutex_block);
 
 	// cambiar estado
 	pcb->estado = SUSP_BLOCK;
 	pcb->tiempo_inicio_suspendido = time(NULL);
 
 	// meter en SUSP_BLOCK
-	pthread_mutex_lock(&array_queues[prio].mutex_susp_block);
-	list_add(array_queues[prio].list_susp_block, pcb);
-	pthread_mutex_unlock(&array_queues[prio].mutex_susp_block);
+	pthread_mutex_lock(&array_queues[ks_indice_cola(prio)].mutex_susp_block);
+	list_add(array_queues[ks_indice_cola(prio)].list_susp_block, pcb);
+	pthread_mutex_unlock(&array_queues[ks_indice_cola(prio)].mutex_susp_block);
 
 	log_cambio_estado(pcb, BLOCK, SUSP_BLOCK);
 
@@ -63,30 +63,30 @@ void ks_pasar_a_susp_block(t_pcb* pcb) {
 void ks_pasar_a_susp_ready(t_pcb* pcb) {
 	int prio = pcb->prioridad;
 
-	pthread_mutex_lock(&array_queues[prio].mutex_susp_block);
-	list_remove_element(array_queues[prio].list_susp_block, pcb);
-	pthread_mutex_unlock(&array_queues[prio].mutex_susp_block);
+	pthread_mutex_lock(&array_queues[ks_indice_cola(prio)].mutex_susp_block);
+	list_remove_element(array_queues[ks_indice_cola(prio)].list_susp_block, pcb);
+	pthread_mutex_unlock(&array_queues[ks_indice_cola(prio)].mutex_susp_block);
 
 	pcb->estado = SUSP_READY;
 
-	pthread_mutex_lock(&array_queues[prio].mutex_susp_ready);
-	list_add(array_queues[prio].list_susp_ready, pcb);
-	pthread_mutex_unlock(&array_queues[prio].mutex_susp_ready);
+	pthread_mutex_lock(&array_queues[ks_indice_cola(prio)].mutex_susp_ready);
+	list_add(array_queues[ks_indice_cola(prio)].list_susp_ready, pcb);
+	pthread_mutex_unlock(&array_queues[ks_indice_cola(prio)].mutex_susp_ready);
 
 	log_cambio_estado(pcb, SUSP_BLOCK, SUSP_READY);
 }
 void ks_pasar_a_ready_desde_susp_ready(t_pcb* pcb) {
 	int prio = pcb->prioridad;
 
-	pthread_mutex_lock(&array_queues[prio].mutex_susp_ready);
-	list_remove_element(array_queues[prio].list_susp_ready, pcb);
-	pthread_mutex_unlock(&array_queues[prio].mutex_susp_ready);
+	pthread_mutex_lock(&array_queues[ks_indice_cola(prio)].mutex_susp_ready);
+	list_remove_element(array_queues[ks_indice_cola(prio)].list_susp_ready, pcb);
+	pthread_mutex_unlock(&array_queues[ks_indice_cola(prio)].mutex_susp_ready);
 
 	pcb->estado = READY;
 
-	pthread_mutex_lock(&array_queues[prio].mutex_ready);
-	queue_push(array_queues[prio].queue_ready, pcb);
-	pthread_mutex_unlock(&array_queues[prio].mutex_ready);
+	pthread_mutex_lock(&array_queues[ks_indice_cola(prio)].mutex_ready);
+	queue_push(array_queues[ks_indice_cola(prio)].queue_ready, pcb);
+	pthread_mutex_unlock(&array_queues[ks_indice_cola(prio)].mutex_ready);
 
 	log_cambio_estado(pcb, SUSP_READY, READY);
 }
@@ -98,15 +98,15 @@ void ks_pasar_a_ready_desde_susp_ready_pid(int pid, int prioridad) {
 	}
 
 	t_pcb* pcb = NULL;
-	pthread_mutex_lock(&array_queues[prioridad].mutex_susp_ready);
-	pcb = list_remove_by_condition(array_queues[prioridad].list_susp_ready, _pcb_tiene_pid);
-	pthread_mutex_unlock(&array_queues[prioridad].mutex_susp_ready);
+	pthread_mutex_lock(&array_queues[ks_indice_cola(prioridad)].mutex_susp_ready);
+	pcb = list_remove_by_condition(array_queues[ks_indice_cola(prioridad)].list_susp_ready, _pcb_tiene_pid);
+	pthread_mutex_unlock(&array_queues[ks_indice_cola(prioridad)].mutex_susp_ready);
 
 	pcb->estado = READY;
 
-	pthread_mutex_lock(&array_queues[prioridad].mutex_ready);
-	queue_push(array_queues[prioridad].queue_ready, pcb);
-	pthread_mutex_unlock(&array_queues[prioridad].mutex_ready);
+	pthread_mutex_lock(&array_queues[ks_indice_cola(prioridad)].mutex_ready);
+	queue_push(array_queues[ks_indice_cola(prioridad)].queue_ready, pcb);
+	pthread_mutex_unlock(&array_queues[ks_indice_cola(prioridad)].mutex_ready);
 
 	log_cambio_estado(pcb, SUSP_READY, READY);
 
@@ -119,12 +119,12 @@ void* ks_timer_suspension(void* arg) {
 
 	usleep((useconds_t)ks_config.suspension_timeout * 1000); // SUSPENSION_TIMEOUT viene en ms
 
-	pthread_mutex_lock(&array_queues[pcb->prioridad].mutex_block);
+	pthread_mutex_lock(&array_queues[ks_indice_cola(pcb->prioridad)].mutex_block);
 	if (pcb->estado != BLOCK) {
-		pthread_mutex_unlock(&array_queues[pcb->prioridad].mutex_block);
+		pthread_mutex_unlock(&array_queues[ks_indice_cola(pcb->prioridad)].mutex_block);
 		return NULL;
 	}
-	pthread_mutex_unlock(&array_queues[pcb->prioridad].mutex_block);
+	pthread_mutex_unlock(&array_queues[ks_indice_cola(pcb->prioridad)].mutex_block);
 
 	ks_pasar_a_susp_block(pcb);
 
@@ -132,11 +132,21 @@ void* ks_timer_suspension(void* arg) {
 }
 
 // DESUSPENSION
+// Orden de evaluación (spec): por prioridad (i=0 = mayor prioridad primero) y,
+// dentro de cada prioridad, primero el que lleve MÁS tiempo suspendido (menor
+// tiempo_inicio_suspendido = se suspendió antes).
+static bool _mas_tiempo_suspendido_primero(void* a, void* b) {
+	return ((t_pcb*)a)->tiempo_inicio_suspendido <= ((t_pcb*)b)->tiempo_inicio_suspendido;
+}
+
 void ks_empezar_a_intentar_desuspender(void) {
 	t_list* lista_a_desuspender = list_create();
 
 	for (int i = 0; i < cantidad_algoritmos; i++) {
 		pthread_mutex_lock(&array_queues[i].mutex_susp_ready);
+
+		// dentro de la prioridad, ordenar por mayor tiempo suspendido primero
+		list_sort(array_queues[i].list_susp_ready, _mas_tiempo_suspendido_primero);
 
 		for (int j = 0; j < list_size(array_queues[i].list_susp_ready); j++) {
 			t_pcb* pcb = list_get(array_queues[i].list_susp_ready, j);

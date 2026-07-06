@@ -9,10 +9,33 @@ void liberar_io(void* io_original) {
 	free(io); // Liberar la memoria de la IO
 }
 
+void liberar_pedido_io(void* pedido_original) {
+	t_pedido_io* pedido = (t_pedido_io*)pedido_original;
+	free(pedido->datos); // NULL salvo STDOUT; free(NULL) es no-op
+	free(pedido);
+}
+
+// Mapea la prioridad de un proceso al índice de cola VÁLIDO de array_queues.
+// FIFO/RR: hay una sola cola (índice 0) y la prioridad no se usa para planificar.
+// CMN: una cola por nivel; una prioridad fuera de rango se acota a la última cola
+// (el PDF pide no planificar fuera de rango; acotar evita dejar el proceso sin cola
+// y sin esto array_queues[ks_indice_cola(prioridad)] se iba de límites con las prioridades 1-3).
+int ks_indice_cola(int prioridad) {
+	if (cantidad_algoritmos <= 1 || prioridad < 0) {
+		return 0;
+	}
+	if (prioridad >= cantidad_algoritmos) {
+		return cantidad_algoritmos - 1;
+	}
+	return prioridad;
+}
+
 void liberar_cpu(void* cpu_original) {
 	t_cpu* cpu = (t_cpu*)cpu_original;
-	free(cpu->pcb_ejecutando);
-	free(cpu); // Liberar la memoria del CPU
+	// NO liberar pcb_ejecutando acá: el PCB en ejecución también está en procs_exec
+	// y se libera (y loguea su fin) al destruir esa lista. Liberarlo también acá
+	// causaba use-after-free + doble free en el teardown de BSOD/shutdown.
+	free(cpu); // Liberar solo la estructura del CPU
 }
 
 void liberar_proceso(void* proc) {
@@ -55,11 +78,16 @@ void liberar_listas_matando_procesos_bsod() {
 	list_destroy_and_destroy_elements(ios_stdout, liberar_io);
 	pthread_mutex_unlock(&mutex_ios_stdout);
 
+	queue_destroy_and_destroy_elements(pedidos_sleep, liberar_pedido_io);
+	queue_destroy_and_destroy_elements(pedidos_stdin, liberar_pedido_io);
+	queue_destroy_and_destroy_elements(pedidos_stdout, liberar_pedido_io);
+
 	pthread_mutex_lock(&mutex_exec);
 	list_destroy_and_destroy_elements(procs_exec, liberar_proceso_bsod);
 	pthread_mutex_unlock(&mutex_exec);
 
-	list_destroy_and_destroy_elements(procs_exit, liberar_proceso_bsod);
+	// procs_exit ya finalizaron y loguearon su fin con motivo EXIT: no re-loguear BSOD.
+	list_destroy_and_destroy_elements(procs_exit, liberar_proceso);
 	pthread_mutex_unlock(&mutex_exit);
 }
 
@@ -79,6 +107,10 @@ void liberar_listas_matando_procesos() {
 	pthread_mutex_lock(&mutex_ios_stdout);
 	list_destroy_and_destroy_elements(ios_stdout, liberar_io);
 	pthread_mutex_unlock(&mutex_ios_stdout);
+
+	queue_destroy_and_destroy_elements(pedidos_sleep, liberar_pedido_io);
+	queue_destroy_and_destroy_elements(pedidos_stdin, liberar_pedido_io);
+	queue_destroy_and_destroy_elements(pedidos_stdout, liberar_pedido_io);
 
 	pthread_mutex_lock(&mutex_exec);
 	list_destroy_and_destroy_elements(procs_exec, liberar_proceso);
@@ -136,6 +168,10 @@ bool finalizar_proceso(int pid) {
 
 	enviar_fin_proceso_km(pid);
 
+	// Al terminar el proceso, KM libera su memoria → puede haber espacio para
+	// des-suspender procesos que estaban en SUSP_READY. Disparo el mediano.
+	sem_post(&sem_memoria_disponible);
+
 	return true;
 }
 
@@ -177,20 +213,31 @@ t_pcb* crear_proceso(int pid, char* path, int prioridad) {
 
 	nuevo_pcb->pid = pid;
 	nuevo_pcb->path = strdup(path);			   // Asegúrate de liberar esta memoria cuando ya no se necesite
-	nuevo_pcb->prioridad = prioridad;		   // ! No manejo el caso en el que la prioridadd exceda a la cant de alg, xq dijeron que eso no va a suceder en las pruebas
+	nuevo_pcb->prioridad = prioridad;
 	nuevo_pcb->prioridad_original = prioridad; // Guardar la prioridad original para herencia de prioridad
 	nuevo_pcb->cpu_fd = -1;					   // Inicialmente no asignado a ningún CPU
 	nuevo_pcb->io_fd = -1;					   // Inicialmente no asignado a ningún IO
 
+	nuevo_pcb->estado = NEW;
+
 	log_creacion_proceso(nuevo_pcb);
+
+	// CMN: NO se planifican procesos con prioridad fuera del rango de colas (spec:
+	// "solamente se planificarán prioridades de la 0 a la N-1"). Queda en NEW, sin
+	// encolar. (En FIFO/RR hay una sola cola y la prioridad no planifica, así que
+	// no aplica: ks_indice_cola las colapsa a 0.)
+	if (ks_config.algoritmo == CMN && (prioridad < 0 || prioridad >= cantidad_algoritmos)) {
+		log_warning(ks_logger, "PID %d con prioridad %d fuera del rango de colas [0..%d]: NO se planifica (queda en NEW)", pid, prioridad, cantidad_algoritmos - 1);
+		return nuevo_pcb;
+	}
 
 	log_cambio_estado(nuevo_pcb, NEW, READY);
 
 	nuevo_pcb->estado = READY; // Estado inicial del proceso es "READY" (saltea NEW)
 
-	pthread_mutex_lock(&array_queues[prioridad].mutex_ready);
-	queue_push(array_queues[prioridad].queue_ready, nuevo_pcb); // Agrega el proceso a la cola correspondiente según su prioridad
-	pthread_mutex_unlock(&array_queues[prioridad].mutex_ready);
+	pthread_mutex_lock(&array_queues[ks_indice_cola(prioridad)].mutex_ready);
+	queue_push(array_queues[ks_indice_cola(prioridad)].queue_ready, nuevo_pcb); // Agrega el proceso a la cola correspondiente según su prioridad
+	pthread_mutex_unlock(&array_queues[ks_indice_cola(prioridad)].mutex_ready);
 
 	return nuevo_pcb;
 }
@@ -216,6 +263,9 @@ t_io* crear_io(int fd, char* tipo_io) {
 
 	nuevo_io->esta_libre = true;
 	nuevo_io->fd = fd;
+	nuevo_io->pid_pendiente = -1;
+	nuevo_io->stdin_dir_logica = 0;
+	nuevo_io->stdin_tamanio = 0;
 
 	if (strcmp(tipo_io, "SLEEP") == 0) {
 		pthread_mutex_lock(&mutex_ios_sleep);
@@ -270,6 +320,113 @@ t_io* io_libre(char* tipo_io) {
 	return NULL;
 }
 
+// ------------------- Asignación / liberación de IO con cola de pedidos -------------------
+// Si hay una IO libre del tipo, se la asigna y manda el pedido. Si no, encola el
+// pedido; se despachará cuando una IO de ese tipo se libere (ks_liberar_io_*).
+// El proceso ya debe estar en BLOCK antes de llamar a esto.
+
+static bool _io_libre_pred(void* ptr) {
+	return ((t_io*)ptr)->esta_libre;
+}
+
+void ks_pedir_io_sleep(int pid, int tiempo) {
+	pthread_mutex_lock(&mutex_ios_sleep);
+	t_io* io = list_find(ios_sleep, _io_libre_pred);
+	if (io != NULL) {
+		io->esta_libre = false;
+		pthread_mutex_unlock(&mutex_ios_sleep);
+		enviar_sleep_io(io->fd, tiempo, pid);
+		return;
+	}
+	t_pedido_io* pedido = malloc(sizeof(t_pedido_io));
+	*pedido = (t_pedido_io){.pid = pid, .tamanio = tiempo, .dir_logica = 0, .datos = NULL};
+	queue_push(pedidos_sleep, pedido);
+	pthread_mutex_unlock(&mutex_ios_sleep);
+	log_debug(ks_logger, "No hay IO SLEEP libre: PID %d encolado", pid);
+}
+
+void ks_liberar_io_sleep(t_io* io) {
+	pthread_mutex_lock(&mutex_ios_sleep);
+	if (!queue_is_empty(pedidos_sleep)) {
+		t_pedido_io* pedido = queue_pop(pedidos_sleep);
+		pthread_mutex_unlock(&mutex_ios_sleep); // la IO sigue ocupada, la reasigno
+		enviar_sleep_io(io->fd, pedido->tamanio, pedido->pid);
+		free(pedido);
+		return;
+	}
+	io->esta_libre = true;
+	pthread_mutex_unlock(&mutex_ios_sleep);
+}
+
+void ks_pedir_io_stdin(int pid, uint32_t dir_logica, int tamanio) {
+	pthread_mutex_lock(&mutex_ios_stdin);
+	t_io* io = list_find(ios_stdin, _io_libre_pred);
+	if (io != NULL) {
+		io->esta_libre = false;
+		io->pid_pendiente = pid;
+		io->stdin_dir_logica = dir_logica;
+		io->stdin_tamanio = tamanio;
+		pthread_mutex_unlock(&mutex_ios_stdin);
+		enviar_stdin_io(io->fd, tamanio, pid);
+		return;
+	}
+	t_pedido_io* pedido = malloc(sizeof(t_pedido_io));
+	*pedido = (t_pedido_io){.pid = pid, .tamanio = tamanio, .dir_logica = dir_logica, .datos = NULL};
+	queue_push(pedidos_stdin, pedido);
+	pthread_mutex_unlock(&mutex_ios_stdin);
+	log_debug(ks_logger, "No hay IO STDIN libre: PID %d encolado", pid);
+}
+
+void ks_liberar_io_stdin(t_io* io) {
+	pthread_mutex_lock(&mutex_ios_stdin);
+	if (!queue_is_empty(pedidos_stdin)) {
+		t_pedido_io* pedido = queue_pop(pedidos_stdin);
+		io->pid_pendiente = pedido->pid;
+		io->stdin_dir_logica = pedido->dir_logica;
+		io->stdin_tamanio = pedido->tamanio;
+		pthread_mutex_unlock(&mutex_ios_stdin);
+		enviar_stdin_io(io->fd, pedido->tamanio, pedido->pid);
+		free(pedido);
+		return;
+	}
+	io->esta_libre = true;
+	pthread_mutex_unlock(&mutex_ios_stdin);
+}
+
+void ks_pedir_io_stdout(int pid, void* datos, int len) {
+	pthread_mutex_lock(&mutex_ios_stdout);
+	t_io* io = list_find(ios_stdout, _io_libre_pred);
+	if (io != NULL) {
+		io->esta_libre = false;
+		pthread_mutex_unlock(&mutex_ios_stdout);
+		enviar_stdout_io(io->fd, datos, len, pid);
+		return;
+	}
+	t_pedido_io* pedido = malloc(sizeof(t_pedido_io));
+	pedido->pid = pid;
+	pedido->tamanio = len;
+	pedido->dir_logica = 0;
+	pedido->datos = malloc(len); // copia propia: el buffer del caller se libera al volver
+	memcpy(pedido->datos, datos, len);
+	queue_push(pedidos_stdout, pedido);
+	pthread_mutex_unlock(&mutex_ios_stdout);
+	log_debug(ks_logger, "No hay IO STDOUT libre: PID %d encolado", pid);
+}
+
+void ks_liberar_io_stdout(t_io* io) {
+	pthread_mutex_lock(&mutex_ios_stdout);
+	if (!queue_is_empty(pedidos_stdout)) {
+		t_pedido_io* pedido = queue_pop(pedidos_stdout);
+		pthread_mutex_unlock(&mutex_ios_stdout);
+		enviar_stdout_io(io->fd, pedido->datos, pedido->tamanio, pedido->pid);
+		free(pedido->datos);
+		free(pedido);
+		return;
+	}
+	io->esta_libre = true;
+	pthread_mutex_unlock(&mutex_ios_stdout);
+}
+
 void finalizar_cpu(t_cpu* cpu) {
 	if (cpu->pcb_ejecutando != NULL) {
 		cpu->pcb_ejecutando->cpu_fd = -1;
@@ -278,9 +435,9 @@ void finalizar_cpu(t_cpu* cpu) {
 
 		log_cambio_estado(cpu->pcb_ejecutando, EXEC, READY);
 
-		pthread_mutex_lock(&array_queues[cpu->pcb_ejecutando->prioridad].mutex_ready);
-		queue_push(array_queues[cpu->pcb_ejecutando->prioridad].queue_ready, cpu->pcb_ejecutando); // Agrega el proceso de vuelta a la cola de ready correspondiente
-		pthread_mutex_unlock(&array_queues[cpu->pcb_ejecutando->prioridad].mutex_ready);
+		pthread_mutex_lock(&array_queues[ks_indice_cola(cpu->pcb_ejecutando->prioridad)].mutex_ready);
+		queue_push(array_queues[ks_indice_cola(cpu->pcb_ejecutando->prioridad)].queue_ready, cpu->pcb_ejecutando); // Agrega el proceso de vuelta a la cola de ready correspondiente
+		pthread_mutex_unlock(&array_queues[ks_indice_cola(cpu->pcb_ejecutando->prioridad)].mutex_ready);
 
 		cpu->pcb_ejecutando = NULL;
 	}
@@ -404,9 +561,9 @@ void ks_pasar_a_block(t_pcb* pcb) {
 	pcb->estado = BLOCK;
 	pcb->tiempo_inicio_block = time(NULL);
 
-	pthread_mutex_lock(&array_queues[pcb->prioridad].mutex_block);
-	list_add(array_queues[pcb->prioridad].list_block, pcb);
-	pthread_mutex_unlock(&array_queues[pcb->prioridad].mutex_block);
+	pthread_mutex_lock(&array_queues[ks_indice_cola(pcb->prioridad)].mutex_block);
+	list_add(array_queues[ks_indice_cola(pcb->prioridad)].list_block, pcb);
+	pthread_mutex_unlock(&array_queues[ks_indice_cola(pcb->prioridad)].mutex_block);
 
 	log_cambio_estado(pcb, EXEC, BLOCK);
 

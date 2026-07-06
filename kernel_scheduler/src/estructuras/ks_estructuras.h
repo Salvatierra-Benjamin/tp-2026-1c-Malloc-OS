@@ -46,7 +46,20 @@ typedef struct {
 typedef struct {
 	bool esta_libre;
 	int fd;
+	// Pedido de STDIN en curso en esta IO: OK_STDIN trae solo los datos, así que
+	// acá recuerdo a quién y dónde escribirlos cuando la IO responda.
+	int pid_pendiente;
+	uint32_t stdin_dir_logica;
+	int stdin_tamanio;
 } t_io;
+
+// PEDIDO DE IO ENCOLADO (cuando no hay IO libre del tipo pedido)
+typedef struct {
+	int pid;
+	int tamanio;		 // SLEEP: tiempo en ms; STDIN/STDOUT: cantidad de bytes
+	uint32_t dir_logica; // STDIN: dónde escribir lo leído (SLEEP/STDOUT no lo usan)
+	void* datos;		 // STDOUT: bytes a imprimir (malloc propio); resto NULL
+} t_pedido_io;
 
 // ENUM ALGORITMOS
 typedef enum { FIFO = 1,
@@ -113,12 +126,18 @@ extern t_elemento_array_algoritmos* array_queues;
 extern int cantidad_algoritmos;
 
 extern bool compactacion_en_progreso;
+extern int cpus_pendientes_desalojo_compactacion;
 
 // LISTAS
 extern t_list* cpus;
 extern t_list* ios_sleep;
 extern t_list* ios_stdin;
 extern t_list* ios_stdout;
+
+// Pedidos encolados por tipo cuando no hay IO libre (protegidos por mutex_ios_*)
+extern t_queue* pedidos_sleep;
+extern t_queue* pedidos_stdin;
+extern t_queue* pedidos_stdout;
 
 extern t_list* procs_exec;
 // extern t_list* procs_block;

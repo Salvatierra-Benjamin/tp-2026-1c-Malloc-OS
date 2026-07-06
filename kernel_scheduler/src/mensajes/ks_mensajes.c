@@ -62,26 +62,29 @@ void enviar_interrupcion_compactacion_cpu(int cpu_fd, int pid) {
 
 // ! -------------------------------- KS -> IO ------------------------------------------------------------------------------------------------
 void enviar_sleep_io(int io_fd, int tiempo_ms, int pid) {
+	// IO lo lee como [pid][tiempo] (receptor_ks.c), en ese orden.
 	t_paquete* paquete_sleep = crear_paquete(SLEEP_IO);
-	agregar_a_paquete(paquete_sleep, &tiempo_ms, sizeof(int));
 	agregar_a_paquete(paquete_sleep, &pid, sizeof(int));
+	agregar_a_paquete(paquete_sleep, &tiempo_ms, sizeof(int));
 	enviar_paquete(paquete_sleep, io_fd);
 	eliminar_paquete(paquete_sleep);
 }
 
 void enviar_stdin_io(int io_fd, int tamanio, int pid) {
+	// IO lo lee como [pid][cant_bytes] (receptor_ks.c), en ese orden.
 	t_paquete* paquete_stdin = crear_paquete(STDIN_IO);
-	agregar_a_paquete(paquete_stdin, &tamanio, sizeof(int));
 	agregar_a_paquete(paquete_stdin, &pid, sizeof(int));
+	agregar_a_paquete(paquete_stdin, &tamanio, sizeof(int));
 	enviar_paquete(paquete_stdin, io_fd);
 	eliminar_paquete(paquete_stdin);
 }
 
 void enviar_stdout_io(int io_fd, char* cadena_de_bytes, int len, int pid) {
+	// IO lo lee como [pid][longitud][cadena] (receptor_ks.c), en ese orden.
 	t_paquete* paquete_stdout = crear_paquete(STDOUT_IO);
+	agregar_a_paquete(paquete_stdout, &pid, sizeof(int));
 	agregar_a_paquete(paquete_stdout, &len, sizeof(int));
 	agregar_a_paquete(paquete_stdout, cadena_de_bytes, len);
-	agregar_a_paquete(paquete_stdout, &pid, sizeof(int));
 	enviar_paquete(paquete_stdout, io_fd);
 	eliminar_paquete(paquete_stdout);
 }
@@ -104,6 +107,12 @@ void enviar_fin_proceso_km(int pid) {
 	agregar_a_paquete(paquete_fin_proceso, &pid, sizeof(int));
 	enviar_paquete(paquete_fin_proceso, socket_km);
 	eliminar_paquete(paquete_fin_proceso);
+}
+
+// CONFIRMACION_DESALOJO_COMPACTACION (KS->KM, sin payload): todas las CPUs
+// quedaron desalojadas, KM ya puede compactar y responder FIN_COMPACTACION.
+void enviar_confirmacion_desalojo_compactacion_km(void) {
+	enviar_operacion(socket_km, CONFIRMACION_DESALOJO_COMPACTACION);
 }
 
 // STDIN_SOLICITUD_ESCRITURA (KS->KM): [pid][dir_logica][tamanio][datos] (contrato en protocolos.h)

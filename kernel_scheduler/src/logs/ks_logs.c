@@ -43,7 +43,11 @@ void log_syscall_recibida(t_pcb* pcb, char* nombre_syscall) {
 void log_cambio_estado(t_pcb* pcb, estados estado_anterior, estados estado_actual) {
 	log_info(ks_logger, "## (%d) Pasa del estado %s al estado %s", pcb->pid, estado_a_string(estado_anterior), estado_a_string(estado_actual));
 
-	if (estado_actual == READY) { // Lo hago acá porque es cada vez que se pasa a READY
+	// Preempción por prioridad: solo cuando un proceso LLEGA a READY (arribo desde
+	// NEW/BLOCK/SUSP_READY), no cuando se lo desaloja de EXEC (eso no es un arribo y
+	// causaría re-chequeos en cadena). El gate de algoritmo (CMN) y queue_preemption
+	// está dentro de ks_verificar_desalojo_prioridad.
+	if (estado_actual == READY && estado_anterior != EXEC) {
 		ks_verificar_desalojo_prioridad(pcb);
 	}
 
@@ -78,8 +82,8 @@ void log_mutex_liberado(t_pcb* pcb, char* nombre_mutex) {
 }
 
 // Cambio de prioridad de Proceso: “## <PID> Cambio de prioridad: <PRIORIDAD_ANTERIOR> - <PRIORIDAD_NUEVA>”
-void log_cambio_prioridad(t_pcb* pcb) {
-	log_info(ks_logger, "## %d Cambio de prioridad: %d - %d", pcb->pid, pcb->prioridad_original, pcb->prioridad);
+void log_cambio_prioridad(t_pcb* pcb, int prioridad_anterior) {
+	log_info(ks_logger, "## %d Cambio de prioridad: %d - %d", pcb->pid, prioridad_anterior, pcb->prioridad);
 }
 
 // Desalojo por fin de Quantum: “## (<PID>) - Desalojado por fin de quantum”

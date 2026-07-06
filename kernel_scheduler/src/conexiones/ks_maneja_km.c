@@ -7,6 +7,7 @@
 #include "../mensajes/ks_mensajes.h"
 #include "../planificadores/ks_planificador_corto.h"
 #include "../planificadores/ks_planificador_mediano.h"
+#include "ks_maneja_io.h" // ks_desbloquear_proceso
 
 void* ks_conexion_km(void* _arg) {
 	(void)_arg;
@@ -112,6 +113,7 @@ void* ks_conexion_km(void* _arg) {
 			pthread_mutex_unlock(&mutex_compactacion);
 
 			sem_post(&sem_memoria_disponible);
+			sem_post(&sem_compactacion_finalizada); // despierta al corto plazo que quedó esperando
 			sem_post(&sem_ready);
 			break;
 		}
@@ -128,29 +130,108 @@ void* ks_conexion_km(void* _arg) {
 			char* cadena_de_bytes = malloc(len1);				   // PEDIMOS EL ESPACIO JUSTO
 			buffer_read(cadena_de_bytes, contenido->buffer, len1); // COPIAMOS EL CONTENIDO DEL BUFFER
 
-			t_io* io = io_libre("STDOUT");
-
-			if (io == NULL) {
-				log_warning(ks_logger, "No hay IOs STDOUT libres para el proceso %d, se descarta el STDOUT", pid);
-				free(cadena_de_bytes);
-				eliminar_paquete(contenido);
-				break; // return mataba el hilo de conexión con KM entero
-			}
-
-			enviar_stdout_io(io->fd, cadena_de_bytes, len1, pid);
+			// Si hay IO STDOUT libre imprime ya; si no, el pedido (con sus datos)
+			// queda encolado y se despacha cuando una STDOUT se libere.
+			ks_pedir_io_stdout(pid, cadena_de_bytes, len1);
 
 			free(cadena_de_bytes);
 			eliminar_paquete(contenido);
 			break;
 		}
 
-		case OK_MEM_FREE: { // OK_MEM_FREE (PID)
+		case OK_STDIN_DATOS_ESCRITOS: { // KM escribió lo leído por STDIN: [pid]
+			t_paquete* contenido = recibir_paquete(socket_km);
 
+			int pid;
+			buffer_read(&pid, contenido->buffer, sizeof(int));
+
+			// STDIN completo (datos ya en memoria): el proceso vuelve de BLOCK a READY.
+			t_pcb* pcb = buscar_pcb_por_pid(pid);
+			if (pcb != NULL) {
+				ks_desbloquear_proceso(pcb);
+				log_fin_io(pcb);
+			} else {
+				log_warning(ks_logger, "OK_STDIN_DATOS_ESCRITOS: no encontré el PCB del PID %d", pid);
+			}
+
+			eliminar_paquete(contenido);
+			break;
+		}
+
+		case ERROR_STDIN: { // KM rechazó la escritura de STDIN (segfault lógico): [pid]
+			t_paquete* contenido = recibir_paquete(socket_km);
+
+			int pid;
+			buffer_read(&pid, contenido->buffer, sizeof(int));
+
+			log_warning(ks_logger, "KM rechazó la escritura de STDIN del PID %d (acceso inválido); lo desbloqueo para no dejarlo colgado", pid);
+			t_pcb* pcb = buscar_pcb_por_pid(pid);
+			if (pcb != NULL) {
+				ks_desbloquear_proceso(pcb);
+			}
+
+			eliminar_paquete(contenido);
+			break;
+		}
+
+		case OK_MEM_FREE: { // OK_MEM_FREE (PID)
+			t_paquete* contenido = recibir_paquete(socket_km);
+
+			int pid;
+			buffer_read(&pid, contenido->buffer, sizeof(int));
+
+			// MEM_FREE liberó memoria en KM → puede haber espacio para
+			// des-suspender procesos en SUSP_READY. Disparo el mediano.
+			sem_post(&sem_memoria_disponible);
+
+			// MEM_FREE atendido: la syscall no bloquea, el proceso vuelve a la CPU
+			t_pcb* pcb = buscar_pcb_por_pid(pid);
+			if (pcb != NULL) {
+				enviar_alojar_proceso_cpu(pcb);
+			} else {
+				log_warning(ks_logger, "OK_MEM_FREE: no encontré el PCB del PID %d para re-despachar", pid);
+			}
+
+			eliminar_paquete(contenido);
 			break;
 		}
 
 		case OK_MEM_ALLOC: { // OK_MEM_ALLOC (PID)
+			t_paquete* contenido = recibir_paquete(socket_km);
 
+			int pid;
+			buffer_read(&pid, contenido->buffer, sizeof(int));
+
+			// MEM_ALLOC atendido: la syscall no bloquea, el proceso vuelve a la CPU
+			t_pcb* pcb = buscar_pcb_por_pid(pid);
+			if (pcb != NULL) {
+				enviar_alojar_proceso_cpu(pcb);
+			} else {
+				log_warning(ks_logger, "OK_MEM_ALLOC: no encontré el PCB del PID %d para re-despachar", pid);
+			}
+
+			eliminar_paquete(contenido);
+			break;
+		}
+
+		case ERROR_MEM_ALLOC: // ERROR_MEM_ALLOC (PID): falló, pero la syscall igual necesita respuesta
+		case ERROR_MEM_FREE: { // ERROR_MEM_FREE (PID)
+			t_paquete* contenido = recibir_paquete(socket_km);
+
+			int pid;
+			buffer_read(&pid, contenido->buffer, sizeof(int));
+
+			log_warning(ks_logger, "KM rechazó la syscall de memoria del PID %d (op %d); re-despacho igual para que el proceso continúe", pid, cod_op);
+
+			// la syscall no bloquea aunque haya fallado: el proceso vuelve a la CPU
+			t_pcb* pcb = buscar_pcb_por_pid(pid);
+			if (pcb != NULL) {
+				enviar_alojar_proceso_cpu(pcb);
+			} else {
+				log_warning(ks_logger, "ERROR_MEM_*: no encontré el PCB del PID %d para re-despachar", pid);
+			}
+
+			eliminar_paquete(contenido);
 			break;
 		}
 

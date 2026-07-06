@@ -25,14 +25,15 @@ void* ks_maneja_cpu(void* arg) {
 			log_syscall_recibida(cpu->pcb_ejecutando, "MUTEX_CREATE");
 			t_paquete* contenido = recibir_paquete(cpu->fd);
 
+			// CPU manda [tam_nombre][nombre con '\0'][pid] (execute_MUTEX_*)
 			int len1;
-			buffer_read(&len1, contenido->buffer, sizeof(int));	 // LEEMOS CUANTO MIDE
-			char* nombre_mutex = malloc(len1);					 // PEDIMOS EL ESPACIO JUSTO
-			buffer_read(&nombre_mutex, contenido->buffer, len1); // COPIAMOS EL CONTENIDO
+			buffer_read(&len1, contenido->buffer, sizeof(int));
+			char* nombre_mutex = malloc(len1 + 1);
+			buffer_read(nombre_mutex, contenido->buffer, len1 + 1); // el '\0' viene incluido
 
 			t_mutex_kernel* mutex = malloc(sizeof(t_mutex_kernel));
 
-			strcpy(mutex->nombre, nombre_mutex);
+			mutex->nombre = strdup(nombre_mutex);
 			mutex->tomado = false;
 			mutex->duenio = NULL;
 			mutex->bloqueados = queue_create();
@@ -44,6 +45,9 @@ void* ks_maneja_cpu(void* arg) {
 
 			free(nombre_mutex);
 			eliminar_paquete(contenido);
+
+			// syscall atendida: el mismo proceso vuelve a la CPU (la CPU lo liberó al hacer la syscall)
+			enviar_alojar_proceso_cpu(cpu->pcb_ejecutando);
 			break;
 		}
 
@@ -53,9 +57,9 @@ void* ks_maneja_cpu(void* arg) {
 			t_paquete* contenido = recibir_paquete(cpu->fd);
 
 			int len1;
-			buffer_read(&len1, contenido->buffer, sizeof(int));	 // LEEMOS CUANTO MIDE
-			char* nombre_mutex = malloc(len1);					 // PEDIMOS EL ESPACIO JUSTO
-			buffer_read(&nombre_mutex, contenido->buffer, len1); // COPIAMOS EL CONTENIDO
+			buffer_read(&len1, contenido->buffer, sizeof(int));
+			char* nombre_mutex = malloc(len1 + 1);
+			buffer_read(nombre_mutex, contenido->buffer, len1 + 1); // el '\0' viene incluido
 
 			t_mutex_kernel* mutex = ks_buscar_mutex(nombre_mutex);
 
@@ -63,6 +67,8 @@ void* ks_maneja_cpu(void* arg) {
 				log_warning(ks_logger, "El mutex %s no se encontró. El proceso %d en la cpu %d, no puede tomarlo", nombre_mutex, cpu->pcb_ejecutando->pid, cpu->id);
 				free(nombre_mutex);
 				eliminar_paquete(contenido);
+				// syscall no bloqueante (el mutex no existe): el mismo proceso vuelve a la CPU
+				enviar_alojar_proceso_cpu(cpu->pcb_ejecutando);
 				break;
 			}
 
@@ -75,18 +81,34 @@ void* ks_maneja_cpu(void* arg) {
 
 				log_mutex_tomado(cpu->pcb_ejecutando, nombre_mutex);
 
+				free(nombre_mutex);
+				eliminar_paquete(contenido);
+
+				// lo tomó sin bloquearse: el mismo proceso vuelve a la CPU
+				enviar_alojar_proceso_cpu(cpu->pcb_ejecutando);
 				break;
 			}
 
-			// El mutex estaba tomado, reviso si hay herencia de prioridad
-			// HERENCIA PRIORIDAD
-			if (cpu->pcb_ejecutando->prioridad > mutex->duenio->prioridad) {
-				mutex->duenio->prioridad = cpu->pcb_ejecutando->prioridad;
-				log_cambio_prioridad(mutex->duenio);
+			// El mutex estaba tomado. HERENCIA DE PRIORIDAD (menor número = mayor
+			// prioridad): subo al dueño SOLO si el que se bloquea es MÁS prioritario.
+			t_pcb* duenio = mutex->duenio;
+			bool hubo_herencia = false;
+			int prioridad_vieja_duenio = 0;
+			if (cpu->pcb_ejecutando->prioridad < duenio->prioridad) {
+				prioridad_vieja_duenio = duenio->prioridad;
+				duenio->prioridad = cpu->pcb_ejecutando->prioridad;
+				hubo_herencia = true;
 			}
 
 			queue_push(mutex->bloqueados, cpu->pcb_ejecutando);
 			pthread_mutex_unlock(&mutex->mutex);
+
+			if (hubo_herencia) {
+				log_cambio_prioridad(duenio, prioridad_vieja_duenio);
+				// Si el dueño estaba esperando en READY, hay que moverlo a la cola
+				// de su nueva prioridad; si no, nunca se planificaría antes.
+				ks_reubicar_ready_por_cambio_prioridad(duenio, prioridad_vieja_duenio, duenio->prioridad);
+			}
 
 			ks_pasar_a_block(cpu->pcb_ejecutando);
 
@@ -101,9 +123,9 @@ void* ks_maneja_cpu(void* arg) {
 			t_paquete* contenido = recibir_paquete(cpu->fd);
 
 			int len1;
-			buffer_read(&len1, contenido->buffer, sizeof(int));	 // LEEMOS CUANTO MIDE
-			char* nombre_mutex = malloc(len1);					 // PEDIMOS EL ESPACIO JUSTO
-			buffer_read(&nombre_mutex, contenido->buffer, len1); // COPIAMOS EL CONTENIDO
+			buffer_read(&len1, contenido->buffer, sizeof(int)); // LEEMOS CUANTO MIDE (strlen sin '\0')
+			char* nombre_mutex = malloc(len1 + 1);
+			buffer_read(nombre_mutex, contenido->buffer, len1 + 1); // el '\0' viene incluido
 
 			t_mutex_kernel* mutex = ks_buscar_mutex(nombre_mutex);
 
@@ -111,15 +133,30 @@ void* ks_maneja_cpu(void* arg) {
 				log_warning(ks_logger, "El mutex %s no se encontró. El proceso %d en la cpu %d, no puede tomarlo", nombre_mutex, cpu->pcb_ejecutando->pid, cpu->id);
 				free(nombre_mutex);
 				eliminar_paquete(contenido);
+				// syscall no bloqueante (el mutex no existe): el mismo proceso vuelve a la CPU
+				enviar_alojar_proceso_cpu(cpu->pcb_ejecutando);
 				break;
 			}
 
 			pthread_mutex_lock(&mutex->mutex);
 			if (mutex->duenio != cpu->pcb_ejecutando) {
-				mutex->duenio->prioridad = mutex->duenio->prioridad_original;
-				log_cambio_prioridad(mutex->duenio);
+				// Un no-dueño no libera el mutex ni toca la prioridad del dueño
+				// (además, duenio podría ser NULL si el mutex está libre).
 				pthread_mutex_unlock(&mutex->mutex);
+				log_warning(ks_logger, "El proceso %d intentó liberar el mutex %s que no le pertenece", cpu->pcb_ejecutando->pid, nombre_mutex);
+				free(nombre_mutex);
+				eliminar_paquete(contenido);
+				// UNLOCK no bloquea: el proceso vuelve a la CPU
+				enviar_alojar_proceso_cpu(cpu->pcb_ejecutando);
 				break;
+			}
+
+			// El dueño libera: si venía con prioridad heredada, la restauro a la
+			// original. Está EXEC (ejecutó el UNLOCK), así que alcanza con el campo.
+			if (cpu->pcb_ejecutando->prioridad != cpu->pcb_ejecutando->prioridad_original) {
+				int prioridad_anterior = cpu->pcb_ejecutando->prioridad; // la heredada, antes de restaurar
+				cpu->pcb_ejecutando->prioridad = cpu->pcb_ejecutando->prioridad_original;
+				log_cambio_prioridad(cpu->pcb_ejecutando, prioridad_anterior);
 			}
 
 			log_mutex_liberado(mutex->duenio, nombre_mutex);
@@ -129,6 +166,10 @@ void* ks_maneja_cpu(void* arg) {
 				mutex->duenio = NULL;
 
 				pthread_mutex_unlock(&mutex->mutex);
+				free(nombre_mutex);
+				eliminar_paquete(contenido);
+				// UNLOCK no bloquea: el proceso vuelve a la CPU
+				enviar_alojar_proceso_cpu(cpu->pcb_ejecutando);
 				break;
 			}
 
@@ -138,11 +179,15 @@ void* ks_maneja_cpu(void* arg) {
 			log_mutex_tomado(desbloqueado, nombre_mutex);
 			pthread_mutex_unlock(&mutex->mutex);
 
-			// BLOCK -> READY
+			// BLOCK -> READY (el que estaba esperando el mutex)
 			desbloqueado->estado = READY;
-			pthread_mutex_lock(&array_queues[desbloqueado->prioridad].mutex_ready);
-			queue_push(array_queues[desbloqueado->prioridad].queue_ready, desbloqueado);
-			pthread_mutex_unlock(&array_queues[desbloqueado->prioridad].mutex_ready);
+			pthread_mutex_lock(&array_queues[ks_indice_cola(desbloqueado->prioridad)].mutex_ready);
+			queue_push(array_queues[ks_indice_cola(desbloqueado->prioridad)].queue_ready, desbloqueado);
+			pthread_mutex_unlock(&array_queues[ks_indice_cola(desbloqueado->prioridad)].mutex_ready);
+			sem_post(&sem_ready); // sin esto el corto plazo no levanta al desbloqueado
+
+			// el que hizo UNLOCK no se bloquea: vuelve a la CPU
+			enviar_alojar_proceso_cpu(cpu->pcb_ejecutando);
 
 			free(nombre_mutex);
 			eliminar_paquete(contenido);
@@ -194,19 +239,12 @@ void* ks_maneja_cpu(void* arg) {
 			int tiempo;
 			buffer_read(&tiempo, contenido->buffer, sizeof(int));
 
-			t_io* io = io_libre("SLEEP");
+			int pid_sleep = cpu->pcb_ejecutando->pid;
 
-			if (io == NULL) {
-				log_warning(ks_logger, "No hay IOs SLEEP libres para el proceso %d en la cpu %d, se descarta el SLEEP", cpu->pcb_ejecutando->pid, cpu->id);
-				eliminar_paquete(contenido);
-				break;
-			}
-
-			cpu->pcb_ejecutando->io_fd = io->fd;
-
+			// El proceso hace IO: se bloquea SIEMPRE. Si no hay IO SLEEP libre, el
+			// pedido queda encolado y se despacha cuando una se libere.
 			ks_pasar_a_block(cpu->pcb_ejecutando);
-
-			enviar_sleep_io(io->fd, tiempo, cpu->pcb_ejecutando->pid);
+			ks_pedir_io_sleep(pid_sleep, tiempo);
 
 			eliminar_paquete(contenido);
 			break;
@@ -251,22 +289,12 @@ void* ks_maneja_cpu(void* arg) {
 			uint32_t tamanio;
 			buffer_read(&tamanio, contenido->buffer, sizeof(uint32_t));
 
-			t_io* io = io_libre("STDIN");
-
-			if (io == NULL) {
-				log_warning(ks_logger, "No hay IOs STDIN libres para el proceso %d en la cpu %d, se descarta el STDIN", cpu->pcb_ejecutando->pid, cpu->id);
-				eliminar_paquete(contenido);
-				break;
-			}
-
-			cpu->pcb_ejecutando->io_fd = io->fd;
-
+			// El proceso hace IO: se bloquea SIEMPRE. Si no hay IO STDIN libre, el
+			// pedido queda encolado (con su dir_logica) y se despacha al liberarse una.
+			// ks_pedir_io_stdin guarda pid/dir/tamanio en la IO asignada, porque
+			// OK_STDIN trae solo los datos leídos (sin pid ni dir).
 			ks_pasar_a_block(cpu->pcb_ejecutando);
-
-			// TODO(KS): guardar dir_logica del STDIN pendiente (¿en el pcb?) para poder armar
-			// STDIN_SOLICITUD_ESCRITURA (enviar_bytes_stdin) cuando la IO devuelva OK_STDIN con los datos
-			(void)dir_logica;
-			enviar_stdin_io(io->fd, (int)tamanio, pid);
+			ks_pedir_io_stdin(pid, dir_logica, (int)tamanio);
 
 			eliminar_paquete(contenido);
 
@@ -297,6 +325,9 @@ void* ks_maneja_cpu(void* arg) {
 
 			free(archivo_instrucciones);
 			eliminar_paquete(contenido);
+
+			// INIT_PROC no bloquea al creador: vuelve a la CPU
+			enviar_alojar_proceso_cpu(cpu->pcb_ejecutando);
 			break;
 		}
 
@@ -322,9 +353,23 @@ void* ks_maneja_cpu(void* arg) {
 				log_debug(ks_logger, "Se desalojo el proceso %d, por motivo de AVISO_DE_INTERRUPCION_DESALOJO", pid);
 
 				t_pcb* pcb = buscar_pcb_por_pid(pid);
-				ks_termina_de_desalojar_un_pcb_general(pcb);
+
+				// El mismo aviso sirve para compactación y para desalojo por prioridad.
+				// Los distingo por el flag: compactación → ready prioritario (spec);
+				// desalojo por prioridad → ready normal de su prioridad.
+				pthread_mutex_lock(&mutex_compactacion);
+				bool en_compactacion = compactacion_en_progreso;
+				pthread_mutex_unlock(&mutex_compactacion);
+
+				ks_termina_de_desalojar_un_pcb_general(pcb, en_compactacion);
 				cpu->pcb_ejecutando = NULL;
 				sem_post(&sem_cpu_libre);
+
+				// Si era por compactación, contabilizo la CPU desalojada; al llegar
+				// a 0 se confirma a KM.
+				if (en_compactacion) {
+					ks_confirmar_desalojo_compactacion_de_una_cpu();
+				}
 			} else if (motivo_interrupcion == AVISO_DE_INTERRUPCION_SEGMENTATION_FAULT) {
 				log_debug(ks_logger, "Se desalojo el proceso %d, por motivo de AVISO_DE_INTERRUPCION_SEGMENTATION_FAULT", pid);
 

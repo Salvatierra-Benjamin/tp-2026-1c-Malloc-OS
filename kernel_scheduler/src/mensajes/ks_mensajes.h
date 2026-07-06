@@ -16,6 +16,7 @@ void enviar_stdin_io(int io_fd, int tamanio, int pid);
 void enviar_stdout_io(int io_fd, char* cadena_de_bytes, int len, int pid);
 void enviar_solicitud_creacion_proceso_km(int pid, char* archivo_instrucciones, int prioridad);
 void enviar_fin_proceso_km(int pid);
+void enviar_confirmacion_desalojo_compactacion_km(void);
 void enviar_bytes_stdin(int pid, uint32_t dir_logica, int tamanio, void* datos);
 void enviar_solicitud_stdout_km(int pid, uint32_t dir_logica, int tamanio);
 void enviar_aviso_suspension_km(int pid);

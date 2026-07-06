@@ -162,6 +162,10 @@ void crear_listas() {
 	ios_stdin = list_create();
 	ios_stdout = list_create();
 
+	pedidos_sleep = queue_create();
+	pedidos_stdin = queue_create();
+	pedidos_stdout = queue_create();
+
 	// procesos = list_create();
 
 	procs_exec = list_create();
