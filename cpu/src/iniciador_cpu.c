@@ -10,6 +10,7 @@ int PID_Interrupcion = -1;
 t_list *lista_memory_sticks;
 int flag_syscall = -1;
 int flag_seg_fault = 0;
+int flag_pc_modificado = 0;
 int TAM_MAX_SEGMENTO = -1;
 t_contexto_ejecucion contexto_aux_global;
 t_instruccion instruccion_aux_global;

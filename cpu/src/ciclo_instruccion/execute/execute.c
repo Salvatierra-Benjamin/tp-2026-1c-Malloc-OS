@@ -103,6 +103,12 @@ void escribir_registro(t_contexto_ejecucion *contexto, char *registro, uint32_t 
     if (info.puntero == NULL)
         return; // Error
 
+    // Si la escritura es al PC (SET/MOV/SUM/SUB con destino PC), avisamos al ciclo para
+    // que NO haga PC++ después: la instrucción ya fijó el PC. Comparar valores no basta
+    // (escribir el mismo valor que tenía sería indistinguible de "no lo tocó").
+    if (info.puntero == &(contexto->registros.PC))
+        flag_pc_modificado = 1;
+
     if (info.tamanio == sizeof(uint8_t))
     {
         *(uint8_t *)info.puntero = (uint8_t)valor; // Escribo solo 1 byte (trunca si es mayor)
@@ -129,9 +135,7 @@ int pasaje_de_char_a_int(char *palabra)
     }
     else
     {
-        // Usamos %d porque ahora num es de tipo int
-        log_info(cpu_logger, "Numero en String: %s", palabra);
-        log_info(cpu_logger, "Numero en Int: %d", num);
+        log_debug(cpu_logger, "Numero en String: %s -> Int: %d", palabra, num);
     }
 
     return num;
@@ -391,6 +395,7 @@ void execute_JNZ(t_contexto_ejecucion *contexto, char *registro, char *instrucci
     if (valor_registro != 0)
     {
         contexto->registros.PC = nueva_instruccion;
+        flag_pc_modificado = 1; // el ciclo no debe hacer PC++ (vale aún si salta a su propio PC)
     }
     log_info(cpu_logger, "## PID: %d - Ejecutando: JNZ - %s - %s", contexto->PID, registro, instruccion_str);
 }

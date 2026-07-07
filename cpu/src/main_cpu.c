@@ -13,9 +13,11 @@ int main(int argc, char *argv[])
     char *path = argv[1];
     identificador_cpu = atoi(argv[2]);
 
-    if (identificador_cpu <= 0)
+    // atoi devuelve 0 tanto para "0" (id válido, el spec no lo prohíbe) como para
+    // basura no numérica. Se rechaza solo el negativo; "0" se acepta.
+    if (identificador_cpu < 0)
     {
-        fprintf(stderr, "Error: El identificador_cpu '%s' no es válido (Debe ser un entero > 0)\n", argv[2]);
+        fprintf(stderr, "Error: El identificador_cpu '%s' no es válido (Debe ser un entero >= 0)\n", argv[2]);
         return EXIT_FAILURE;
     }
 

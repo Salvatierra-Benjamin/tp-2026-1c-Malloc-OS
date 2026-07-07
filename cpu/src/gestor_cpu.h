@@ -41,6 +41,7 @@ extern int PID_Interrupcion;
 extern t_list *lista_memory_sticks;
 extern int flag_syscall;
 extern int flag_seg_fault; // se setea al detectar SEG_FAULT: corta el ciclo del proceso sin matar la CPU
+extern int flag_pc_modificado; // 1 si la instrucción escribió PC explícitamente (JNZ/SET/MOV a PC): no aplicar PC++
 extern int TAM_MAX_SEGMENTO;
 extern t_contexto_ejecucion contexto_aux_global;
 extern t_instruccion instruccion_aux_global;

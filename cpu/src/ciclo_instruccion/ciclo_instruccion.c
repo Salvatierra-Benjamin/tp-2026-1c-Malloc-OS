@@ -13,7 +13,10 @@ void Ejecutar_Ciclo_de_Instruccion(t_contexto_ejecucion *contexto_actual)
 
         Iniciar_Fetch(contexto_actual, &nueva_instruccion);
 
-        uint32_t pc_anterior = contexto_actual->registros.PC;
+        // Se resetea antes del execute: lo setea escribir_registro/execute_JNZ si la
+        // instrucción escribe el PC. Reemplaza la comparación por valor (que fallaba
+        // cuando un salto apuntaba al mismo PC que ya tenía).
+        flag_pc_modificado = 0;
 
         Iniciar_Decode(contexto_actual, nueva_instruccion); // -> execute
 
@@ -27,10 +30,10 @@ void Ejecutar_Ciclo_de_Instruccion(t_contexto_ejecucion *contexto_actual)
             break;
         }
 
-        if (contexto_actual->registros.PC == pc_anterior)
+        if (!flag_pc_modificado)
         {
             contexto_actual->registros.PC++;
-        } // Si tengo que enviar el contexto al km, le estoy enviando un pc anterior
+        } // la instrucción no tocó el PC: avanzamos a la siguiente
 
         // Syscall Desalojo CPU, Libero y espero otro proceso.
         if (flag_syscall == 1)

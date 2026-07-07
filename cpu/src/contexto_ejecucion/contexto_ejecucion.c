@@ -21,42 +21,35 @@ void Recibir_Contexto(t_contexto_ejecucion *contexto, t_buffer *buffer)
 
 void Loggear_Contexto(t_contexto_ejecucion *contexto_actual)
 {
-    // =========================================================================
-    //  LOGS PARA DEMOSTRAR LA DESERIALIZACIÓN
-    // =========================================================================
-    log_info(cpu_logger, "================ CONTEXTO RECIBIDO ================");
-    log_info(cpu_logger, "PID: %d", contexto_actual->PID);
+    // Dump de deserialización: solo diagnóstico. Va en log_debug para no ensuciar el
+    // output obligatorio cuando LOG_LEVEL=INFO (queda visible con LOG_LEVEL=DEBUG).
+    log_debug(cpu_logger, "================ CONTEXTO RECIBIDO ================");
+    log_debug(cpu_logger, "PID: %d", contexto_actual->PID);
 
-    log_info(cpu_logger, "Registros CPU -> PC: %u | AX: %u | BX: %u | CX: %u | DX: %u",
-             contexto_actual->registros.PC, contexto_actual->registros.AX,
-             contexto_actual->registros.BX, contexto_actual->registros.CX,
-             contexto_actual->registros.DX);
+    log_debug(cpu_logger, "Registros CPU -> PC: %u | AX: %u | BX: %u | CX: %u | DX: %u",
+              contexto_actual->registros.PC, contexto_actual->registros.AX,
+              contexto_actual->registros.BX, contexto_actual->registros.CX,
+              contexto_actual->registros.DX);
 
-    log_info(cpu_logger, "Registros EXT -> EAX: %u | EBX: %u | ECX: %u | EDX: %u",
-             contexto_actual->registros.EAX, contexto_actual->registros.EBX,
-             contexto_actual->registros.ECX, contexto_actual->registros.EDX);
+    log_debug(cpu_logger, "Registros EXT -> EAX: %u | EBX: %u | ECX: %u | EDX: %u",
+              contexto_actual->registros.EAX, contexto_actual->registros.EBX,
+              contexto_actual->registros.ECX, contexto_actual->registros.EDX);
 
-    log_info(cpu_logger, "Registros IDX -> SI: %u | DI: %u",
-             contexto_actual->registros.SI, contexto_actual->registros.DI);
+    log_debug(cpu_logger, "Registros IDX -> SI: %u | DI: %u",
+              contexto_actual->registros.SI, contexto_actual->registros.DI);
 
-    log_info(cpu_logger, "Cantidad de Segmentos recibidos: %d", contexto_actual->tabla_segmentos.cantidad_segmentos);
+    log_debug(cpu_logger, "Cantidad de Segmentos recibidos: %d", contexto_actual->tabla_segmentos.cantidad_segmentos);
 
-    // Acá está la prueba del delito: Mostramos el puntero falopa
-    log_warning(cpu_logger, "Dirección de memoria del puntero 'segmento': %p", (void *)contexto_actual->tabla_segmentos.segmento);
-
-    // ESTO ES LO QUE VA A HACER EXPLOTAR EL PROGRAMA CON LA "FUNCIÓN MALA"
     if (contexto_actual->tabla_segmentos.cantidad_segmentos > 0)
     {
-
         for (int i = 0; i < contexto_actual->tabla_segmentos.cantidad_segmentos; i++)
         {
-            log_info(cpu_logger, "Intentando leer los datos del Segmento: %d ...", i);
-            log_info(cpu_logger, "Segmento %d -> Base: %u | Tamaño: %u", i,
-                     contexto_actual->tabla_segmentos.segmento[i].dir_base,
-                     contexto_actual->tabla_segmentos.segmento[i].tam_seg);
+            log_debug(cpu_logger, "Segmento %d -> Base: %u | Tamaño: %u", i,
+                      contexto_actual->tabla_segmentos.segmento[i].dir_base,
+                      contexto_actual->tabla_segmentos.segmento[i].tam_seg);
         }
     }
-    log_info(cpu_logger, "===================================================");
+    log_debug(cpu_logger, "===================================================");
 }
 
 void Destruir_Contexto(t_contexto_ejecucion *contexto)
@@ -76,5 +69,5 @@ void Destruir_Contexto(t_contexto_ejecucion *contexto)
     // Esto pone todos los bytes de la estructura de registros en 0
     memset(&(contexto->registros), 0, sizeof(t_registros));
 
-    log_info(cpu_logger, "Contexto destruido y estructura limpiada.");
+    log_debug(cpu_logger, "Contexto destruido y estructura limpiada.");
 }

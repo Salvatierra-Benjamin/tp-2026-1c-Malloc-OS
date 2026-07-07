@@ -160,7 +160,10 @@ void enviar_lista_desuspension_km(t_list* lista_a_desuspender) {
 }
 
 void enviar_mem_alloc(int id_segmento, int tamanio, int pid) {
-	t_paquete* paquete_alloc = crear_paquete(MEM_ALLOC);
+	// ENVIO_MEM_ALLOC (3006), NO MEM_ALLOC (11, enum de instrucción): KM escucha el
+	// opcode 3006 en manejador_ks. Con 11, KM lo leía como opcode desconocido, no
+	// drenaba el payload y desincronizaba el stream KS->KM (colgaba la syscall).
+	t_paquete* paquete_alloc = crear_paquete(ENVIO_MEM_ALLOC);
 	agregar_a_paquete(paquete_alloc, &pid, sizeof(int));
 	agregar_a_paquete(paquete_alloc, &id_segmento, sizeof(int));
 	agregar_a_paquete(paquete_alloc, &tamanio, sizeof(int));
@@ -169,7 +172,8 @@ void enviar_mem_alloc(int id_segmento, int tamanio, int pid) {
 }
 
 void enviar_mem_free(int id_segmento, int pid) {
-	t_paquete* paquete_free = crear_paquete(MEM_FREE);
+	// ENVIO_MEM_FREE (3007), NO MEM_FREE (12): mismo motivo que enviar_mem_alloc.
+	t_paquete* paquete_free = crear_paquete(ENVIO_MEM_FREE);
 	agregar_a_paquete(paquete_free, &pid, sizeof(int));
 	agregar_a_paquete(paquete_free, &id_segmento, sizeof(int));
 	enviar_paquete(paquete_free, socket_km);

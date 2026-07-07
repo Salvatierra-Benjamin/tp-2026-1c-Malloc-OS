@@ -178,9 +178,50 @@ t_cpu *conexion_cpu(int cpu_id, int cpu_socket)
     cpu->cpu_socket = cpu_socket;
     pthread_mutex_init(&cpu->mutex_socket, NULL);
 
+    // Orden de locks sticks -> cpu: se toma mutex_lista_memory_sticks durante toda el
+    // alta para que un stick que conecta en paralelo (aviso_aumento_memoria) vea la CPU
+    // ya publicada en lista_cpu O bien todavía no esté en la lista que le mandamos acá,
+    // nunca ambos (evita mandar el stick duplicado) ni ninguno (evita perdérselo).
+    // No hay ciclo: la ruta de alta de stick libera este mutex ANTES de tomar
+    // mutex_lista_cpu (manejador_memory_stick.c: unlock en :99, aviso en :101).
+    pthread_mutex_lock(&mutex_lista_memory_sticks);
+
     pthread_mutex_lock(&mutex_lista_cpu);
     list_add(lista_cpu, cpu);
     pthread_mutex_unlock(&mutex_lista_cpu);
+
+    // C7: aviso_aumento_memoria solo notifica a las CPUs presentes al conectar un stick
+    // nuevo. Una CPU que arranca DESPUÉS de los sticks (orden de arranque típico) no se
+    // enteraría de ninguno y encontrar_stick_por_direccion devolvería NULL en el primer
+    // MOV_IN/MOV_OUT. Acá le mandamos todos los sticks ya conectados (mismo payload que
+    // aviso_aumento_memoria: [base][tamanio][ip_size][ip\0][puerto_size][puerto\0]).
+    t_list_iterator *it = list_iterator_create(lista_memory_sticks);
+    while (list_iterator_has_next(it))
+    {
+        t_memory_stick *ms = (t_memory_stick *)list_iterator_next(it);
+        t_paquete *paquete_ms = crear_paquete(RECIBIR_MEMORY_STICK);
+
+        agregar_a_paquete(paquete_ms, &(ms->base), sizeof(int));
+        agregar_a_paquete(paquete_ms, &(ms->tamanio), sizeof(int));
+
+        int ip_size = strlen(ms->ip) + 1;
+        agregar_a_paquete(paquete_ms, &ip_size, sizeof(int));
+        agregar_a_paquete(paquete_ms, ms->ip, ip_size);
+
+        int puerto_size = strlen(ms->puerto) + 1;
+        agregar_a_paquete(paquete_ms, &puerto_size, sizeof(int));
+        agregar_a_paquete(paquete_ms, ms->puerto, puerto_size);
+
+        // mismo mutex que usa aviso_aumento_memoria: sin él los paquetes se intercalan
+        pthread_mutex_lock(&cpu->mutex_socket);
+        enviar_paquete(paquete_ms, cpu->cpu_socket);
+        pthread_mutex_unlock(&cpu->mutex_socket);
+
+        eliminar_paquete(paquete_ms);
+    }
+    list_iterator_destroy(it);
+
+    pthread_mutex_unlock(&mutex_lista_memory_sticks);
 
     log_info(logger, "## CPU %d Conectada", cpu_id);
     return cpu;

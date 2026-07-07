@@ -32,38 +32,24 @@ void Recibir_Instruccion(t_instruccion *nueva_instruccion)
 
 void Loggear_Instruccion(t_instruccion *instruccion)
 {
-    // =========================================================================
-    //  LOGS DE CONTROL: DESERIALIZACIÓN DE INSTRUCCIÓN
-    // =========================================================================
-    log_info(cpu_logger, "================ INSTRUCCIÓN RECIBIDA ================");
+    // Dump de deserialización de instrucción: solo diagnóstico, en log_debug para no
+    // ensuciar el output obligatorio con LOG_LEVEL=INFO (el log "Ejecutando" del
+    // enunciado lo emite execute_*).
+    log_debug(cpu_logger, "================ INSTRUCCIÓN RECIBIDA ================");
+    log_debug(cpu_logger, "ID Comando: %d | PID Asociado: %d",
+              instruccion->comando, instruccion->PID);
 
-    // Suponiendo que 'comando' es un enum o entero, lo imprimimos como %d o %u
-    log_info(cpu_logger, "ID Comando: %d | PID Asociado: %d",
-             instruccion->comando, instruccion->PID);
-
-    // Verificamos e imprimimos el Parámetro 1 (Dinámico)
     if (instruccion->parametro_1 != NULL)
-    {
-        log_info(cpu_logger, "Parámetro 1 [Dirección: %p]: \"%s\"",
-                 (void *)instruccion->parametro_1, instruccion->parametro_1);
-    }
+        log_debug(cpu_logger, "Parámetro 1: \"%s\"", instruccion->parametro_1);
     else
-    {
-        log_warning(cpu_logger, "Parámetro 1 es NULL");
-    }
+        log_debug(cpu_logger, "Parámetro 1 es NULL");
 
-    // Verificamos e imprimimos el Parámetro 2 (Dinámico)
     if (instruccion->parametro_2 != NULL)
-    {
-        log_info(cpu_logger, "Parámetro 2 [Dirección: %p]: \"%s\"",
-                 (void *)instruccion->parametro_2, instruccion->parametro_2);
-    }
+        log_debug(cpu_logger, "Parámetro 2: \"%s\"", instruccion->parametro_2);
     else
-    {
-        log_warning(cpu_logger, "Parámetro 2 es NULL");
-    }
+        log_debug(cpu_logger, "Parámetro 2 es NULL");
 
-    log_info(cpu_logger, "======================================================");
+    log_debug(cpu_logger, "======================================================");
 }
 
 void Destruir_Instruccion(t_instruccion *instruccion)
