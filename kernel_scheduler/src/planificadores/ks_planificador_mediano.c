@@ -116,11 +116,20 @@ void ks_pasar_a_ready_desde_susp_ready_pid(int pid, int prioridad) {
 // TIMER DE SUSPENSION
 void* ks_timer_suspension(void* arg) {
 	t_pcb* pcb = (t_pcb*)arg;
+	// Marca del block para el que se lanzó ESTE timer. ks_pasar_a_block setea
+	// tiempo_inicio_block en cada bloqueo, así que si el proceso se desbloqueó y volvió a
+	// bloquear, el valor cambia.
+	time_t inicio_block = pcb->tiempo_inicio_block;
 
 	usleep((useconds_t)ks_config.suspension_timeout * 1000); // SUSPENSION_TIMEOUT viene en ms
 
 	pthread_mutex_lock(&array_queues[ks_indice_cola(pcb->prioridad)].mutex_block);
-	if (pcb->estado != BLOCK) {
+	// Suspender solo si sigue en BLOCK Y es el MISMO block. Sin la 2ª condición, un timer
+	// viejo (de un block anterior ya desbloqueado) suspendía un block nuevo y reciente:
+	// los procesos que bloquean seguido acumulan timers detached que nunca se cancelan, y
+	// al despertar 35s después encontraban al proceso en otro block y lo suspendían igual
+	// (105 suspensiones espurias con SUSPENSION_TIMEOUT=35000 y sleeps <=10s en PCP).
+	if (pcb->estado != BLOCK || pcb->tiempo_inicio_block != inicio_block) {
 		pthread_mutex_unlock(&array_queues[ks_indice_cola(pcb->prioridad)].mutex_block);
 		return NULL;
 	}
