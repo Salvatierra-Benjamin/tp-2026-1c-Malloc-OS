@@ -175,6 +175,10 @@ void crear_listas() {
 	procs_exit = list_create();
 
 	creaciones_pendientes = list_create();
+
+	// mutexes_kernel arrancaba en NULL y nunca se creaba -> el primer MUTEX_CREATE
+	// hacía list_add(NULL, mutex) y segfaultaba.
+	mutexes_kernel = list_create();
 }
 
 void ks_liberar_config(void) {
