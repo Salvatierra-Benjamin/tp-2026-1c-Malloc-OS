@@ -236,10 +236,21 @@ void ks_verificar_desalojo_prioridad(t_pcb* nuevo) {
 	pthread_mutex_unlock(&mutex_exec);
 }
 
-void ks_empieza_a_desalojar_por_compactacion(void) {
+void ks_empieza_a_desalojar_por_compactacion(int pid_disparador) {
 	pthread_mutex_lock(&mutex_exec);
 
-	int cantidad_a_desalojar = list_size(procs_exec);
+	// El proceso que disparó la compactación (MEM_ALLOC) está en procs_exec pero su CPU
+	// ya lo liberó por la syscall y quedó idle: NO se lo interrumpe (no respondería el
+	// DESALOJO_PROCESO -> el contador nunca llegaría a 0 -> deadlock con KM). Se cuenta e
+	// interrumpe solo al resto, que sí está ejecutando de verdad.
+	t_list* a_desalojar = list_create();
+	for (int i = 0; i < list_size(procs_exec); i++) {
+		t_pcb* pcb = list_get(procs_exec, i);
+		if (pcb->pid != pid_disparador) {
+			list_add(a_desalojar, pcb);
+		}
+	}
+	int cantidad_a_desalojar = list_size(a_desalojar);
 
 	// Fijo el contador ANTES de interrumpir: cada CPU responderá DESALOJO_PROCESO
 	// (en otro hilo) y decrementará; al llegar a 0 se confirma a KM.
@@ -248,16 +259,16 @@ void ks_empieza_a_desalojar_por_compactacion(void) {
 	pthread_mutex_unlock(&mutex_compactacion);
 
 	for (int i = 0; i < cantidad_a_desalojar; i++) {
-		t_pcb* pcb = list_get(procs_exec, i);
+		t_pcb* pcb = list_get(a_desalojar, i);
 
 		enviar_interrupcion_compactacion_cpu(pcb->cpu_fd, pcb->pid);
 	}
-	// list_clean(procs_exec);
+	list_destroy(a_desalojar);
 
 	pthread_mutex_unlock(&mutex_exec);
 
-	// Si no había ninguna CPU ejecutando, no llegará ningún DESALOJO_PROCESO:
-	// confirmo de inmediato para que KM no quede esperando eternamente.
+	// Si no había ninguna CPU ejecutando (salvo el disparador), no llegará ningún
+	// DESALOJO_PROCESO: confirmo de inmediato para que KM no quede esperando eternamente.
 	if (cantidad_a_desalojar == 0) {
 		enviar_confirmacion_desalojo_compactacion_km();
 	}

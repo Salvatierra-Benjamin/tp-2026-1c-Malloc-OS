@@ -95,13 +95,21 @@ void* ks_conexion_km(void* _arg) {
 			// }
 
 		case DESALOJO_POR_COMPACTACION: {
+			// KM manda [pid_disparador]: ese proceso está mid-syscall (MEM_ALLOC) con su
+			// CPU idle, no hay que desalojarlo (no respondería el DESALOJO). Se re-despacha
+			// vía OK_MEM_ALLOC cuando termina la compactación.
+			t_paquete* contenido = recibir_paquete(socket_km);
+			int pid_disparador;
+			buffer_read(&pid_disparador, contenido->buffer, sizeof(int));
+			eliminar_paquete(contenido);
+
 			log_inicio_compactacion();
 
 			pthread_mutex_lock(&mutex_compactacion);
 			compactacion_en_progreso = true;
 			pthread_mutex_unlock(&mutex_compactacion);
 
-			ks_empieza_a_desalojar_por_compactacion();
+			ks_empieza_a_desalojar_por_compactacion(pid_disparador);
 
 			break;
 		}

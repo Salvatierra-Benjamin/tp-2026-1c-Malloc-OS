@@ -934,7 +934,14 @@ void iniciar_compactacion(int pid, int sid, uint32_t tamanio) {
 
     log_info(logger, "[KM] MEM_ALLOC PID %d: espacio fragmentado, se solicita desalojo para compactar", pid);
 
-    enviar_operacion_a_ks(DESALOJO_POR_COMPACTACION);
+    // Se manda el pid que disparó la compactación: ese proceso está mid-syscall (MEM_ALLOC),
+    // su CPU ya lo liberó y quedó idle, así que KS NO debe intentar desalojarlo (una CPU
+    // idle no procesa la interrupción ni responde DESALOJO_PROCESO -> KS esperaría la
+    // confirmación para siempre). Se re-despacha después vía OK_MEM_ALLOC.
+    t_paquete *paquete_desalojo = crear_paquete(DESALOJO_POR_COMPACTACION);
+    agregar_a_paquete(paquete_desalojo, &pid, sizeof(int));
+    enviar_paquete_a_ks(paquete_desalojo);
+    eliminar_paquete(paquete_desalojo);
 }
 
 // Memoria total = fin del último stick (las bases se asignan contiguas y solo se agregan).
