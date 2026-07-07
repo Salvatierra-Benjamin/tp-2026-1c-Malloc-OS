@@ -10,7 +10,7 @@ int main(int argc, char *argv[])
 
     char *path = argv[1];
     char *tipo_io = argv[2];
-    char *tipo_io_mayusculas = normalizar(tipo_io);
+    tipo_io_mayusculas = normalizar(tipo_io);
 
     io_cargar_config(path);
     inicializar_logger();

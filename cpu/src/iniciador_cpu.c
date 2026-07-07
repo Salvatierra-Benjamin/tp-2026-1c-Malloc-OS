@@ -88,6 +88,11 @@ void inicializar_semaforos_coordinadores()
     sem_init(&sem_instruccion_procesada, 0, 0);
     sem_init(&hay_interrupcion, 0, 0);
     sem_init(&semaphore, 0, 0);
+
+    // La lista de Memory Sticks se poblaba solo por RECIBIR_MEMORY_STICK pero nunca se
+    // creaba: con el orden de arranque sticks->CPU (ahora que KM manda los sticks
+    // preexistentes al conectar la CPU) el primer list_add caía sobre NULL -> segfault.
+    lista_memory_sticks = list_create();
 }
 
 void cerrar_conexiones()
