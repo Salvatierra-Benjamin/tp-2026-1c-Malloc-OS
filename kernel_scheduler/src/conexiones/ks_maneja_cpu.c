@@ -333,6 +333,12 @@ void* ks_maneja_cpu(void* arg) {
 		}
 
 		case ENVIO_EXIT: {
+			// La CPU manda ENVIO_EXIT [pid]: hay que drenar el paquete aunque el pid no
+			// se use (KS confía en cpu->pcb_ejecutando->pid). Sin esto los 8 bytes del
+			// payload [size][pid] quedaban en el socket y se leían como opcodes basura
+			// (4 y 0) en la siguiente vuelta del loop.
+			t_paquete* contenido = recibir_paquete(cpu->fd);
+			eliminar_paquete(contenido);
 			log_syscall_recibida(cpu->pcb_ejecutando, "EXIT");
 			finalizar_proceso(cpu->pcb_ejecutando->pid, "EXIT"); // finalizar_proceso ya loguea el fin
 			cpu->pcb_ejecutando = NULL;
