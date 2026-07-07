@@ -8,6 +8,6 @@
 #include "contexto_ejecucion/contexto_ejecucion.h"
 #include "ciclo_instruccion/fetch/operaciones_instrucciones.h"
 void receptor_km();
-void *atencion_km();
+void *atencion_km(void *arg);
 
 #endif

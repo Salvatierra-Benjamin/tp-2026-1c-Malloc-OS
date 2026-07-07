@@ -236,10 +236,11 @@ void* ks_maneja_cpu(void* arg) {
 			log_syscall_recibida(cpu->pcb_ejecutando, "SLEEP");
 			t_paquete* contenido = recibir_paquete(cpu->fd);
 
+			// CPU manda [pid][tiempo] (execute_SLEEP), en ese orden — como STDIN/STDOUT.
+			int pid_sleep;
+			buffer_read(&pid_sleep, contenido->buffer, sizeof(int));
 			int tiempo;
 			buffer_read(&tiempo, contenido->buffer, sizeof(int));
-
-			int pid_sleep = cpu->pcb_ejecutando->pid;
 
 			// El proceso hace IO: se bloquea SIEMPRE. Si no hay IO SLEEP libre, el
 			// pedido queda encolado y se despacha cuando una se libere.
@@ -333,7 +334,7 @@ void* ks_maneja_cpu(void* arg) {
 
 		case ENVIO_EXIT: {
 			log_syscall_recibida(cpu->pcb_ejecutando, "EXIT");
-			finalizar_proceso(cpu->pcb_ejecutando->pid); // finalizar_proceso ya loguea el fin
+			finalizar_proceso(cpu->pcb_ejecutando->pid, "EXIT"); // finalizar_proceso ya loguea el fin
 			cpu->pcb_ejecutando = NULL;
 			sem_post(&sem_cpu_libre);
 			break;
@@ -346,8 +347,9 @@ void* ks_maneja_cpu(void* arg) {
 			int pid;
 			buffer_read(&pid, contenido->buffer, sizeof(int));
 
-			uint8_t motivo_interrupcion = 0; //
-			buffer_read(&motivo_interrupcion, contenido->buffer, sizeof(uint8_t));
+			// CPU manda el motivo como int (los valores 3004/3005 no entran en 1 byte).
+			int motivo_interrupcion = 0;
+			buffer_read(&motivo_interrupcion, contenido->buffer, sizeof(int));
 
 			if (motivo_interrupcion == AVISO_DE_INTERRUPCION_DESALOJO) {
 				log_debug(ks_logger, "Se desalojo el proceso %d, por motivo de AVISO_DE_INTERRUPCION_DESALOJO", pid);
@@ -373,12 +375,12 @@ void* ks_maneja_cpu(void* arg) {
 			} else if (motivo_interrupcion == AVISO_DE_INTERRUPCION_SEGMENTATION_FAULT) {
 				log_debug(ks_logger, "Se desalojo el proceso %d, por motivo de AVISO_DE_INTERRUPCION_SEGMENTATION_FAULT", pid);
 
-				t_pcb* pcb = buscar_pcb_por_pid(pid);
-				ks_termina_de_desalojar_un_pcb_seg_fault(pcb);
+				// SEG_FAULT: el proceso se FINALIZA (spec), no vuelve a READY. La CPU
+				// ya NO se desconecta (fix C6 de CPU), así que la liberamos para el
+				// próximo proceso.
+				finalizar_proceso(pid, "SEG_FAULT");
 				cpu->pcb_ejecutando = NULL;
 				sem_post(&sem_cpu_libre);
-
-				// ? Se tiene que desconectar la cpu, y eso lo manejo en el swicth cuando se desconecta (case -1).
 			} else {
 				log_error(ks_logger, "Se quiere desalojar el proceso %d, por motivo desconocido (%d).", pid, motivo_interrupcion);
 			}

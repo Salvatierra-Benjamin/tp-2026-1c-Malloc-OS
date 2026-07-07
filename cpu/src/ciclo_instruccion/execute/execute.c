@@ -164,6 +164,9 @@ t_memory_stick *encontrar_stick_por_direccion(t_list *sticks, uint32_t dir_fisic
 // Agregué 'int pid' a la firma de la función
 void operar_en_memoria(int pid, uint32_t dir_fisica, void *buffer, uint32_t tamano, t_operacion_memoria op, t_list *memory_sticks)
 {
+    if (flag_seg_fault) // hubo un seg fault en la traducción previa: no operamos
+        return;
+
     uint32_t bytes_restantes = tamano;
     uint32_t offset_buffer = 0;
     uint32_t dir_actual = dir_fisica;
@@ -174,28 +177,33 @@ void operar_en_memoria(int pid, uint32_t dir_fisica, void *buffer, uint32_t tama
 
         if (stick == NULL)
         {
-            log_error(cpu_logger, "PID: %d - ERROR DE MEMORIA: La dirección física %d no pertenece a ningún Memory Stick conectado.", pid, dir_actual);
-            log_error(cpu_logger, "PID: %d - Segmentation Fault en dirección %d", pid, dir_actual);
+            // La dirección física no cae en ningún stick conectado: SEG_FAULT.
+            // Devolvemos el proceso a KS y cortamos su ciclo, sin matar la CPU.
+            log_error(cpu_logger, "PID: %d - SEG_FAULT: dirección física %u no pertenece a ningún Memory Stick", pid, dir_actual);
+            flag_seg_fault = 1;
             int motivo = AVISO_DE_INTERRUPCION_SEGMENTATION_FAULT;
             t_paquete *paquete_ks = crear_paquete(DESALOJO_PROCESO);
             agregar_a_paquete(paquete_ks, &pid, sizeof(int));
             agregar_a_paquete(paquete_ks, &motivo, sizeof(int));
             enviar_paquete(paquete_ks, conexion_ks);
             eliminar_paquete(paquete_ks);
-            liberar_todo();
-            exit(EXIT_FAILURE);
+            return;
         }
 
         // Calcular cuántos bytes podemos operar en el stick actual
         uint32_t bytes_disponibles_en_stick = (stick->base + stick->tamanio) - dir_actual;
         uint32_t bytes_a_operar = (bytes_restantes < bytes_disponibles_en_stick) ? bytes_restantes : bytes_disponibles_en_stick;
 
+        // El stick espera un offset LOCAL a su malloc, no la dirección física global.
+        // Sin esto, con 2+ sticks (base > 0) el memcpy del MS se va de rango.
+        uint32_t offset_local = dir_actual - stick->base;
+
         if (op == LEER)
         {
             // 1. Armar y enviar petición de lectura
             t_paquete *paquete_lectura = crear_paquete(PETICION_LECTURA_MS);
             agregar_a_paquete(paquete_lectura, &pid, sizeof(int));
-            agregar_a_paquete(paquete_lectura, &dir_actual, sizeof(uint32_t));
+            agregar_a_paquete(paquete_lectura, &offset_local, sizeof(uint32_t));
             int tamanio_a_enviar = (int)bytes_a_operar;
             agregar_a_paquete(paquete_lectura, &tamanio_a_enviar, sizeof(int));
 
@@ -216,6 +224,11 @@ void operar_en_memoria(int pid, uint32_t dir_fisica, void *buffer, uint32_t tama
                 buffer_read((char *)buffer + offset_buffer, respuesta_lectura->buffer, bytes_a_operar);
 
                 eliminar_paquete(respuesta_lectura);
+
+                // Log obligatorio de acceso a memoria (dir física global; valor en hasta 4 bytes)
+                uint32_t valor_leido = 0;
+                memcpy(&valor_leido, (char *)buffer + offset_buffer, bytes_a_operar < sizeof(uint32_t) ? bytes_a_operar : sizeof(uint32_t));
+                log_info(cpu_logger, "PID: %d - Acción: LEER - Dirección Física: %u - Valor: %u", pid, dir_actual, valor_leido);
             }
             else
             {
@@ -229,7 +242,7 @@ void operar_en_memoria(int pid, uint32_t dir_fisica, void *buffer, uint32_t tama
             // 1. Armar y enviar petición de escritura
             t_paquete *paquete_escritura = crear_paquete(PETICION_ESCRITURA_MS);
             agregar_a_paquete(paquete_escritura, &pid, sizeof(int));
-            agregar_a_paquete(paquete_escritura, &dir_actual, sizeof(uint32_t));
+            agregar_a_paquete(paquete_escritura, &offset_local, sizeof(uint32_t));
             int tamanio_a_enviar = (int)bytes_a_operar;
             agregar_a_paquete(paquete_escritura, &tamanio_a_enviar, sizeof(int));
 
@@ -258,6 +271,11 @@ void operar_en_memoria(int pid, uint32_t dir_fisica, void *buffer, uint32_t tama
                 }
 
                 eliminar_paquete(respuesta_ok);
+
+                // Log obligatorio de acceso a memoria (dir física global; valor en hasta 4 bytes)
+                uint32_t valor_escrito = 0;
+                memcpy(&valor_escrito, (char *)buffer + offset_buffer, bytes_a_operar < sizeof(uint32_t) ? bytes_a_operar : sizeof(uint32_t));
+                log_info(cpu_logger, "PID: %d - Acción: ESCRIBIR - Dirección Física: %u - Valor: %u", pid, dir_actual, valor_escrito);
             }
             else
             {
@@ -327,7 +345,7 @@ void execute_NOOP(t_contexto_ejecucion *contexto, char *param1, char *param2)
 {
     (void)param1;
     (void)param2;
-    log_info(cpu_logger, "PID: %d - Ejecutando: NOOP", contexto->PID);
+    log_info(cpu_logger, "## PID: %d - Ejecutando: NOOP", contexto->PID);
 }
 // “## PID: <PID> - Ejecutando: <INSTRUCCION> - <PARAMETROS>”.
 
@@ -337,7 +355,7 @@ void execute_SET(t_contexto_ejecucion *contexto, char *registro, char *valor_str
 
     escribir_registro(contexto, registro, valor);
 
-    log_info(cpu_logger, "PID: %d - Ejecutando: SET - %s - %s", contexto->PID, registro, valor_str);
+    log_info(cpu_logger, "## PID: %d - Ejecutando: SET - %s - %s", contexto->PID, registro, valor_str);
 }
 
 void execute_SUM(t_contexto_ejecucion *contexto, char *registro_destino, char *registro_origen)
@@ -349,7 +367,7 @@ void execute_SUM(t_contexto_ejecucion *contexto, char *registro_destino, char *r
 
     escribir_registro(contexto, registro_destino, resultado);
 
-    log_info(cpu_logger, "PID: %d - Ejecutando: SUM - %s - %s", contexto->PID, registro_destino, registro_origen);
+    log_info(cpu_logger, "## PID: %d - Ejecutando: SUM - %s - %s", contexto->PID, registro_destino, registro_origen);
 }
 
 void execute_SUB(t_contexto_ejecucion *contexto, char *registro_destino, char *registro_origen)
@@ -361,7 +379,7 @@ void execute_SUB(t_contexto_ejecucion *contexto, char *registro_destino, char *r
 
     escribir_registro(contexto, registro_destino, resultado);
 
-    log_info(cpu_logger, "PID: %d - Ejecutando: SUB - %s - %s", contexto->PID, registro_destino, registro_origen);
+    log_info(cpu_logger, "## PID: %d - Ejecutando: SUB - %s - %s", contexto->PID, registro_destino, registro_origen);
 }
 
 void execute_JNZ(t_contexto_ejecucion *contexto, char *registro, char *instruccion_str)
@@ -374,7 +392,7 @@ void execute_JNZ(t_contexto_ejecucion *contexto, char *registro, char *instrucci
     {
         contexto->registros.PC = nueva_instruccion;
     }
-    log_info(cpu_logger, "PID: %d - Ejecutando: JNZ - %s - %s", contexto->PID, registro, instruccion_str);
+    log_info(cpu_logger, "## PID: %d - Ejecutando: JNZ - %s - %s", contexto->PID, registro, instruccion_str);
 }
 
 // =========================================================
@@ -392,6 +410,7 @@ void execute_JNZ(t_contexto_ejecucion *contexto, char *registro, char *instrucci
 void execute_MOV_IN(t_contexto_ejecucion *contexto, char *registro_datos, char *param2)
 {
     (void)param2;
+    log_info(cpu_logger, "## PID: %d - Ejecutando: MOV_IN - %s", contexto->PID, registro_datos);
 
     uint32_t dir_logica = contexto->registros.SI;                      // Se lee de SI
     uint32_t tamanio_a_leer = obtener_tamano_registro(registro_datos); // Ej: EAX = 4, AX = 1
@@ -408,6 +427,7 @@ void execute_MOV_IN(t_contexto_ejecucion *contexto, char *registro_datos, char *
 void execute_MOV_OUT(t_contexto_ejecucion *contexto, char *registro_datos, char *param2)
 {
     (void)param2;
+    log_info(cpu_logger, "## PID: %d - Ejecutando: MOV_OUT - %s", contexto->PID, registro_datos);
 
     uint32_t dir_logica = contexto->registros.DI; // Se escribe en DI
     uint32_t tamanio_a_escribir = obtener_tamano_registro(registro_datos);
@@ -426,6 +446,7 @@ void execute_MOV_OUT(t_contexto_ejecucion *contexto, char *registro_datos, char 
 void execute_COPY_MEM(t_contexto_ejecucion *contexto, char *nombre_registro_tamano, char *param2)
 {
     (void)param2;
+    log_info(cpu_logger, "## PID: %d - Ejecutando: COPY_MEM - %s", contexto->PID, nombre_registro_tamano);
 
     uint32_t dir_logica_origen = contexto->registros.SI;
     uint32_t dir_logica_destino = contexto->registros.DI;
@@ -455,7 +476,7 @@ void execute_MUTEX_CREATE(t_contexto_ejecucion *contexto, char *nombre_mutex, ch
 {
     (void)param2;
 
-    log_info(cpu_logger, "PID: %d - Ejecutando: MUTEX_CREATE - %s", contexto->PID, nombre_mutex);
+    log_info(cpu_logger, "## PID: %d - Ejecutando: MUTEX_CREATE - %s", contexto->PID, nombre_mutex);
     t_paquete *paquete_mutex = crear_paquete(ENVIO_MUTEX_CREATE);
     int tamanio_nombre = strlen(nombre_mutex);
     agregar_a_paquete(paquete_mutex, &tamanio_nombre, sizeof(int));
@@ -472,7 +493,7 @@ void execute_MUTEX_CREATE(t_contexto_ejecucion *contexto, char *nombre_mutex, ch
 void execute_MUTEX_LOCK(t_contexto_ejecucion *contexto, char *nombre_mutex, char *param2)
 {
     (void)param2;
-    log_info(cpu_logger, "PID: %d - Ejecutando: MUTEX_LOCK - %s", contexto->PID, nombre_mutex);
+    log_info(cpu_logger, "## PID: %d - Ejecutando: MUTEX_LOCK - %s", contexto->PID, nombre_mutex);
 
     t_paquete *paquete_mutex = crear_paquete(ENVIO_MUTEX_LOCK);
     int tamanio_nombre = strlen(nombre_mutex);
@@ -490,7 +511,7 @@ void execute_MUTEX_LOCK(t_contexto_ejecucion *contexto, char *nombre_mutex, char
 void execute_MUTEX_UNLOCK(t_contexto_ejecucion *contexto, char *nombre_mutex, char *param2)
 {
     (void)param2;
-    log_info(cpu_logger, "PID: %d - Ejecutando: MUTEX_UNLOCK - %s", contexto->PID, nombre_mutex);
+    log_info(cpu_logger, "## PID: %d - Ejecutando: MUTEX_UNLOCK - %s", contexto->PID, nombre_mutex);
 
     t_paquete *paquete_mutex = crear_paquete(ENVIO_MUTEX_UNLOCK);
     int tamanio_nombre = strlen(nombre_mutex);
@@ -505,22 +526,23 @@ void execute_MUTEX_UNLOCK(t_contexto_ejecucion *contexto, char *nombre_mutex, ch
     flag_syscall = 1;
 }
 
-void execute_MEM_ALLOC(t_contexto_ejecucion *contexto, char *tamano_str, char *registro_direccion)
+// MEM_ALLOC (Id del Segmento, Tamaño): param1 = id de segmento, param2 = tamaño en bytes.
+void execute_MEM_ALLOC(t_contexto_ejecucion *contexto, char *id_segmento_str, char *tamano_str)
 {
-    log_info(cpu_logger, "PID: %d - Ejecutando: MEM_ALLOC - %s bytes", contexto->PID, tamano_str);
+    log_info(cpu_logger, "## PID: %d - Ejecutando: MEM_ALLOC - %s - %s", contexto->PID, id_segmento_str, tamano_str);
+    int id_segmento = pasaje_de_char_a_int(id_segmento_str);
     int tamanio = pasaje_de_char_a_int(tamano_str);
-    if (tamanio <= 0)
+    if (id_segmento < 0 || tamanio <= 0)
     {
-        log_error(cpu_logger, "PID: %d - MEM_ALLOC tamanio invalido: %s", contexto->PID, tamano_str);
+        log_error(cpu_logger, "PID: %d - MEM_ALLOC parametros invalidos: id=%s tam=%s", contexto->PID, id_segmento_str, tamano_str);
         return;
     }
 
+    // KS lee ENVIO_MEM_ALLOC como [id_segmento][tamanio][pid]
     t_paquete *paquete_mem = crear_paquete(ENVIO_MEM_ALLOC);
-    agregar_a_paquete(paquete_mem, &(contexto->PID), sizeof(int));
+    agregar_a_paquete(paquete_mem, &id_segmento, sizeof(int));
     agregar_a_paquete(paquete_mem, &tamanio, sizeof(int));
-    int tamanio_registro = strlen(registro_direccion);
-    agregar_a_paquete(paquete_mem, &tamanio_registro, sizeof(int));
-    agregar_a_paquete(paquete_mem, registro_direccion, tamanio_registro + 1);
+    agregar_a_paquete(paquete_mem, &(contexto->PID), sizeof(int));
 
     enviar_paquete(paquete_mem, conexion_ks);
 
@@ -529,16 +551,22 @@ void execute_MEM_ALLOC(t_contexto_ejecucion *contexto, char *tamano_str, char *r
     flag_syscall = 1;
 }
 
-void execute_MEM_FREE(t_contexto_ejecucion *contexto, char *registro_direccion, char *param2)
+// MEM_FREE (Id del Segmento): param1 = id de segmento.
+void execute_MEM_FREE(t_contexto_ejecucion *contexto, char *id_segmento_str, char *param2)
 {
     (void)param2;
-    log_info(cpu_logger, "PID: %d - Ejecutando: MEM_FREE", contexto->PID);
+    int id_segmento = pasaje_de_char_a_int(id_segmento_str);
+    log_info(cpu_logger, "## PID: %d - Ejecutando: MEM_FREE - %s", contexto->PID, id_segmento_str);
+    if (id_segmento < 0)
+    {
+        log_error(cpu_logger, "PID: %d - MEM_FREE id de segmento invalido: %s", contexto->PID, id_segmento_str);
+        return;
+    }
 
+    // KS lee ENVIO_MEM_FREE como [id_segmento][pid]
     t_paquete *paquete_mem = crear_paquete(ENVIO_MEM_FREE);
+    agregar_a_paquete(paquete_mem, &id_segmento, sizeof(int));
     agregar_a_paquete(paquete_mem, &(contexto->PID), sizeof(int));
-    int tamanio_registro = strlen(registro_direccion);
-    agregar_a_paquete(paquete_mem, &tamanio_registro, sizeof(int));
-    agregar_a_paquete(paquete_mem, registro_direccion, tamanio_registro + 1);
 
     enviar_paquete(paquete_mem, conexion_ks);
 
@@ -550,7 +578,7 @@ void execute_MEM_FREE(t_contexto_ejecucion *contexto, char *registro_direccion, 
 void execute_SLEEP(t_contexto_ejecucion *contexto, char *tiempo_str, char *param2)
 {
     (void)param2;
-    log_info(cpu_logger, "PID: %d - Ejecutando: SLEEP - %s", contexto->PID, tiempo_str);
+    log_info(cpu_logger, "## PID: %d - Ejecutando: SLEEP - %s", contexto->PID, tiempo_str);
 
     int tiempo = pasaje_de_char_a_int(tiempo_str);
     if (tiempo < 0)
@@ -572,7 +600,7 @@ void execute_SLEEP(t_contexto_ejecucion *contexto, char *tiempo_str, char *param
 
 void execute_STDOUT(t_contexto_ejecucion *contexto, char *registro_direccion, char *registro_tamano)
 {
-    log_info(cpu_logger, "PID: %d - Ejecutando: STDOUT", contexto->PID);
+    log_info(cpu_logger, "## PID: %d - Ejecutando: STDOUT", contexto->PID);
 
     uint32_t direccion_logica = leer_registro(contexto, registro_direccion);
     uint32_t tamanio = leer_registro(contexto, registro_tamano);
@@ -597,7 +625,7 @@ void execute_STDOUT(t_contexto_ejecucion *contexto, char *registro_direccion, ch
 
 void execute_STDIN(t_contexto_ejecucion *contexto, char *registro_direccion, char *registro_tamano)
 {
-    log_info(cpu_logger, "PID: %d - Ejecutando: STDIN", contexto->PID);
+    log_info(cpu_logger, "## PID: %d - Ejecutando: STDIN", contexto->PID);
 
     uint32_t direccion_logica = leer_registro(contexto, registro_direccion);
     uint32_t tamanio = leer_registro(contexto, registro_tamano);
@@ -622,7 +650,7 @@ void execute_STDIN(t_contexto_ejecucion *contexto, char *registro_direccion, cha
 
 void execute_INIT_PROC(t_contexto_ejecucion *contexto, char *path, char *prioridad_str)
 {
-    log_info(cpu_logger, "PID: %d - Ejecutando: INIT_PROC - %s", contexto->PID, path);
+    log_info(cpu_logger, "## PID: %d - Ejecutando: INIT_PROC - %s", contexto->PID, path);
 
     int prioridad = pasaje_de_char_a_int(prioridad_str);
     if (prioridad < 0)
@@ -649,7 +677,7 @@ void execute_EXIT(t_contexto_ejecucion *contexto, char *param1, char *param2)
 {
     (void)param1;
     (void)param2;
-    log_info(cpu_logger, "PID: %d - Ejecutando: EXIT", contexto->PID);
+    log_info(cpu_logger, "## PID: %d - Ejecutando: EXIT", contexto->PID);
 
     t_paquete *paquete_exit = crear_paquete(ENVIO_EXIT);
     agregar_a_paquete(paquete_exit, &(contexto->PID), sizeof(int));

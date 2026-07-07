@@ -17,6 +17,16 @@ void Ejecutar_Ciclo_de_Instruccion(t_contexto_ejecucion *contexto_actual)
 
         Iniciar_Decode(contexto_actual, nueva_instruccion); // -> execute
 
+        // SEG_FAULT: el proceso ya fue devuelto a KS (motivo SEG_FAULT). Cortamos el
+        // ciclo sin PC++, sin actualizar contexto y sin chequear interrupción.
+        // La CPU vuelve a esperar otro proceso (NO se mata).
+        if (flag_seg_fault == 1)
+        {
+            Destruir_Instruccion(&nueva_instruccion);
+            seguir_ejecutando = false;
+            break;
+        }
+
         if (contexto_actual->registros.PC == pc_anterior)
         {
             contexto_actual->registros.PC++;
@@ -41,7 +51,10 @@ void Ejecutar_Ciclo_de_Instruccion(t_contexto_ejecucion *contexto_actual)
 
         Destruir_Instruccion(&nueva_instruccion);
 
-        if (check_interrupt(contexto_actual))
+        // Solo chequeamos interrupción si NO fue una syscall: si lo fue, el proceso
+        // ya se devolvió al KS por esa vía y ya se mandó el contexto a KM. Chequear
+        // acá mandaría otro ACTUALIZAR_CONTEXTO + DESALOJO_PROCESO espurio.
+        if (flag_syscall != 1 && check_interrupt(contexto_actual))
         {
             seguir_ejecutando = false;
         }

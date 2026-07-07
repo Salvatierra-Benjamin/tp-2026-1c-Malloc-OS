@@ -36,8 +36,9 @@ char *funcion_stdin(int cant_bytes)
     return cadena;
 }
 
-void *atencion_ks()
+void *atencion_ks(void *arg)
 {
+    (void)arg;
     log_debug(io_logger, "[RECEPTOR_KS_IO] CONECTADO CON KS");
     while (1)
     {

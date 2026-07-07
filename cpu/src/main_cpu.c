@@ -30,6 +30,7 @@ int main(int argc, char *argv[])
         // 1. Esperamos a que el receptor_ks nos avise que hay un proceso
         sem_wait(&sem_proceso_nuevo);
         flag_syscall = 0;
+        flag_seg_fault = 0;
 
         // 2. Solicitud Contexto del CPU al KM
         t_paquete *paquete_solicitud_contexto = crear_paquete(SOLICITUD_CONTEXTO_EJECUCION);

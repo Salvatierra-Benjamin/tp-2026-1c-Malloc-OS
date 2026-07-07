@@ -5,6 +5,6 @@
 #include "iniciador_cpu.h"
 
 void receptor_ks();
-void *atencion_ks();
+void *atencion_ks(void *arg);
 
 #endif

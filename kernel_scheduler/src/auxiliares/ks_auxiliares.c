@@ -154,17 +154,23 @@ void destruir_semaforos(void) {
 	sem_destroy(&sem_memoria_disponible);
 }
 
-bool finalizar_proceso(int pid) {
+bool finalizar_proceso(int pid, char* motivo) {
 	t_pcb* pcb = buscar_pcb_por_pid(pid);
 	if (pcb == NULL) {
 		return false; // No se encontró el proceso con el PID dado
 	}
+	// Sacarlo de EXEC (venía ejecutando cuando pidió EXIT o segfaulteó); si no,
+	// quedaba huérfano en procs_exec y lo tocaría la compactación.
+	pthread_mutex_lock(&mutex_exec);
+	list_remove_element(procs_exec, pcb);
+	pthread_mutex_unlock(&mutex_exec);
+
 	pcb->estado = EXIT_ESTADO; // Cambia el estado del proceso a "EXIT"
 	pthread_mutex_lock(&mutex_exit);
 	list_add(procs_exit, pcb); // Agrega el proceso a la lista de procesos en estado EXIT
 	pthread_mutex_unlock(&mutex_exit);
 
-	log_fin_proceso(pcb, "EXIT");
+	log_fin_proceso(pcb, motivo);
 
 	enviar_fin_proceso_km(pid);
 

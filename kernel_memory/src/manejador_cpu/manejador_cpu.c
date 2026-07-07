@@ -114,6 +114,8 @@ void *manejador_cpu(void *arg)
                 agregar_a_paquete(p_ins, instruccion->parametro_2, parametro_2_size);
             }
 
+            usleep(parametros->instruction_delay * 1000);
+
             enviar_paquete_a_cpu(cpu_actual, p_ins, socket_cpu);
 
             destruir_instruccion(instruccion);

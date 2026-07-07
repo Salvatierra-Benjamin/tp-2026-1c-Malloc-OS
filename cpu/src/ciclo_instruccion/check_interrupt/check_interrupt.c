@@ -10,7 +10,8 @@ bool check_interrupt(t_contexto_ejecucion *contexto_actual)
         return false;
     }
 
-    log_info(cpu_logger, "[CPU] Interrupción recibida para PID %d", contexto_actual->PID);
+    log_info(cpu_logger, "## Interrupción recibida");
+    log_debug(cpu_logger, "[CPU] Interrupción para PID %d", contexto_actual->PID);
 
     // 1) Enviar contexto actualizado a Kernel Memory
     t_paquete *paquete_km = crear_paquete(ACTUALIZAR_CONTEXTO_EJECUCION);

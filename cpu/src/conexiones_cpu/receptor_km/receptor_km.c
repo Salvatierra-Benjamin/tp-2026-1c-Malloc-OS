@@ -8,8 +8,9 @@ void receptor_km()
     pthread_detach(hilo_atencion_km);
 }
 
-void *atencion_km()
+void *atencion_km(void *arg)
 {
+    (void)arg;
     log_debug(cpu_logger, "[RECEPTOR_KS_CPU] CPU CONECTADO CON KS");
 
     while (1)
@@ -106,6 +107,7 @@ void *atencion_km()
             Destruir_Instruccion(&instruccion_aux_global);
 
             eliminar_paquete(paquete);
+            break; // sin esto caía por fall-through a ERROR_ENVIO_INSTRUCCION → exit()
         }
         case ERROR_ENVIO_INSTRUCCION:
         {

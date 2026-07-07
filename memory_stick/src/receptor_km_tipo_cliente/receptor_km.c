@@ -54,69 +54,11 @@ void *atencion_km(void *arg)
 
             break;
         }
-        case PETICION_ESCRITURA_MS:
-        {
-            // 1. Declarar las variables donde guardaremos lo recibido
-            int pid;
-            uint32_t direccion_fisica;
-            int tamanio_a_escribir;
-            void *datos = NULL; // Lo dejamos en NULL para inicializarlo con malloc dinámicamente
-
-            // 2. Recibir el paquete (Corregido el tipo de dato: era t_paquete*, no int t_paquete*)
-            t_paquete *paquete_peticion_escritura_ms = recibir_paquete(conexion_km);
-
-            // 3. Extracción de datos del buffer (¡Mucha atención al orden en que viajan!)
-            // Suponiendo que el Kernel Memory los envió en este orden: PID -> DF -> TAMANIO -> DATOS
-            buffer_read(&pid, paquete_peticion_escritura_ms->buffer, sizeof(int));
-            buffer_read(&direccion_fisica, paquete_peticion_escritura_ms->buffer, sizeof(uint32_t));
-            buffer_read(&tamanio_a_escribir, paquete_peticion_escritura_ms->buffer, sizeof(int));
-
-            // Para los datos variables, primero necesitamos saber el tamaño, reservamos espacio y leemos
-            datos = malloc(tamanio_a_escribir);
-            buffer_read(datos, paquete_peticion_escritura_ms->buffer, tamanio_a_escribir);
-            // Ya no necesitamos el paquete de petición, liberamos
-            eliminar_paquete(paquete_peticion_escritura_ms);
-
-            // 4. Procesar la escritura en la memoria física simulada del MS
-            pthread_mutex_lock(&mutex_memoria);
-            procesar_peticion_escritura(conexion_km, direccion_fisica, datos, tamanio_a_escribir);
-            pthread_mutex_unlock(&mutex_memoria);
-            // 5. Responder el OK al Kernel Memory incluyendo el PID como control
-            t_paquete *paquete_ok_escritura = crear_paquete(RESPUESTA_ESCRITURA_MS);
-            agregar_a_paquete(paquete_ok_escritura, &pid, sizeof(int));
-
-            enviar_paquete(paquete_ok_escritura, conexion_km);
-            // Escritura: “## Escritura de <CANTIDAD ESCRITA> bytes”
-            log_info(ms_logger, "## Escritura de %d bytes", tamanio_a_escribir);
-
-            // 6. Limpieza absoluta para evitar memory leaks
-            eliminar_paquete(paquete_ok_escritura);
-            free(datos);
-            break;
-        }
-        case PETICION_LECTURA_MS:
-        {
-            int pid;
-            uint32_t direccion_fisica;
-            int tamanio_a_leer;
-
-            // 1. Recibir el paquete enviado por el Kernel Memory
-            t_paquete *paquete_peticion_lectura_ms = recibir_paquete(conexion_km);
-
-            // 2. Extraer los datos del buffer
-            // Suponiendo que viajan en orden: PID -> DF -> TAMANIO
-            buffer_read(&pid, paquete_peticion_lectura_ms->buffer, sizeof(int));
-            buffer_read(&direccion_fisica, paquete_peticion_lectura_ms->buffer, sizeof(uint32_t));
-            buffer_read(&tamanio_a_leer, paquete_peticion_lectura_ms->buffer, sizeof(int));
-
-            eliminar_paquete(paquete_peticion_lectura_ms);
-
-            // 3. Procesar la lectura
-            pthread_mutex_lock(&mutex_memoria);
-            procesar_peticion_lectura(conexion_km, direccion_fisica, tamanio_a_leer);
-            pthread_mutex_unlock(&mutex_memoria);
-            break;
-        }
+        // NOTA: las R/W de KM NO llegan por esta conexión (la que MS inició hacia KM).
+        // KM abre una conexión de datos dedicada al puerto de escucha de CPUs del stick
+        // (sin handshake) y manda PETICION_ESCRITURA_MS / PETICION_LECTURA_MS por ahí,
+        // así que las atiende esperar_cpus.c/atencion_cpus (que loguea Escritura/Lectura).
+        // Esta conexión solo transporta el handshake + MEMORY_STICK_SIZE.
         default:
         {
             log_warning(ms_logger, "[RECEPTOR_KM_MS] operacion desconocida : %d", cod_op);

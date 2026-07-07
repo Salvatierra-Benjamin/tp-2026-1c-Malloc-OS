@@ -27,7 +27,7 @@ int asignar_pid(void);
 void registrar_creacion_pendiente(int pid, char* path, int prioridad);
 t_creacion_pendiente* sacar_creacion_pendiente(int pid);
 
-bool finalizar_proceso(int pid);
+bool finalizar_proceso(int pid, char* motivo);
 
 t_pcb* crear_proceso(int pid, char* path, int prioridad);
 

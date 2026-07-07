@@ -40,6 +40,7 @@ extern int PID_a_ejecutar;
 extern int PID_Interrupcion;
 extern t_list *lista_memory_sticks;
 extern int flag_syscall;
+extern int flag_seg_fault; // se setea al detectar SEG_FAULT: corta el ciclo del proceso sin matar la CPU
 extern int TAM_MAX_SEGMENTO;
 extern t_contexto_ejecucion contexto_aux_global;
 extern t_instruccion instruccion_aux_global;

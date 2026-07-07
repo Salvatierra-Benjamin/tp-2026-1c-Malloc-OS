@@ -325,19 +325,8 @@ void ks_termina_de_desalojar_un_pcb_general(t_pcb* pcb, bool a_ready_prioritario
 	sem_post(&sem_ready);
 }
 
-void ks_termina_de_desalojar_un_pcb_seg_fault(t_pcb* pcb) {
-	pthread_mutex_lock(&mutex_exec);
-	list_remove_element(procs_exec, pcb);
-	pthread_mutex_unlock(&mutex_exec);
-
-	pcb->estado = READY;
-
-	pthread_mutex_lock(&array_queues[ks_indice_cola(pcb->prioridad)].mutex_ready_prioritario);
-	queue_push(array_queues[ks_indice_cola(pcb->prioridad)].queue_ready_prioritario, pcb);
-	pthread_mutex_unlock(&array_queues[ks_indice_cola(pcb->prioridad)].mutex_ready_prioritario);
-
-	log_cambio_estado(pcb, EXEC, READY); // ! NO HACE FALTA HACER EL SEM_POST PORQUE NO SE PUEDE ALOJAR NADA PORQUE SE DESCONECTA LA CPU
-}
+// (ks_termina_de_desalojar_un_pcb_seg_fault eliminada: el SEG_FAULT ahora FINALIZA
+//  el proceso vía finalizar_proceso(pid, "SEG_FAULT"), no lo re-encola en READY.)
 
 void ks_termina_de_desalojar_por_compactacion(void) {
 	pthread_mutex_lock(&mutex_exec);

@@ -7,8 +7,9 @@ void receptor_ks()
     pthread_detach(hilo_atencion_ks);
 }
 
-void *atencion_ks()
+void *atencion_ks(void *arg)
 {
+    (void)arg;
     log_debug(cpu_logger, "[RECEPTOR_KS_CPU] CPU CONECTADO CON KS");
 
     while (1)
