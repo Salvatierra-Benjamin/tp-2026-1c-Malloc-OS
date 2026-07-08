@@ -1,4 +1,5 @@
 #include "ks_maneja_km.h"
+#include <stdlib.h> // exit, EXIT_FAILURE
 
 #include "../main/ks_main.h"
 
@@ -67,12 +68,18 @@ void *ks_conexion_km(void *_arg)
 		{
 		case DETECCION_CORRUPCION_MEMORIA:
 		{
+			// BSOD = muerte total del sistema. matar_procesos_ready() +
+			// liberar_listas_matando_procesos_bsod() loguean el fin de cada proceso con
+			// motivo BSOD. Después matamos el PROCESO ENTERO con exit(): termina todos los
+			// threads de una. Antes se hacía return NULL, que mataba solo ESTE thread y
+			// dejaba vivo al handler de CPU leyendo del socket sobre estructuras ya
+			// liberadas (cpus, PCBs, mutexes) -> use-after-free: aparecían PIDs y
+			// prioridades basura en el log después del BSOD.
 			matar_procesos_ready();
 			liberar_listas_matando_procesos_bsod();
 			liberar_mutex();
 			destruir_semaforos();
-			return NULL;
-			// break;
+			exit(EXIT_FAILURE);
 		}
 
 		case AUMENTO_DE_MEMORIA:
