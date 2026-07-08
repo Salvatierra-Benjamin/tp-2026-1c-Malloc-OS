@@ -1,5 +1,5 @@
 #include "ks_maneja_cpu.h"
-
+#include "ks_maneja_io.h"
 #include "../auxiliares/ks_auxiliares.h"
 #include "../logs/ks_logs.h"
 #include "../main/ks_main.h"
@@ -180,11 +180,17 @@ void* ks_maneja_cpu(void* arg) {
 			pthread_mutex_unlock(&mutex->mutex);
 
 			// BLOCK -> READY (el que estaba esperando el mutex)
+			// desbloqueado->estado = READY;
+			// pthread_mutex_lock(&array_queues[ks_indice_cola(desbloqueado->prioridad)].mutex_ready);
+			// queue_push(array_queues[ks_indice_cola(desbloqueado->prioridad)].queue_ready, desbloqueado);
+			// pthread_mutex_unlock(&array_queues[ks_indice_cola(desbloqueado->prioridad)].mutex_ready);
+			// sem_post(&sem_ready); // sin esto el corto plazo no levanta al desbloqueado
 			desbloqueado->estado = READY;
 			pthread_mutex_lock(&array_queues[ks_indice_cola(desbloqueado->prioridad)].mutex_ready);
 			queue_push(array_queues[ks_indice_cola(desbloqueado->prioridad)].queue_ready, desbloqueado);
 			pthread_mutex_unlock(&array_queues[ks_indice_cola(desbloqueado->prioridad)].mutex_ready);
 			sem_post(&sem_ready); // sin esto el corto plazo no levanta al desbloqueado
+			ks_desbloquear_proceso(desbloqueado);
 
 			// el que hizo UNLOCK no se bloquea: vuelve a la CPU
 			enviar_alojar_proceso_cpu(cpu->pcb_ejecutando);

@@ -3,6 +3,8 @@
 #include "../main/ks_main.h"
 #include "../mensajes/ks_mensajes.h"
 #include "../planificadores/ks_planificador_mediano.h" // ks_timer_suspension
+#include "../conexiones/ks_maneja_io.h" // ks_desbloquear_proceso
+#include "../logs/ks_logs.h"            // log_mutex_tomado
 
 void liberar_io(void* io_original) {
 	t_io* io = (t_io*)io_original;
@@ -87,6 +89,7 @@ void liberar_listas_matando_procesos_bsod() {
 	pthread_mutex_unlock(&mutex_exec);
 
 	// procs_exit ya finalizaron y loguearon su fin con motivo EXIT: no re-loguear BSOD.
+	pthread_mutex_lock(&mutex_exit);
 	list_destroy_and_destroy_elements(procs_exit, liberar_proceso);
 	pthread_mutex_unlock(&mutex_exit);
 }
@@ -116,6 +119,7 @@ void liberar_listas_matando_procesos() {
 	list_destroy_and_destroy_elements(procs_exec, liberar_proceso);
 	pthread_mutex_unlock(&mutex_exec);
 
+	pthread_mutex_lock(&mutex_exit);
 	list_destroy_and_destroy_elements(procs_exit, liberar_proceso);
 	pthread_mutex_unlock(&mutex_exit);
 }
@@ -153,6 +157,68 @@ void destruir_semaforos(void) {
 	sem_destroy(&sem_cpu_libre);
 	sem_destroy(&sem_memoria_disponible);
 }
+// Saca toda referencia al PCB de las colas de planificación. Barre TODAS las colas
+// de prioridad (no solo la actual: la herencia pudo cambiar pcb->prioridad respecto
+// de la cola donde quedó encolado). Idempotente: si no está, no hace nada.
+void ks_remover_pcb_de_todas_las_colas(t_pcb* pcb) {
+	for (int i = 0; i < cantidad_algoritmos; i++) {
+		pthread_mutex_lock(&array_queues[i].mutex_ready_prioritario);
+		list_remove_element(array_queues[i].queue_ready_prioritario->elements, pcb);
+		pthread_mutex_unlock(&array_queues[i].mutex_ready_prioritario);
+
+		pthread_mutex_lock(&array_queues[i].mutex_ready);
+		list_remove_element(array_queues[i].queue_ready->elements, pcb);
+		pthread_mutex_unlock(&array_queues[i].mutex_ready);
+
+		pthread_mutex_lock(&array_queues[i].mutex_block);
+		list_remove_element(array_queues[i].list_block, pcb);
+		pthread_mutex_unlock(&array_queues[i].mutex_block);
+
+		pthread_mutex_lock(&array_queues[i].mutex_susp_block);
+		list_remove_element(array_queues[i].list_susp_block, pcb);
+		pthread_mutex_unlock(&array_queues[i].mutex_susp_block);
+
+		pthread_mutex_lock(&array_queues[i].mutex_susp_ready);
+		list_remove_element(array_queues[i].list_susp_ready, pcb);
+		pthread_mutex_unlock(&array_queues[i].mutex_susp_ready);
+	}
+}
+
+// Al finalizar un proceso: lo saca de la cola de espera de todo mutex, y si era
+// dueño de alguno, se lo concede al siguiente en espera (o lo deja libre). Así no
+// quedan mutexes trabados si un dueño muere/segfaultea con el lock tomado.
+void ks_liberar_mutexes_de_proceso(t_pcb* pcb) {
+	t_list* a_desbloquear = list_create();
+
+	pthread_mutex_lock(&mutex_mutexes_kernel);
+	for (int m = 0; m < list_size(mutexes_kernel); m++) {
+		t_mutex_kernel* mtx = list_get(mutexes_kernel, m);
+		pthread_mutex_lock(&mtx->mutex);
+
+		list_remove_element(mtx->bloqueados->elements, pcb); // si esperaba, sacarlo
+
+		if (mtx->duenio == pcb) {
+			if (queue_is_empty(mtx->bloqueados)) {
+				mtx->tomado = false;
+				mtx->duenio = NULL;
+			} else {
+				t_pcb* siguiente = queue_pop(mtx->bloqueados);
+				mtx->duenio = siguiente;
+				log_mutex_tomado(siguiente, mtx->nombre);
+				list_add(a_desbloquear, siguiente);
+			}
+		}
+		pthread_mutex_unlock(&mtx->mutex);
+	}
+	pthread_mutex_unlock(&mutex_mutexes_kernel);
+
+	// Desbloquear FUERA del lock de mutexes_kernel (ks_desbloquear_proceso toma
+	// locks de colas) para no anidar mutex_mutexes_kernel con los de array_queues.
+	for (int i = 0; i < list_size(a_desbloquear); i++) {
+		ks_desbloquear_proceso((t_pcb*) list_get(a_desbloquear, i));
+	}
+	list_destroy(a_desbloquear);
+}
 
 bool finalizar_proceso(int pid, char* motivo) {
 	t_pcb* pcb = buscar_pcb_por_pid(pid);
@@ -164,6 +230,12 @@ bool finalizar_proceso(int pid, char* motivo) {
 	pthread_mutex_lock(&mutex_exec);
 	list_remove_element(procs_exec, pcb);
 	pthread_mutex_unlock(&mutex_exec);
+
+	// >>> FIX BSOD: liberar mutexes del proceso y sacar toda referencia de las
+	// colas ANTES de moverlo a procs_exit (queda referenciado solo ahí).
+	ks_liberar_mutexes_de_proceso(pcb);
+	ks_remover_pcb_de_todas_las_colas(pcb);
+	// <<<
 
 	pcb->estado = EXIT_ESTADO; // Cambia el estado del proceso a "EXIT"
 	pthread_mutex_lock(&mutex_exit);
