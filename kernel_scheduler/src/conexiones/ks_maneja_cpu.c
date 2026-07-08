@@ -185,11 +185,6 @@ void* ks_maneja_cpu(void* arg) {
 			// queue_push(array_queues[ks_indice_cola(desbloqueado->prioridad)].queue_ready, desbloqueado);
 			// pthread_mutex_unlock(&array_queues[ks_indice_cola(desbloqueado->prioridad)].mutex_ready);
 			// sem_post(&sem_ready); // sin esto el corto plazo no levanta al desbloqueado
-			desbloqueado->estado = READY;
-			pthread_mutex_lock(&array_queues[ks_indice_cola(desbloqueado->prioridad)].mutex_ready);
-			queue_push(array_queues[ks_indice_cola(desbloqueado->prioridad)].queue_ready, desbloqueado);
-			pthread_mutex_unlock(&array_queues[ks_indice_cola(desbloqueado->prioridad)].mutex_ready);
-			sem_post(&sem_ready); // sin esto el corto plazo no levanta al desbloqueado
 			ks_desbloquear_proceso(desbloqueado);
 
 			// el que hizo UNLOCK no se bloquea: vuelve a la CPU
