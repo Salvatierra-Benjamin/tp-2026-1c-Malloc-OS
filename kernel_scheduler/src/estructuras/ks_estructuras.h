@@ -33,6 +33,10 @@ typedef struct {
 	estados estado;
 	time_t tiempo_inicio_block;
 	time_t tiempo_inicio_suspendido;
+	bool   stdin_pendiente;      // init false en crear_pcb
+    void*  stdin_datos;          // malloc propio de KS; free tras escribir
+    uint32_t stdin_dir_logica;
+    int    stdin_tamanio;
 } t_pcb;
 
 // CPU

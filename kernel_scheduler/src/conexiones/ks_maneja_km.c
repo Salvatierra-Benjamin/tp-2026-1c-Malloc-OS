@@ -9,12 +9,14 @@
 #include "../planificadores/ks_planificador_mediano.h"
 #include "ks_maneja_io.h" // ks_desbloquear_proceso
 
-void* ks_conexion_km(void* _arg) {
+void *ks_conexion_km(void *_arg)
+{
 	(void)_arg;
 
 	socket_km = crear_conexion(ks_config.ip_km, ks_config.puerto_km);
 
-	if (socket_km < 0) {
+	if (socket_km < 0)
+	{
 		log_error(ks_logger, "No pude conectar a Kernel Memory %s:%s", ks_config.ip_km, ks_config.puerto_km);
 		return NULL;
 	}
@@ -25,14 +27,16 @@ void* ks_conexion_km(void* _arg) {
 	enviar_operacion(socket_km, HANDSHAKE_KS);
 
 	int op = recibir_operacion(socket_km);
-	if (op <= 0) {
+	if (op <= 0)
+	{
 		log_error(ks_logger, "Kernel Memory cerró durante handshake");
 		close(socket_km);
 		return NULL;
 	}
 
 	// KM responde HANDSHAKE_OK genérico (manejador_global.c), no KM_OK_CONEXION
-	if (op != HANDSHAKE_OK) {
+	if (op != HANDSHAKE_OK)
+	{
 		log_error(ks_logger, "Handshake invalido. Esperaba HANDSHAKE_OK (%d), llegó %d", HANDSHAKE_OK, op);
 		close(socket_km);
 		return NULL;
@@ -48,17 +52,21 @@ void* ks_conexion_km(void* _arg) {
 	enviar_solicitud_creacion_proceso_km(pid_inicial, ks_config.path_proceso_inicial, 0);
 
 	// Loop de comunicación con KM
-	while (1) {
+	while (1)
+	{
 		int cod_op = recibir_operacion(socket_km);
 
-		if (cod_op <= 0) {
+		if (cod_op <= 0)
+		{
 			log_error(ks_logger, "Kernel Memory se desconectó");
 			close(socket_km);
 			break;
 		}
 
-		switch (cod_op) {
-		case DETECCION_CORRUPCION_MEMORIA: {
+		switch (cod_op)
+		{
+		case DETECCION_CORRUPCION_MEMORIA:
+		{
 			matar_procesos_ready();
 			liberar_listas_matando_procesos_bsod();
 			liberar_mutex();
@@ -67,8 +75,9 @@ void* ks_conexion_km(void* _arg) {
 			// break;
 		}
 
-		case AUMENTO_DE_MEMORIA: { // AUMENTO_DE_MEMORIA (TAMAÑO)
-			t_paquete* contenido = recibir_paquete(socket_km);
+		case AUMENTO_DE_MEMORIA:
+		{ // AUMENTO_DE_MEMORIA (TAMAÑO)
+			t_paquete *contenido = recibir_paquete(socket_km);
 
 			int tamanio;
 			buffer_read(&tamanio, contenido->buffer, sizeof(int));
@@ -94,11 +103,12 @@ void* ks_conexion_km(void* _arg) {
 			// 	break;
 			// }
 
-		case DESALOJO_POR_COMPACTACION: {
+		case DESALOJO_POR_COMPACTACION:
+		{
 			// KM manda [pid_disparador]: ese proceso está mid-syscall (MEM_ALLOC) con su
 			// CPU idle, no hay que desalojarlo (no respondería el DESALOJO). Se re-despacha
 			// vía OK_MEM_ALLOC cuando termina la compactación.
-			t_paquete* contenido = recibir_paquete(socket_km);
+			t_paquete *contenido = recibir_paquete(socket_km);
 			int pid_disparador;
 			buffer_read(&pid_disparador, contenido->buffer, sizeof(int));
 			eliminar_paquete(contenido);
@@ -114,7 +124,8 @@ void* ks_conexion_km(void* _arg) {
 			break;
 		}
 
-		case FIN_COMPACTACION: {
+		case FIN_COMPACTACION:
+		{
 			log_fin_compactacion();
 			pthread_mutex_lock(&mutex_compactacion);
 			compactacion_en_progreso = false;
@@ -126,8 +137,9 @@ void* ks_conexion_km(void* _arg) {
 			break;
 		}
 
-		case STDOUT_RESTUESTA_LECTURA: { // KM -> KS: [pid][tamanio][datos] (contrato en protocolos.h)
-			t_paquete* contenido = recibir_paquete(socket_km);
+		case STDOUT_RESTUESTA_LECTURA:
+		{ // KM -> KS: [pid][tamanio][datos] (contrato en protocolos.h)
+			t_paquete *contenido = recibir_paquete(socket_km);
 
 			int pid;
 			buffer_read(&pid, contenido->buffer, sizeof(int));
@@ -135,7 +147,7 @@ void* ks_conexion_km(void* _arg) {
 			int len1;
 			buffer_read(&len1, contenido->buffer, sizeof(int)); // LEEMOS CUANTO MIDE
 
-			char* cadena_de_bytes = malloc(len1);				   // PEDIMOS EL ESPACIO JUSTO
+			char *cadena_de_bytes = malloc(len1);				   // PEDIMOS EL ESPACIO JUSTO
 			buffer_read(cadena_de_bytes, contenido->buffer, len1); // COPIAMOS EL CONTENIDO DEL BUFFER
 
 			// Si hay IO STDOUT libre imprime ya; si no, el pedido (con sus datos)
@@ -147,18 +159,30 @@ void* ks_conexion_km(void* _arg) {
 			break;
 		}
 
-		case OK_STDIN_DATOS_ESCRITOS: { // KM escribió lo leído por STDIN: [pid]
-			t_paquete* contenido = recibir_paquete(socket_km);
+		case OK_STDIN_DATOS_ESCRITOS:
+		{ // KM escribió lo leído por STDIN: [pid]
+			t_paquete *contenido = recibir_paquete(socket_km);
 
 			int pid;
 			buffer_read(&pid, contenido->buffer, sizeof(int));
 
 			// STDIN completo (datos ya en memoria): el proceso vuelve de BLOCK a READY.
-			t_pcb* pcb = buscar_pcb_por_pid(pid);
-			if (pcb != NULL) {
+			t_pcb *pcb = buscar_pcb_por_pid(pid);
+			if (pcb != NULL && pcb->stdin_pendiente)
+			{
+				// Era un STDIN diferido por suspensión: ya se escribió, limpiar y pasar a READY.
+				free(pcb->stdin_datos);
+				pcb->stdin_datos = NULL;
+				pcb->stdin_pendiente = false;
+				ks_pasar_a_ready_desde_susp_ready_pid(pid, pcb->prioridad); // o push directo a READY
+			}
+			else if (pcb != NULL)
+			{
 				ks_desbloquear_proceso(pcb);
 				log_fin_io(pcb);
-			} else {
+			}
+			else
+			{
 				log_warning(ks_logger, "OK_STDIN_DATOS_ESCRITOS: no encontré el PCB del PID %d", pid);
 			}
 
@@ -166,15 +190,17 @@ void* ks_conexion_km(void* _arg) {
 			break;
 		}
 
-		case ERROR_STDIN: { // KM rechazó la escritura de STDIN (segfault lógico): [pid]
-			t_paquete* contenido = recibir_paquete(socket_km);
+		case ERROR_STDIN:
+		{ // KM rechazó la escritura de STDIN (segfault lógico): [pid]
+			t_paquete *contenido = recibir_paquete(socket_km);
 
 			int pid;
 			buffer_read(&pid, contenido->buffer, sizeof(int));
 
 			log_warning(ks_logger, "KM rechazó la escritura de STDIN del PID %d (acceso inválido); lo desbloqueo para no dejarlo colgado", pid);
-			t_pcb* pcb = buscar_pcb_por_pid(pid);
-			if (pcb != NULL) {
+			t_pcb *pcb = buscar_pcb_por_pid(pid);
+			if (pcb != NULL)
+			{
 				ks_desbloquear_proceso(pcb);
 			}
 
@@ -182,8 +208,9 @@ void* ks_conexion_km(void* _arg) {
 			break;
 		}
 
-		case OK_MEM_FREE: { // OK_MEM_FREE (PID)
-			t_paquete* contenido = recibir_paquete(socket_km);
+		case OK_MEM_FREE:
+		{ // OK_MEM_FREE (PID)
+			t_paquete *contenido = recibir_paquete(socket_km);
 
 			int pid;
 			buffer_read(&pid, contenido->buffer, sizeof(int));
@@ -193,10 +220,13 @@ void* ks_conexion_km(void* _arg) {
 			sem_post(&sem_memoria_disponible);
 
 			// MEM_FREE atendido: la syscall no bloquea, el proceso vuelve a la CPU
-			t_pcb* pcb = buscar_pcb_por_pid(pid);
-			if (pcb != NULL) {
+			t_pcb *pcb = buscar_pcb_por_pid(pid);
+			if (pcb != NULL)
+			{
 				enviar_alojar_proceso_cpu(pcb);
-			} else {
+			}
+			else
+			{
 				log_warning(ks_logger, "OK_MEM_FREE: no encontré el PCB del PID %d para re-despachar", pid);
 			}
 
@@ -204,17 +234,21 @@ void* ks_conexion_km(void* _arg) {
 			break;
 		}
 
-		case OK_MEM_ALLOC: { // OK_MEM_ALLOC (PID)
-			t_paquete* contenido = recibir_paquete(socket_km);
+		case OK_MEM_ALLOC:
+		{ // OK_MEM_ALLOC (PID)
+			t_paquete *contenido = recibir_paquete(socket_km);
 
 			int pid;
 			buffer_read(&pid, contenido->buffer, sizeof(int));
 
 			// MEM_ALLOC atendido: la syscall no bloquea, el proceso vuelve a la CPU
-			t_pcb* pcb = buscar_pcb_por_pid(pid);
-			if (pcb != NULL) {
+			t_pcb *pcb = buscar_pcb_por_pid(pid);
+			if (pcb != NULL)
+			{
 				enviar_alojar_proceso_cpu(pcb);
-			} else {
+			}
+			else
+			{
 				log_warning(ks_logger, "OK_MEM_ALLOC: no encontré el PCB del PID %d para re-despachar", pid);
 			}
 
@@ -223,8 +257,9 @@ void* ks_conexion_km(void* _arg) {
 		}
 
 		case ERROR_MEM_ALLOC: // ERROR_MEM_ALLOC (PID): falló, pero la syscall igual necesita respuesta
-		case ERROR_MEM_FREE: { // ERROR_MEM_FREE (PID)
-			t_paquete* contenido = recibir_paquete(socket_km);
+		case ERROR_MEM_FREE:
+		{ // ERROR_MEM_FREE (PID)
+			t_paquete *contenido = recibir_paquete(socket_km);
 
 			int pid;
 			buffer_read(&pid, contenido->buffer, sizeof(int));
@@ -232,10 +267,13 @@ void* ks_conexion_km(void* _arg) {
 			log_warning(ks_logger, "KM rechazó la syscall de memoria del PID %d (op %d); re-despacho igual para que el proceso continúe", pid, cod_op);
 
 			// la syscall no bloquea aunque haya fallado: el proceso vuelve a la CPU
-			t_pcb* pcb = buscar_pcb_por_pid(pid);
-			if (pcb != NULL) {
+			t_pcb *pcb = buscar_pcb_por_pid(pid);
+			if (pcb != NULL)
+			{
 				enviar_alojar_proceso_cpu(pcb);
-			} else {
+			}
+			else
+			{
 				log_warning(ks_logger, "ERROR_MEM_*: no encontré el PCB del PID %d para re-despachar", pid);
 			}
 
@@ -243,8 +281,9 @@ void* ks_conexion_km(void* _arg) {
 			break;
 		}
 
-		case OK_PROCESO_SUSPENDIDO: { // OK_PROCESO_SUSPENDIDO (PID)
-			t_paquete* contenido = recibir_paquete(socket_km);
+		case OK_PROCESO_SUSPENDIDO:
+		{ // OK_PROCESO_SUSPENDIDO (PID)
+			t_paquete *contenido = recibir_paquete(socket_km);
 
 			int pid;
 			buffer_read(&pid, contenido->buffer, sizeof(int));
@@ -253,8 +292,9 @@ void* ks_conexion_km(void* _arg) {
 			break;
 		}
 
-		case OK_PROCESO_DES_SUSPENDIDO: { // OK_PROCESO_DES_SUSPENDIDO (PID)
-			t_paquete* contenido = recibir_paquete(socket_km);
+		case OK_PROCESO_DES_SUSPENDIDO:
+		{ // OK_PROCESO_DES_SUSPENDIDO (PID)
+			t_paquete *contenido = recibir_paquete(socket_km);
 
 			int tamanio;
 			buffer_read(&tamanio, contenido->buffer, sizeof(int));
@@ -263,18 +303,22 @@ void* ks_conexion_km(void* _arg) {
 			break;
 		}
 
-		case ERROR_CREACION_PROCESO: { // KM rechaza la creación: [pid]
-			t_paquete* contenido = recibir_paquete(socket_km);
+		case ERROR_CREACION_PROCESO:
+		{ // KM rechaza la creación: [pid]
+			t_paquete *contenido = recibir_paquete(socket_km);
 
 			int pid;
 			buffer_read(&pid, contenido->buffer, sizeof(int));
 
-			t_creacion_pendiente* pendiente = sacar_creacion_pendiente(pid);
-			if (pendiente != NULL) {
+			t_creacion_pendiente *pendiente = sacar_creacion_pendiente(pid);
+			if (pendiente != NULL)
+			{
 				log_error(ks_logger, "KM no pudo crear el proceso PID %d (%s)", pid, pendiente->path);
 				free(pendiente->path);
 				free(pendiente);
-			} else {
+			}
+			else
+			{
 				log_error(ks_logger, "KM no pudo crear el proceso PID %d (sin solicitud pendiente)", pid);
 			}
 
@@ -282,16 +326,20 @@ void* ks_conexion_km(void* _arg) {
 			break;
 		}
 
-		case OK_CREACION_PROCESO: { // KM confirma la creación: [pid]
-			t_paquete* contenido = recibir_paquete(socket_km);
+		case OK_CREACION_PROCESO:
+		{ // KM confirma la creación: [pid]
+			t_paquete *contenido = recibir_paquete(socket_km);
 
 			int pid;
 			buffer_read(&pid, contenido->buffer, sizeof(int));
 
-			t_creacion_pendiente* pendiente = sacar_creacion_pendiente(pid);
-			if (pendiente == NULL) {
+			t_creacion_pendiente *pendiente = sacar_creacion_pendiente(pid);
+			if (pendiente == NULL)
+			{
 				log_warning(ks_logger, "KM confirmo la creacion del PID %d pero no habia solicitud pendiente", pid);
-			} else {
+			}
+			else
+			{
 				crear_proceso(pendiente->pid, pendiente->path, pendiente->prioridad);
 				sem_post(&sem_ready); // hay un proceso nuevo en READY para el corto plazo
 				free(pendiente->path);
@@ -304,12 +352,13 @@ void* ks_conexion_km(void* _arg) {
 
 		case RESPUESTA_DESSUSPENCION_LISTA: // Lista de PIDS Y PRIORIDADES dessuspendidas: [cantidad][pid1][prioridad1][pid2][prioridad2]...[pidN][prioridadN]
 		{
-			t_paquete* contenido = recibir_paquete(socket_km);
+			t_paquete *contenido = recibir_paquete(socket_km);
 
 			int cantidad;
 			buffer_read(&cantidad, contenido->buffer, sizeof(int));
 
-			for (int i = 0; i < cantidad; i++) {
+			for (int i = 0; i < cantidad; i++)
+			{
 				int pid;
 				buffer_read(&pid, contenido->buffer, sizeof(int));
 
@@ -323,11 +372,13 @@ void* ks_conexion_km(void* _arg) {
 			break;
 		}
 
-		case -1: {
+		case -1:
+		{
 			log_warning(ks_logger, "[KM] se desconecto km");
 			return NULL;
 		}
-		default: {
+		default:
+		{
 			log_warning(ks_logger, "[KM] operacion desconocida: %d", cod_op);
 			break;
 		}

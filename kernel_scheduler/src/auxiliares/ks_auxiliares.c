@@ -223,6 +223,9 @@ t_pcb* crear_proceso(int pid, char* path, int prioridad) {
 	nuevo_pcb->prioridad_original = prioridad; // Guardar la prioridad original para herencia de prioridad
 	nuevo_pcb->cpu_fd = -1;					   // Inicialmente no asignado a ningún CPU
 	nuevo_pcb->io_fd = -1;					   // Inicialmente no asignado a ningún IO
+	nuevo_pcb->stdin_pendiente = false;
+    nuevo_pcb->stdin_datos = NULL;
+    nuevo_pcb->stdin_dir_logica = 0;
 
 	nuevo_pcb->estado = NEW;
 

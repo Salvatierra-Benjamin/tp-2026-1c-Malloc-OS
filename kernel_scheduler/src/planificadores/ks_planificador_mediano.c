@@ -102,6 +102,15 @@ void ks_pasar_a_ready_desde_susp_ready_pid(int pid, int prioridad) {
 	pcb = list_remove_by_condition(array_queues[ks_indice_cola(prioridad)].list_susp_ready, _pcb_tiene_pid);
 	pthread_mutex_unlock(&array_queues[ks_indice_cola(prioridad)].mutex_susp_ready);
 
+	if (pcb->stdin_pendiente) {
+        // Ya es residente: recién ahora la escritura va a ser válida en KM.
+        // El proceso se empuja a READY cuando llegue OK_STDIN_DATOS_ESCRITOS.
+        enviar_bytes_stdin(pid, pcb->stdin_dir_logica, pcb->stdin_tamanio, pcb->stdin_datos);
+        // dejar el PCB "aparte" (p.ej. una lista/dict pendientes_stdin_post_desusp por pid)
+        // para que OK_STDIN_DATOS_ESCRITOS lo encuentre y lo pase a READY.
+        return; // NO push a READY acá
+    }
+
 	pcb->estado = READY;
 
 	pthread_mutex_lock(&array_queues[ks_indice_cola(prioridad)].mutex_ready);

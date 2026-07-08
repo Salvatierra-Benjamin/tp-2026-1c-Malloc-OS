@@ -6,27 +6,31 @@
 #include "../mensajes/ks_mensajes.h"
 #include "../planificadores/ks_planificador_corto.h"
 
-void* ks_maneja_io(void* arg) {
+void *ks_maneja_io(void *arg)
+{
 	// main pasa un t_io*; NO liberarlo acá, vive en las listas ios_*
-	t_io* io = (t_io*)arg;
+	t_io *io = (t_io *)arg;
 
 	log_debug(ks_logger, "Entra en ks_maneja_io (fd = %d)", io->fd);
 
 	int ejecutando = 1;
 
-	while (ejecutando) {
+	while (ejecutando)
+	{
 		int op_code = recibir_operacion(io->fd);
-		switch (op_code) {
+		switch (op_code)
+		{
 		case OK_SLEEP: // OK_SLEEP  (PID)
 		{
-			t_paquete* contenido = recibir_paquete(io->fd);
+			t_paquete *contenido = recibir_paquete(io->fd);
 
 			int pid;
 			buffer_read(&pid, contenido->buffer, sizeof(int));
 
-			t_pcb* pcb = buscar_pcb_por_pid(pid);
+			t_pcb *pcb = buscar_pcb_por_pid(pid);
 
-			if (pcb != NULL) {
+			if (pcb != NULL)
+			{
 				ks_desbloquear_proceso(pcb);
 				log_debug(ks_logger, "Proceso %d desbloqueado del SLEEP", pid);
 				log_fin_io(pcb);
@@ -41,7 +45,7 @@ void* ks_maneja_io(void* arg) {
 
 		case OK_STDIN: // IO -> KS: payload = [datos] (tamaño = lo pedido). pid/dir los tengo en la IO
 		{
-			t_paquete* contenido = recibir_paquete(io->fd);
+			t_paquete *contenido = recibir_paquete(io->fd);
 
 			int pid = io->pid_pendiente;
 			uint32_t dir_logica = io->stdin_dir_logica;
@@ -49,14 +53,28 @@ void* ks_maneja_io(void* arg) {
 
 			// Leo lo que IO capturó del teclado y se lo mando a KM para que lo
 			// escriba en la memoria del proceso (dir_logica).
-			void* datos = malloc(tamanio);
+			void *datos = malloc(tamanio);
 			buffer_read(datos, contenido->buffer, tamanio);
 
-			// OJO: NO se desbloquea acá. El proceso vuelve a READY recién cuando KM
-			// confirma la escritura con OK_STDIN_DATOS_ESCRITOS (ks_maneja_km).
-			enviar_bytes_stdin(pid, dir_logica, tamanio, datos);
+			t_pcb *pcb = buscar_pcb_por_pid(pid);
 
-			free(datos);
+			if (pcb != NULL && pcb->estado == SUSP_BLOCK)
+			{
+				// Suspendido mientras esperaba el teclado: NO se puede escribir ahora
+				// (segmentos en SWAP). Guardo el dato en el PCB y lo paso a SUSP_READY
+				// para que el mediano lo des-suspenda; el flush va en la des-suspensión.
+				pcb->stdin_pendiente = true;
+				pcb->stdin_datos = datos; // ownership pasa al PCB (no free acá)
+				pcb->stdin_dir_logica = dir_logica;
+				pcb->stdin_tamanio = tamanio;
+				ks_desbloquear_proceso(pcb); // SUSP_BLOCK -> SUSP_READY
+			}
+			else
+			{
+				// Residente (BLOCK): comportamiento actual, se escribe ya.
+				enviar_bytes_stdin(pid, dir_logica, tamanio, datos);
+				free(datos);
+			}
 
 			// La IO ya leyó (su trabajo terminó, aunque el proceso se desbloquee
 			// recién con OK_STDIN_DATOS_ESCRITOS): se libera o toma el próximo STDIN.
@@ -68,14 +86,15 @@ void* ks_maneja_io(void* arg) {
 
 		case OK_STDOUT: // OK_STDOUT_RESPUESTA_BYTES (PID)
 		{
-			t_paquete* contenido = recibir_paquete(io->fd);
+			t_paquete *contenido = recibir_paquete(io->fd);
 
 			int pid;
 			buffer_read(&pid, contenido->buffer, sizeof(int));
 
-			t_pcb* pcb = buscar_pcb_por_pid(pid);
+			t_pcb *pcb = buscar_pcb_por_pid(pid);
 
-			if (pcb != NULL) {
+			if (pcb != NULL)
+			{
 				ks_desbloquear_proceso(pcb);
 				log_debug(ks_logger, "Proceso %d desbloqueado del STDOUT", pid);
 				log_fin_io(pcb);
@@ -88,12 +107,14 @@ void* ks_maneja_io(void* arg) {
 			break;
 		}
 
-		case -1: {
+		case -1:
+		{
 			log_warning(ks_logger, "[IO] se desconecto io");
 			ejecutando = 0;
 			break;
 		}
-		default: {
+		default:
+		{
 			log_warning(ks_logger, "[IO] operacion desconocida: %d", op_code);
 			break;
 		}
@@ -103,11 +124,14 @@ void* ks_maneja_io(void* arg) {
 	return NULL;
 }
 
-void ks_desbloquear_proceso(t_pcb* pcb) {
+void ks_desbloquear_proceso(t_pcb *pcb)
+{
 
-	if (pcb->estado == BLOCK) {
-		bool _es_pcb(void* ptr) {
-			t_pcb* aux = ptr;
+	if (pcb->estado == BLOCK)
+	{
+		bool _es_pcb(void *ptr)
+		{
+			t_pcb *aux = ptr;
 			return aux->pid == pcb->pid;
 		}
 
@@ -127,9 +151,11 @@ void ks_desbloquear_proceso(t_pcb* pcb) {
 		return;
 	}
 
-	if (pcb->estado == SUSP_BLOCK) {
-		bool _es_pcb(void* ptr) {
-			t_pcb* aux = ptr;
+	if (pcb->estado == SUSP_BLOCK)
+	{
+		bool _es_pcb(void *ptr)
+		{
+			t_pcb *aux = ptr;
 			return aux->pid == pcb->pid;
 		}
 		pthread_mutex_lock(&array_queues[ks_indice_cola(pcb->prioridad)].mutex_susp_block);
