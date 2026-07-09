@@ -37,8 +37,8 @@ void cpu_cargar_config(char *path)
     }
     char *log_level_string = config_get_string_value(config, "LOG_LEVEL");
     cpu_config.log_level = log_level_from_string((char *)log_level_string);
-    cpu_config.ip_kernel_memory = strdup(config_get_string_value(config, "IP_KERNEL_MEMORY"));
-    cpu_config.ip_kernel_scheduler = strdup(config_get_string_value(config, "IP_KERNEL_SCHEDULER"));
+    cpu_config.ip_kernel_memory = strdup(config_get_string_value(config, "IP_KM"));
+    cpu_config.ip_kernel_scheduler = strdup(config_get_string_value(config, "IP_KS"));
     cpu_config.puerto_kernel_memory = strdup(config_get_string_value(config, "PUERTO_KERNEL_MEMORY"));
     cpu_config.puerto_kernel_scheduler = strdup(config_get_string_value(config, "PUERTO_KERNEL_SCHEDULER"));
 
