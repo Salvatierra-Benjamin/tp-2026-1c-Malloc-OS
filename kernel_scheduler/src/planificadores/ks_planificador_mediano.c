@@ -106,9 +106,13 @@ void ks_pasar_a_ready_desde_susp_ready_pid(int pid, int prioridad) {
         // Ya es residente: recién ahora la escritura va a ser válida en KM.
         // El proceso se empuja a READY cuando llegue OK_STDIN_DATOS_ESCRITOS.
         enviar_bytes_stdin(pid, pcb->stdin_dir_logica, pcb->stdin_tamanio, pcb->stdin_datos);
-        // dejar el PCB "aparte" (p.ej. una lista/dict pendientes_stdin_post_desusp por pid)
-        // para que OK_STDIN_DATOS_ESCRITOS lo encuentre y lo pase a READY.
-        return; // NO push a READY acá
+        // Ya lo sacamos de susp_ready arriba: lo parkeo en pendientes_stdin_post_desusp
+        // (fuera de las colas normales) para que OK_STDIN_DATOS_ESCRITOS lo encuentre y
+        // lo pase a READY. Sin esto el PCB quedaba huérfano (proceso wedgeado + leak).
+        pthread_mutex_lock(&mutex_pendientes_stdin);
+        list_add(pendientes_stdin_post_desusp, pcb);
+        pthread_mutex_unlock(&mutex_pendientes_stdin);
+        return; // NO push a READY acá: lo hace el handler del OK
     }
 
 	pcb->estado = READY;
@@ -120,6 +124,38 @@ void ks_pasar_a_ready_desde_susp_ready_pid(int pid, int prioridad) {
 	log_cambio_estado(pcb, SUSP_READY, READY);
 
 	sem_post(&sem_ready); // ?
+}
+
+// Completa un STDIN diferido cuando llega OK_STDIN_DATOS_ESCRITOS de KM: saca el PCB
+// de pendientes_stdin_post_desusp (donde quedó parkeado tras des-suspender) y lo pasa
+// a READY. Devuelve true si era un diferido; false si el pid no estaba parkeado (STDIN
+// normal, sin suspensión: lo maneja el camino de buscar_pcb_por_pid del handler).
+bool ks_completar_stdin_post_desusp(int pid) {
+	bool _pcb_tiene_pid(void* ptr) {
+		return ((t_pcb*)ptr)->pid == pid;
+	}
+
+	pthread_mutex_lock(&mutex_pendientes_stdin);
+	t_pcb* pcb = list_remove_by_condition(pendientes_stdin_post_desusp, _pcb_tiene_pid);
+	pthread_mutex_unlock(&mutex_pendientes_stdin);
+
+	if (pcb == NULL) {
+		return false;
+	}
+
+	free(pcb->stdin_datos);
+	pcb->stdin_datos = NULL;
+	pcb->stdin_pendiente = false;
+	pcb->estado = READY;
+
+	pthread_mutex_lock(&array_queues[ks_indice_cola(pcb->prioridad)].mutex_ready);
+	queue_push(array_queues[ks_indice_cola(pcb->prioridad)].queue_ready, pcb);
+	pthread_mutex_unlock(&array_queues[ks_indice_cola(pcb->prioridad)].mutex_ready);
+
+	log_cambio_estado(pcb, SUSP_READY, READY);
+	sem_post(&sem_ready);
+
+	return true;
 }
 
 // TIMER DE SUSPENSION

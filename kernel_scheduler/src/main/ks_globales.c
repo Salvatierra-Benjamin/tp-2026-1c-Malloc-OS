@@ -32,6 +32,9 @@ t_list* procs_exec = NULL;
 // t_list *procs_susp_ready = NULL;
 t_list* procs_exit = NULL;
 
+// PCBs con STDIN diferido tras des-suspensión, esperando OK_STDIN_DATOS_ESCRITOS.
+t_list* pendientes_stdin_post_desusp = NULL;
+
 t_list* mutexes_kernel = NULL;
 
 t_list* creaciones_pendientes = NULL;
@@ -54,6 +57,8 @@ pthread_mutex_t mutex_creaciones_pendientes = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mutex_siguiente_pid = PTHREAD_MUTEX_INITIALIZER;
 
 pthread_mutex_t mutex_compactacion = PTHREAD_MUTEX_INITIALIZER;
+
+pthread_mutex_t mutex_pendientes_stdin = PTHREAD_MUTEX_INITIALIZER;
 
 // SEMAFOROS
 sem_t sem_ready;

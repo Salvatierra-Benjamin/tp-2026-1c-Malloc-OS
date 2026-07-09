@@ -149,6 +149,11 @@ extern t_list* procs_exec;
 // extern t_list* procs_susp_ready;
 extern t_list* procs_exit;
 
+// PCBs con STDIN diferido tras des-suspensión: se sacan de susp_ready y esperan el
+// OK_STDIN_DATOS_ESCRITOS de KM para recién ahí pasar a READY. Viven fuera de las
+// colas normales, por eso necesitan su propia lista (si no, quedan huérfanos).
+extern t_list* pendientes_stdin_post_desusp;
+
 extern t_list* mutexes_kernel;
 
 extern t_list* creaciones_pendientes;
@@ -171,6 +176,8 @@ extern pthread_mutex_t mutex_creaciones_pendientes;
 extern pthread_mutex_t mutex_siguiente_pid;
 
 extern pthread_mutex_t mutex_compactacion;
+
+extern pthread_mutex_t mutex_pendientes_stdin;
 
 // SEMAFOROS
 extern sem_t sem_ready;

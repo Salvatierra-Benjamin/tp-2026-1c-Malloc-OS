@@ -174,6 +174,8 @@ void crear_listas() {
 	// procs_susp_ready = list_create();
 	procs_exit = list_create();
 
+	pendientes_stdin_post_desusp = list_create();
+
 	creaciones_pendientes = list_create();
 
 	// mutexes_kernel arrancaba en NULL y nunca se creaba -> el primer MUTEX_CREATE

@@ -21,6 +21,7 @@ void ks_pasar_a_susp_block(t_pcb* pcb);
 void ks_pasar_a_susp_ready(t_pcb* pcb);
 void ks_pasar_a_ready_desde_susp_ready(t_pcb* pcb);
 void ks_pasar_a_ready_desde_susp_ready_pid(int pid, int prioridad);
+bool ks_completar_stdin_post_desusp(int pid);
 
 // DESUSPENSION
 void ks_empezar_a_intentar_desuspender(void);

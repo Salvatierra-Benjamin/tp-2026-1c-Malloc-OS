@@ -92,6 +92,11 @@ void liberar_listas_matando_procesos_bsod() {
 	pthread_mutex_lock(&mutex_exit);
 	list_destroy_and_destroy_elements(procs_exit, liberar_proceso);
 	pthread_mutex_unlock(&mutex_exit);
+
+	// PCBs parkeados esperando el OK de un STDIN diferido: siguen vivos -> BSOD.
+	pthread_mutex_lock(&mutex_pendientes_stdin);
+	list_destroy_and_destroy_elements(pendientes_stdin_post_desusp, liberar_proceso_bsod);
+	pthread_mutex_unlock(&mutex_pendientes_stdin);
 }
 
 void liberar_listas_matando_procesos() {
@@ -122,6 +127,10 @@ void liberar_listas_matando_procesos() {
 	pthread_mutex_lock(&mutex_exit);
 	list_destroy_and_destroy_elements(procs_exit, liberar_proceso);
 	pthread_mutex_unlock(&mutex_exit);
+
+	pthread_mutex_lock(&mutex_pendientes_stdin);
+	list_destroy_and_destroy_elements(pendientes_stdin_post_desusp, liberar_proceso);
+	pthread_mutex_unlock(&mutex_pendientes_stdin);
 }
 
 void liberar_mutex() {
@@ -134,6 +143,7 @@ void liberar_mutex() {
 	// pthread_mutex_destroy(&mutex_susp_block);
 	// pthread_mutex_destroy(&mutex_susp_ready);
 	pthread_mutex_destroy(&mutex_exit);
+	pthread_mutex_destroy(&mutex_pendientes_stdin);
 	pthread_mutex_destroy(&mutex_array_queues);
 
 	for (int i = 0; i < cantidad_algoritmos; i++) {

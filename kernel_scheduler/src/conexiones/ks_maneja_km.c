@@ -173,24 +173,25 @@ void *ks_conexion_km(void *_arg)
 			int pid;
 			buffer_read(&pid, contenido->buffer, sizeof(int));
 
-			// STDIN completo (datos ya en memoria): el proceso vuelve de BLOCK a READY.
-			t_pcb *pcb = buscar_pcb_por_pid(pid);
-			if (pcb != NULL && pcb->stdin_pendiente)
+			// STDIN completo (datos ya en memoria): el proceso vuelve a READY.
+			// 1) STDIN diferido por suspensión: el PCB está parkeado en
+			//    pendientes_stdin_post_desusp (fuera de las colas). ks_completar_* lo
+			//    saca de ahí, libera los datos y lo pasa a READY.
+			if (!ks_completar_stdin_post_desusp(pid))
 			{
-				// Era un STDIN diferido por suspensión: ya se escribió, limpiar y pasar a READY.
-				free(pcb->stdin_datos);
-				pcb->stdin_datos = NULL;
-				pcb->stdin_pendiente = false;
-				ks_pasar_a_ready_desde_susp_ready_pid(pid, pcb->prioridad); // o push directo a READY
-			}
-			else if (pcb != NULL)
-			{
-				ks_desbloquear_proceso(pcb);
-				log_fin_io(pcb);
-			}
-			else
-			{
-				log_warning(ks_logger, "OK_STDIN_DATOS_ESCRITOS: no encontré el PCB del PID %d", pid);
+				// 2) STDIN normal (proceso residente, estaba en BLOCK): desbloquear.
+				t_pcb *pcb = buscar_pcb_por_pid(pid);
+				if (pcb != NULL)
+				{
+					ks_desbloquear_proceso(pcb);
+					log_fin_io(pcb);
+				}
+				else
+				{
+					log_warning(ks_logger, "OK_STDIN_DATOS_ESCRITOS: no encontré el PCB del PID %d", pid);
+				}
+			} else {
+				log_warning(ks_logger, "NO SE ENCUENTRA NINGUN PROCESO PENDIENTE DE IO DESPUES DE DESSUSPENCION pid:%d", pid);
 			}
 
 			eliminar_paquete(contenido);
