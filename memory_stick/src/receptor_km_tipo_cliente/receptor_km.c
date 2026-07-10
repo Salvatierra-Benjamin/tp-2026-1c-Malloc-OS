@@ -1,5 +1,5 @@
 #include "receptor_km.h"
-// TODO Implementar delay
+// HACER Implementar delay
 void receptor_km()
 {
     log_debug(ms_logger, "[RECEPTOR_KM_MS] Conectando con KM...");

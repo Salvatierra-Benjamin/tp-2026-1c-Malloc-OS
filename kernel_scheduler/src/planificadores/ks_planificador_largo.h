@@ -11,7 +11,7 @@
 // #include <commons/collections/queue.h>
 // #include <commons/log.h>
 
-// // PLANIFICADOR
+// PLANIFICADOR
 // void* ks_planificador_largo_plazo(void* arg);
 
 // void ks_admitir_proceso(t_pcb* pcb);

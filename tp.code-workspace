@@ -27,10 +27,6 @@
     {
       "name": "utils",
       "path": "utils"
-    },
-     {
-      "name": "Debug",
-      "path": "Debug"
     }
   ],
   "settings": {

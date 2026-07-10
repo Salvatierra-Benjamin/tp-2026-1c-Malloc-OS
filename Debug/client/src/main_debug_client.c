@@ -93,8 +93,7 @@ int main(int argc, char *argv[])
     inicializar_semaforos_coordinadores();
     creacion_conexiones_debug_client();
 
-    //! HANDSHAKE DINAMICO CON MS
-    while (1)
+    HANDSHAKE DINAMICO CON MS while (1)
     {
         // 1. Esperamos a que el receptor_ks nos avise que hay un proceso
         int respuesta_alojar_proceso = recibir_operacion(conexion_debug_server);

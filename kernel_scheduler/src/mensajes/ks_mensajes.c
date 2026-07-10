@@ -4,49 +4,53 @@
 
 #include "../logs/ks_logs.h"
 
-/* // ! EJEMPLO DE USO
-	// ! ENVIOS
-    t_paquete *paquete_solicitud_contexto = crear_paquete(SOLICITUD_CONTEXTO_EJECUCION);
-    // enviar int
+/* //  EJEMPLO DE USO
+	//  ENVIOS
+	t_paquete *paquete_solicitud_contexto = crear_paquete(SOLICITUD_CONTEXTO_EJECUCION);
+	// enviar int
 	agregar_a_paquete(paquete_solicitud_contexto, &PID_a_ejecutar, sizeof(int));
 	// enviar string
 	int parametro_1_size = strlen (instruccion->parametro_1)+1;
 	agregar_a_paquete (p_ins, &parametro_1_size, sizeof (int));
 	agregar_a_paquete (p_ins, instruccion-parametro_1, parametro_1_size);
 
-    enviar_paquete(paquete_solicitud_contexto, conexion_km);
-    eliminar_paquete(paquete_solicitud_contexto);
+	enviar_paquete(paquete_solicitud_contexto, conexion_km);
+	eliminar_paquete(paquete_solicitud_contexto);
 
-	// ! RECEPCIONES
+	//  RECEPCIONES
 	int len1;
 	buffer_read (&len1, contenido->buffer, sizeof (int)) ; // LEEMOS CUANTO MIDE
 	char* nombre_mutex = malloc(len1); // PEDIMOS EL ESPACIO JUSTO
 	buffer_read (&nombre_mutex, contenido->buffer, len1); // COPIAMOS EL CONTENIDO DEL BUFFER
 */
 
-// ! -------------------------------- KS RTA GRAL DE OK CONEXIÓN ------------------------------------------------------------------------------------------------
-void enviar_ok_conexion(int fd) {
+//  -------------------------------- KS RTA GRAL DE OK CONEXIÓN ------------------------------------------------------------------------------------------------
+void enviar_ok_conexion(int fd)
+{
 	enviar_operacion(fd, KS_OK_CONEXION);
 }
 
-// ! -------------------------------- KS -> CPU ------------------------------------------------------------------------------------------------
-void enviar_alojar_proceso_cpu(t_pcb* pcb) {
-	t_paquete* paquete_alojar = crear_paquete(ALOJAR_PROCESO);
+//  -------------------------------- KS -> CPU ------------------------------------------------------------------------------------------------
+void enviar_alojar_proceso_cpu(t_pcb *pcb)
+{
+	t_paquete *paquete_alojar = crear_paquete(ALOJAR_PROCESO);
 	agregar_a_paquete(paquete_alojar, &pcb->pid, sizeof(int));
 	enviar_paquete(paquete_alojar, pcb->cpu_fd);
 	eliminar_paquete(paquete_alojar);
 }
 
-void enviar_interrupcion_cpu(int cpu_fd, int pid) {
-	t_paquete* paquete_interrupcion = crear_paquete(INTERRUPCION);
+void enviar_interrupcion_cpu(int cpu_fd, int pid)
+{
+	t_paquete *paquete_interrupcion = crear_paquete(INTERRUPCION);
 	agregar_a_paquete(paquete_interrupcion, &pid, sizeof(int));
 	enviar_paquete(paquete_interrupcion, cpu_fd);
 	eliminar_paquete(paquete_interrupcion);
 }
 
 // CPU solo atiende INTERRUPCION (receptor_ks.c); el opcode SOLICITUD_DESALOJO_COMPACTACION_MEMORIA no existe en protocolos.h
-void enviar_interrupcion_compactacion_cpu(int cpu_fd, int pid) {
-	t_paquete* paquete_interrupcion = crear_paquete(INTERRUPCION);
+void enviar_interrupcion_compactacion_cpu(int cpu_fd, int pid)
+{
+	t_paquete *paquete_interrupcion = crear_paquete(INTERRUPCION);
 	agregar_a_paquete(paquete_interrupcion, &pid, sizeof(int));
 	enviar_paquete(paquete_interrupcion, cpu_fd);
 	eliminar_paquete(paquete_interrupcion);
@@ -60,28 +64,31 @@ void enviar_interrupcion_compactacion_cpu(int cpu_fd, int pid) {
 // 	eliminar_paquete(paquete_interrupcion);
 // }
 
-// ! -------------------------------- KS -> IO ------------------------------------------------------------------------------------------------
-void enviar_sleep_io(int io_fd, int tiempo_ms, int pid) {
+//  -------------------------------- KS -> IO ------------------------------------------------------------------------------------------------
+void enviar_sleep_io(int io_fd, int tiempo_ms, int pid)
+{
 	// IO lo lee como [pid][tiempo] (receptor_ks.c), en ese orden.
-	t_paquete* paquete_sleep = crear_paquete(SLEEP_IO);
+	t_paquete *paquete_sleep = crear_paquete(SLEEP_IO);
 	agregar_a_paquete(paquete_sleep, &pid, sizeof(int));
 	agregar_a_paquete(paquete_sleep, &tiempo_ms, sizeof(int));
 	enviar_paquete(paquete_sleep, io_fd);
 	eliminar_paquete(paquete_sleep);
 }
 
-void enviar_stdin_io(int io_fd, int tamanio, int pid) {
+void enviar_stdin_io(int io_fd, int tamanio, int pid)
+{
 	// IO lo lee como [pid][cant_bytes] (receptor_ks.c), en ese orden.
-	t_paquete* paquete_stdin = crear_paquete(STDIN_IO);
+	t_paquete *paquete_stdin = crear_paquete(STDIN_IO);
 	agregar_a_paquete(paquete_stdin, &pid, sizeof(int));
 	agregar_a_paquete(paquete_stdin, &tamanio, sizeof(int));
 	enviar_paquete(paquete_stdin, io_fd);
 	eliminar_paquete(paquete_stdin);
 }
 
-void enviar_stdout_io(int io_fd, char* cadena_de_bytes, int len, int pid) {
+void enviar_stdout_io(int io_fd, char *cadena_de_bytes, int len, int pid)
+{
 	// IO lo lee como [pid][longitud][cadena] (receptor_ks.c), en ese orden.
-	t_paquete* paquete_stdout = crear_paquete(STDOUT_IO);
+	t_paquete *paquete_stdout = crear_paquete(STDOUT_IO);
 	agregar_a_paquete(paquete_stdout, &pid, sizeof(int));
 	agregar_a_paquete(paquete_stdout, &len, sizeof(int));
 	agregar_a_paquete(paquete_stdout, cadena_de_bytes, len);
@@ -89,10 +96,11 @@ void enviar_stdout_io(int io_fd, char* cadena_de_bytes, int len, int pid) {
 	eliminar_paquete(paquete_stdout);
 }
 
-// ! -------------------------------- KS -> KM ------------------------------------------------------------------------------------------------
-void enviar_solicitud_creacion_proceso_km(int pid, char* archivo_instrucciones, int prioridad) {
+//  -------------------------------- KS -> KM ------------------------------------------------------------------------------------------------
+void enviar_solicitud_creacion_proceso_km(int pid, char *archivo_instrucciones, int prioridad)
+{
 	// KM espera [pid][path_size][path con '\0'][prioridad] (manejador_ks.c de KM)
-	t_paquete* paquete_creacion_proceso = crear_paquete(CREACION_PROCESO);
+	t_paquete *paquete_creacion_proceso = crear_paquete(CREACION_PROCESO);
 	int path_size = strlen(archivo_instrucciones) + 1;
 	agregar_a_paquete(paquete_creacion_proceso, &pid, sizeof(int));
 	agregar_a_paquete(paquete_creacion_proceso, &path_size, sizeof(int));
@@ -102,8 +110,9 @@ void enviar_solicitud_creacion_proceso_km(int pid, char* archivo_instrucciones, 
 	eliminar_paquete(paquete_creacion_proceso);
 }
 
-void enviar_fin_proceso_km(int pid) {
-	t_paquete* paquete_fin_proceso = crear_paquete(FIN_PROCESO);
+void enviar_fin_proceso_km(int pid)
+{
+	t_paquete *paquete_fin_proceso = crear_paquete(FIN_PROCESO);
 	agregar_a_paquete(paquete_fin_proceso, &pid, sizeof(int));
 	enviar_paquete(paquete_fin_proceso, socket_km);
 	eliminar_paquete(paquete_fin_proceso);
@@ -111,13 +120,15 @@ void enviar_fin_proceso_km(int pid) {
 
 // CONFIRMACION_DESALOJO_COMPACTACION (KS->KM, sin payload): todas las CPUs
 // quedaron desalojadas, KM ya puede compactar y responder FIN_COMPACTACION.
-void enviar_confirmacion_desalojo_compactacion_km(void) {
+void enviar_confirmacion_desalojo_compactacion_km(void)
+{
 	enviar_operacion(socket_km, CONFIRMACION_DESALOJO_COMPACTACION);
 }
 
 // STDIN_SOLICITUD_ESCRITURA (KS->KM): [pid][dir_logica][tamanio][datos] (contrato en protocolos.h)
-void enviar_bytes_stdin(int pid, uint32_t dir_logica, int tamanio, void* datos) {
-	t_paquete* paquete_stdin = crear_paquete(STDIN_SOLICITUD_ESCRITURA);
+void enviar_bytes_stdin(int pid, uint32_t dir_logica, int tamanio, void *datos)
+{
+	t_paquete *paquete_stdin = crear_paquete(STDIN_SOLICITUD_ESCRITURA);
 	agregar_a_paquete(paquete_stdin, &pid, sizeof(int));
 	agregar_a_paquete(paquete_stdin, &dir_logica, sizeof(uint32_t));
 	agregar_a_paquete(paquete_stdin, &tamanio, sizeof(int));
@@ -127,8 +138,9 @@ void enviar_bytes_stdin(int pid, uint32_t dir_logica, int tamanio, void* datos) 
 }
 
 // STDOUT_SOLICITUD_LECTURA (KS->KM): [pid][dir_logica][tamanio] (contrato en protocolos.h)
-void enviar_solicitud_stdout_km(int pid, uint32_t dir_logica, int tamanio) {
-	t_paquete* paquete_stdout = crear_paquete(STDOUT_SOLICITUD_LECTURA);
+void enviar_solicitud_stdout_km(int pid, uint32_t dir_logica, int tamanio)
+{
+	t_paquete *paquete_stdout = crear_paquete(STDOUT_SOLICITUD_LECTURA);
 	agregar_a_paquete(paquete_stdout, &pid, sizeof(int));
 	agregar_a_paquete(paquete_stdout, &dir_logica, sizeof(uint32_t));
 	agregar_a_paquete(paquete_stdout, &tamanio, sizeof(int));
@@ -136,21 +148,24 @@ void enviar_solicitud_stdout_km(int pid, uint32_t dir_logica, int tamanio) {
 	eliminar_paquete(paquete_stdout);
 }
 
-void enviar_aviso_suspension_km(int pid) {
-	t_paquete* paquete_suspension = crear_paquete(SUSPENCION_PROCESO);
+void enviar_aviso_suspension_km(int pid)
+{
+	t_paquete *paquete_suspension = crear_paquete(SUSPENCION_PROCESO);
 	agregar_a_paquete(paquete_suspension, &pid, sizeof(int));
 	enviar_paquete(paquete_suspension, socket_km);
 	eliminar_paquete(paquete_suspension);
 }
 
-void enviar_lista_desuspension_km(t_list* lista_a_desuspender) {
-	t_paquete* paquete_dessuspencion_lista = crear_paquete(SOLICITUD_DESSUSPENCION_LISTA);
+void enviar_lista_desuspension_km(t_list *lista_a_desuspender)
+{
+	t_paquete *paquete_dessuspencion_lista = crear_paquete(SOLICITUD_DESSUSPENCION_LISTA);
 
 	int cantidad = list_size(lista_a_desuspender);
 	agregar_a_paquete(paquete_dessuspencion_lista, &cantidad, sizeof(int));
 
-	for (int i = 0; i < cantidad; i++) {
-		t_pcb* pcb = list_get(lista_a_desuspender, i);
+	for (int i = 0; i < cantidad; i++)
+	{
+		t_pcb *pcb = list_get(lista_a_desuspender, i);
 		agregar_a_paquete(paquete_dessuspencion_lista, &(pcb->pid), sizeof(int));
 		agregar_a_paquete(paquete_dessuspencion_lista, &(pcb->prioridad), sizeof(int));
 	}
@@ -159,11 +174,12 @@ void enviar_lista_desuspension_km(t_list* lista_a_desuspender) {
 	eliminar_paquete(paquete_dessuspencion_lista);
 }
 
-void enviar_mem_alloc(int id_segmento, int tamanio, int pid) {
+void enviar_mem_alloc(int id_segmento, int tamanio, int pid)
+{
 	// ENVIO_MEM_ALLOC (3006), NO MEM_ALLOC (11, enum de instrucción): KM escucha el
 	// opcode 3006 en manejador_ks. Con 11, KM lo leía como opcode desconocido, no
 	// drenaba el payload y desincronizaba el stream KS->KM (colgaba la syscall).
-	t_paquete* paquete_alloc = crear_paquete(ENVIO_MEM_ALLOC);
+	t_paquete *paquete_alloc = crear_paquete(ENVIO_MEM_ALLOC);
 	agregar_a_paquete(paquete_alloc, &pid, sizeof(int));
 	agregar_a_paquete(paquete_alloc, &id_segmento, sizeof(int));
 	agregar_a_paquete(paquete_alloc, &tamanio, sizeof(int));
@@ -171,9 +187,10 @@ void enviar_mem_alloc(int id_segmento, int tamanio, int pid) {
 	eliminar_paquete(paquete_alloc);
 }
 
-void enviar_mem_free(int id_segmento, int pid) {
+void enviar_mem_free(int id_segmento, int pid)
+{
 	// ENVIO_MEM_FREE (3007), NO MEM_FREE (12): mismo motivo que enviar_mem_alloc.
-	t_paquete* paquete_free = crear_paquete(ENVIO_MEM_FREE);
+	t_paquete *paquete_free = crear_paquete(ENVIO_MEM_FREE);
 	agregar_a_paquete(paquete_free, &pid, sizeof(int));
 	agregar_a_paquete(paquete_free, &id_segmento, sizeof(int));
 	enviar_paquete(paquete_free, socket_km);

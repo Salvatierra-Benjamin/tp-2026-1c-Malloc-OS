@@ -13,7 +13,8 @@
 
 #include "../mensajes/ks_mensajes.h"
 
-static algoritmos ks_algoritmo_from_string(char* str) {
+static algoritmos ks_algoritmo_from_string(char *str)
+{
 	if (strcmp(str, "FIFO") == 0)
 		return FIFO;
 	if (strcmp(str, "RR") == 0)
@@ -24,26 +25,29 @@ static algoritmos ks_algoritmo_from_string(char* str) {
 	return INVALIDO;
 }
 
-void ks_parsear_algoritmos(char* raw) {
-	if (!raw) {
+void ks_parsear_algoritmos(char *raw)
+{
+	if (!raw)
+	{
 		cantidad_algoritmos = 0;
 		array_queues = NULL;
 		return;
 	}
 
 	// saco corchetes (string_replace devuelve una copia nueva, no modifica in-place)
-	char* con_corchetes = string_duplicate(raw);
-	char* sin_apertura = string_replace(con_corchetes, "[", "");
-	char* limpio = string_replace(sin_apertura, "]", "");
+	char *con_corchetes = string_duplicate(raw);
+	char *sin_apertura = string_replace(con_corchetes, "[", "");
+	char *limpio = string_replace(sin_apertura, "]", "");
 	free(con_corchetes);
 	free(sin_apertura);
 
 	// separo por coma
-	char** tokens = string_split(limpio, ",");
+	char **tokens = string_split(limpio, ",");
 
 	// contar algoritmos
 	cantidad_algoritmos = 0;
-	while (tokens[cantidad_algoritmos] != NULL) {
+	while (tokens[cantidad_algoritmos] != NULL)
+	{
 		cantidad_algoritmos++;
 	}
 
@@ -51,7 +55,8 @@ void ks_parsear_algoritmos(char* raw) {
 	array_queues = malloc(sizeof(t_elemento_array_algoritmos) * cantidad_algoritmos);
 
 	// llenar array
-	for (int i = 0; i < cantidad_algoritmos; i++) {
+	for (int i = 0; i < cantidad_algoritmos; i++)
+	{
 		string_trim(&tokens[i]);
 		array_queues[i].alg = ks_algoritmo_from_string(tokens[i]);
 
@@ -77,7 +82,8 @@ void ks_parsear_algoritmos(char* raw) {
 	free(limpio);
 }
 
-void ks_solo_un_algoritmo(algoritmos alg) {
+void ks_solo_un_algoritmo(algoritmos alg)
+{
 	int i = 0; // prioridad
 	cantidad_algoritmos = 1;
 	array_queues = malloc(sizeof(t_elemento_array_algoritmos));
@@ -102,10 +108,12 @@ void ks_solo_un_algoritmo(algoritmos alg) {
 	pthread_mutex_init(&array_queues[i].mutex_susp_ready, NULL);
 }
 
-bool ks_cargar_config(char* path_config, char* path_proceso_inicial) {
-	t_config* config = config_create(path_config);
+bool ks_cargar_config(char *path_config, char *path_proceso_inicial)
+{
+	t_config *config = config_create(path_config);
 
-	if (!config) {
+	if (!config)
+	{
 		return false;
 	}
 
@@ -115,9 +123,12 @@ bool ks_cargar_config(char* path_config, char* path_proceso_inicial) {
 	ks_config.algoritmo = ks_algoritmo_from_string(config_get_string_value(config, "PLANIFICATION_ALGORITHM"));
 
 	// estas funciones llenan los globales array_queues / cantidad_algoritmos
-	if (ks_config.algoritmo == FIFO || ks_config.algoritmo == RR) {
+	if (ks_config.algoritmo == FIFO || ks_config.algoritmo == RR)
+	{
 		ks_solo_un_algoritmo(ks_config.algoritmo);
-	} else {
+	}
+	else
+	{
 		ks_parsear_algoritmos(config_get_string_value(config, "QUEUES_ALGORITHMS"));
 	}
 
@@ -125,16 +136,19 @@ bool ks_cargar_config(char* path_config, char* path_proceso_inicial) {
 	// config_get_string_value(config, "QUEUE_PREEMPTION");
 	// ks_config.queue_preemption = strdup(config_get_string_value(config,
 	// "QUEUE_PREEMPTION"));
-	if (strcmp(config_get_string_value(config, "QUEUE_PREEMPTION"), "TRUE") == 0) {
+	if (strcmp(config_get_string_value(config, "QUEUE_PREEMPTION"), "TRUE") == 0)
+	{
 		ks_config.queue_preemption = true;
-	} else {
+	}
+	else
+	{
 		ks_config.queue_preemption = false;
 	}
 
 	ks_config.suspension_timeout = config_get_int_value(config, "SUSPENSION_TIMEOUT");
 	ks_config.path_proceso_inicial = strdup(path_proceso_inicial);
-	const char* log_level_string = config_get_string_value(config, "LOG_LEVEL");
-	t_log_level level = log_level_from_string((char*)log_level_string);
+	const char *log_level_string = config_get_string_value(config, "LOG_LEVEL");
+	t_log_level level = log_level_from_string((char *)log_level_string);
 
 	ks_logger = log_create("kernel_scheduler.log", "KERNEL_SCHEDULER", 1, level);
 
@@ -156,7 +170,8 @@ bool ks_cargar_config(char* path_config, char* path_proceso_inicial) {
 	return ks_logger != NULL;
 }
 
-void crear_listas() {
+void crear_listas()
+{
 	cpus = list_create();
 	ios_sleep = list_create();
 	ios_stdin = list_create();
@@ -183,20 +198,25 @@ void crear_listas() {
 	mutexes_kernel = list_create();
 }
 
-void ks_liberar_config(void) {
-	if (ks_logger) {
+void ks_liberar_config(void)
+{
+	if (ks_logger)
+	{
 		log_destroy(ks_logger);
 	}
 }
 
-void* ks_conexion_loop(void* _arg) {
+void *ks_conexion_loop(void *_arg)
+{
 	(void)_arg;
 
 	printf("Entra en ks_conexion_loop");
 
-	for (;;) {
+	for (;;)
+	{
 		int fd = esperar_cliente(ks_server_fd);
-		if (fd < 0) {
+		if (fd < 0)
+		{
 			log_error(ks_logger, "accept falló");
 			continue;
 		}
@@ -204,38 +224,42 @@ void* ks_conexion_loop(void* _arg) {
 		log_debug(ks_logger, "Se conectó un cliente en el socket: %d", fd);
 
 		int op = recibir_operacion(fd);
-		if (op <= 0) {
+		if (op <= 0)
+		{
 			close(fd);
 			continue;
 		}
 
-		if (op == HANDSHAKE_IO) {
+		if (op == HANDSHAKE_IO)
+		{
 			log_debug(ks_logger, "Se conecto un nuevo IO");
 
 			enviar_ok_conexion(fd);
 
 			int op_datos = recibir_operacion(fd);
-			if (op_datos != ENVIAR_DATOS_IO) {
+			if (op_datos != ENVIAR_DATOS_IO)
+			{
 				log_error(ks_logger, "Se conecto un nuevo IO, pero no envio ENVIAR_DATOS_IO");
 				close(fd);
 				continue;
 			}
 
-			t_paquete* contenido = recibir_paquete(fd);
+			t_paquete *contenido = recibir_paquete(fd);
 
 			// IO manda el tipo como bytes crudos, sin longitud adelante ni '\0' (receptor_ks.c de IO)
 			int len_tipo_io = contenido->buffer->size;
-			char* tipo_io = malloc(len_tipo_io + 1);
+			char *tipo_io = malloc(len_tipo_io + 1);
 			buffer_read(tipo_io, contenido->buffer, len_tipo_io);
 			tipo_io[len_tipo_io] = '\0';
 
-			t_io* io = crear_io(fd, tipo_io);
+			t_io *io = crear_io(fd, tipo_io);
 
 			free(tipo_io);
 			eliminar_paquete(contenido);
 
 			pthread_t hilo_io;
-			if (pthread_create(&hilo_io, NULL, ks_maneja_io, io) != 0) {
+			if (pthread_create(&hilo_io, NULL, ks_maneja_io, io) != 0)
+			{
 				log_error(ks_logger, "no se inicia el hilo io");
 				close(fd);
 				continue;
@@ -243,12 +267,14 @@ void* ks_conexion_loop(void* _arg) {
 
 			pthread_detach(hilo_io);
 			log_debug(ks_logger, "Se detachea el hilo_io");
-		} else if (op == HANDSHAKE_CPU) {
+		}
+		else if (op == HANDSHAKE_CPU)
+		{
 			log_debug(ks_logger, "Se conecto un nuevo CPU");
 
 			// CPU manda HANDSHAKE_CPU como paquete con su id adentro y espera
 			// HANDSHAKE_OK, no KS_OK_CONEXION (realizar_handshake_ks en handshakes.c de CPU)
-			t_paquete* contenido = recibir_paquete(fd);
+			t_paquete *contenido = recibir_paquete(fd);
 
 			int id_cpu = -1;
 			buffer_read(&id_cpu, contenido->buffer, sizeof(int));
@@ -256,7 +282,7 @@ void* ks_conexion_loop(void* _arg) {
 
 			enviar_operacion(fd, HANDSHAKE_OK);
 
-			t_cpu* cpu = crear_cpu(id_cpu, fd);
+			t_cpu *cpu = crear_cpu(id_cpu, fd);
 
 			pthread_mutex_lock(&mutex_cpus);
 			list_add(cpus, cpu);
@@ -269,7 +295,8 @@ void* ks_conexion_loop(void* _arg) {
 			// NO recibir_paquete aca
 			pthread_t hilo_cpu;
 
-			if (pthread_create(&hilo_cpu, NULL, ks_maneja_cpu, cpu) != 0) {
+			if (pthread_create(&hilo_cpu, NULL, ks_maneja_cpu, cpu) != 0)
+			{
 				log_error(ks_logger, "no se inicia el hilo cpu");
 				close(fd);
 				continue;
@@ -278,10 +305,11 @@ void* ks_conexion_loop(void* _arg) {
 			log_debug(ks_logger, "Se detachea el hilo_cpu");
 		}
 
-		else {
+		else
+		{
 			log_error(ks_logger, "Handshake desconocido (%d)", op);
 			// Si vino algo, descartalo
-			t_paquete* trash = recibir_paquete(fd);
+			t_paquete *trash = recibir_paquete(fd);
 			if (trash)
 				eliminar_paquete(trash);
 			close(fd);
@@ -292,7 +320,8 @@ void* ks_conexion_loop(void* _arg) {
 	return NULL;
 }
 
-static void sigint_handler(int _sig) {
+static void sigint_handler(int _sig)
+{
 	(void)_sig;
 
 	if (ks_logger)
@@ -306,9 +335,11 @@ static void sigint_handler(int _sig) {
 	exit(0);
 }
 
-int main(int argc, char* argv[]) {			   //  ~ ./bin/kernel_scheduler [Archivo Config]
-											   //  [Path Proceso Inicial]
-	if (!ks_cargar_config(argv[1], argv[2])) { //! Está hardcodeado el codigo del config
+int main(int argc, char *argv[])
+{ //  ~ ./bin/kernel_scheduler [Archivo Config]
+  //  [Path Proceso Inicial]
+	if (!ks_cargar_config(argv[1], argv[2]))
+	{ // Está hardcodeado el codigo del config
 		fprintf(stderr, "No pude cargar ks.config.\n");
 
 		return EXIT_FAILURE;
@@ -327,7 +358,8 @@ int main(int argc, char* argv[]) {			   //  ~ ./bin/kernel_scheduler [Archivo Co
 
 	// ABRIR SERVIDOR DE ESCUCHA PARA CPU E IO
 	ks_server_fd = iniciar_servidor(ks_config.puerto_escucha);
-	if (ks_server_fd < 0) {
+	if (ks_server_fd < 0)
+	{
 		log_error(ks_logger, "No pude iniciar servidor en %s", ks_config.puerto_escucha);
 		return EXIT_FAILURE;
 	}

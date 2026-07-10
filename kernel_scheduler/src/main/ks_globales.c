@@ -1,14 +1,14 @@
 #include "ks_main.h"
 
 // VARIABLES GLOBALES
-t_log* ks_logger = NULL;
+t_log *ks_logger = NULL;
 t_ks_config ks_config;
 
 int ks_server_fd = -1;
 int socket_km = -1;
 
-// ! 0 ES LA MAYOR PRIORIDAD!!!!, LUEGO LE VAN SIGUIENDO EN ORDEN LOS VALORES (CUANTO MAYOR EL VALOR, MENOR LA PRIORIDAD)
-t_elemento_array_algoritmos* array_queues = NULL;
+//  0 ES LA MAYOR PRIORIDAD!!!!, LUEGO LE VAN SIGUIENDO EN ORDEN LOS VALORES (CUANTO MAYOR EL VALOR, MENOR LA PRIORIDAD)
+t_elemento_array_algoritmos *array_queues = NULL;
 int cantidad_algoritmos = 0;
 
 bool compactacion_en_progreso = false;
@@ -17,27 +17,27 @@ bool compactacion_en_progreso = false;
 int cpus_pendientes_desalojo_compactacion = 0;
 
 // LISTAS
-t_list* cpus = NULL;
-t_list* ios_sleep = NULL;
-t_list* ios_stdin = NULL;
-t_list* ios_stdout = NULL;
+t_list *cpus = NULL;
+t_list *ios_sleep = NULL;
+t_list *ios_stdin = NULL;
+t_list *ios_stdout = NULL;
 
-t_queue* pedidos_sleep = NULL;
-t_queue* pedidos_stdin = NULL;
-t_queue* pedidos_stdout = NULL;
+t_queue *pedidos_sleep = NULL;
+t_queue *pedidos_stdin = NULL;
+t_queue *pedidos_stdout = NULL;
 
-t_list* procs_exec = NULL;
+t_list *procs_exec = NULL;
 // t_list *procs_block = NULL;
 // t_list *procs_susp_block = NULL;
 // t_list *procs_susp_ready = NULL;
-t_list* procs_exit = NULL;
+t_list *procs_exit = NULL;
 
 // PCBs con STDIN diferido tras des-suspensión, esperando OK_STDIN_DATOS_ESCRITOS.
-t_list* pendientes_stdin_post_desusp = NULL;
+t_list *pendientes_stdin_post_desusp = NULL;
 
-t_list* mutexes_kernel = NULL;
+t_list *mutexes_kernel = NULL;
 
-t_list* creaciones_pendientes = NULL;
+t_list *creaciones_pendientes = NULL;
 int siguiente_pid = 0; // el proceso inicial es PID 0 (asignar_pid usa post-incremento)
 
 // MUTEX

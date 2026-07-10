@@ -89,7 +89,7 @@ void *ks_conexion_km(void *_arg)
 			int tamanio;
 			buffer_read(&tamanio, contenido->buffer, sizeof(int));
 
-			// ? Hacer algo con el tamanio? O solo es para loguear?
+			//  Hacer algo con el tamanio? O solo es para loguear?
 
 			sem_post(&sem_memoria_disponible);
 
@@ -97,14 +97,14 @@ void *ks_conexion_km(void *_arg)
 			break;
 		}
 
-			// case COMPACTACION: { // ? es lo mismo que DESALOJO_POR_COMPACTACION? O es para cuando KM detecta corrupción de memoria y decide compactar? O es para cuando KS detecta corrupción de memoria y decide matar procesos y compactar? No se si es necesario diferenciarlo, pero lo dejo por las dudas.
+			// case COMPACTACION: { //  es lo mismo que DESALOJO_POR_COMPACTACION? O es para cuando KM detecta corrupción de memoria y decide compactar? O es para cuando KS detecta corrupción de memoria y decide matar procesos y compactar? No se si es necesario diferenciarlo, pero lo dejo por las dudas.
 			//     log_inicio_compactacion();
 			//     sem_post(&sem_memoria_disponible);
 
 			// 	break;
 			// }
 
-			// case: // ! DETECCION_CORRUPCION_MEMORIA ---→ COMPACTACION
+			// case: //  DETECCION_CORRUPCION_MEMORIA ---→ COMPACTACION
 			// {
 
 			// 	break;
@@ -190,7 +190,9 @@ void *ks_conexion_km(void *_arg)
 				{
 					log_warning(ks_logger, "OK_STDIN_DATOS_ESCRITOS: no encontré el PCB del PID %d", pid);
 				}
-			} else {
+			}
+			else
+			{
 				log_warning(ks_logger, "NO SE ENCUENTRA NINGUN PROCESO PENDIENTE DE IO DESPUES DE DESSUSPENCION pid:%d", pid);
 			}
 

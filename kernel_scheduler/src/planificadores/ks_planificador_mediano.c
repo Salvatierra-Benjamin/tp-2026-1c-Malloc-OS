@@ -10,12 +10,14 @@
 // READY -> SUSP_READY
 
 // TRANSICIONES
-bool pasar_a_block(t_pcb* pcb) {
+bool pasar_a_block(t_pcb *pcb)
+{
 	pthread_mutex_lock(&mutex_exec);
 	bool removido = list_remove_element(procs_exec, pcb);
 	pthread_mutex_unlock(&mutex_exec);
 
-	if ((pcb == NULL) || !removido) {
+	if ((pcb == NULL) || !removido)
+	{
 		liberar_proceso(pcb);
 		return false;
 	}
@@ -30,14 +32,15 @@ bool pasar_a_block(t_pcb* pcb) {
 	pthread_mutex_unlock(&array_queues[ks_indice_cola(pcb->prioridad)].mutex_block);
 
 	pthread_t hilo_suspend;
-	t_pcb* pcb_copia = pcb;
+	t_pcb *pcb_copia = pcb;
 	pthread_create(&hilo_suspend, NULL, ks_timer_suspension, pcb_copia);
 	pthread_detach(hilo_suspend);
 
 	return true;
 }
 
-void ks_pasar_a_susp_block(t_pcb* pcb) {
+void ks_pasar_a_susp_block(t_pcb *pcb)
+{
 	int prio = pcb->prioridad;
 
 	// sacar de BLOCK
@@ -58,9 +61,10 @@ void ks_pasar_a_susp_block(t_pcb* pcb) {
 
 	enviar_aviso_suspension_km(pcb->pid);
 
-	// ? TODO: liberar estructuras --- Hay que hacerlo?
+	// liberar estructuras --- Hay que hacerlo?
 }
-void ks_pasar_a_susp_ready(t_pcb* pcb) {
+void ks_pasar_a_susp_ready(t_pcb *pcb)
+{
 	int prio = pcb->prioridad;
 
 	pthread_mutex_lock(&array_queues[ks_indice_cola(prio)].mutex_susp_block);
@@ -75,7 +79,8 @@ void ks_pasar_a_susp_ready(t_pcb* pcb) {
 
 	log_cambio_estado(pcb, SUSP_BLOCK, SUSP_READY);
 }
-void ks_pasar_a_ready_desde_susp_ready(t_pcb* pcb) {
+void ks_pasar_a_ready_desde_susp_ready(t_pcb *pcb)
+{
 	int prio = pcb->prioridad;
 
 	pthread_mutex_lock(&array_queues[ks_indice_cola(prio)].mutex_susp_ready);
@@ -91,29 +96,32 @@ void ks_pasar_a_ready_desde_susp_ready(t_pcb* pcb) {
 	log_cambio_estado(pcb, SUSP_READY, READY);
 }
 
-void ks_pasar_a_ready_desde_susp_ready_pid(int pid, int prioridad) {
-	bool _pcb_tiene_pid(void* ptr) {
-		t_pcb* pcb = (t_pcb*)ptr;
+void ks_pasar_a_ready_desde_susp_ready_pid(int pid, int prioridad)
+{
+	bool _pcb_tiene_pid(void *ptr)
+	{
+		t_pcb *pcb = (t_pcb *)ptr;
 		return pcb->pid == pid;
 	}
 
-	t_pcb* pcb = NULL;
+	t_pcb *pcb = NULL;
 	pthread_mutex_lock(&array_queues[ks_indice_cola(prioridad)].mutex_susp_ready);
 	pcb = list_remove_by_condition(array_queues[ks_indice_cola(prioridad)].list_susp_ready, _pcb_tiene_pid);
 	pthread_mutex_unlock(&array_queues[ks_indice_cola(prioridad)].mutex_susp_ready);
 
-	if (pcb->stdin_pendiente) {
-        // Ya es residente: recién ahora la escritura va a ser válida en KM.
-        // El proceso se empuja a READY cuando llegue OK_STDIN_DATOS_ESCRITOS.
-        enviar_bytes_stdin(pid, pcb->stdin_dir_logica, pcb->stdin_tamanio, pcb->stdin_datos);
-        // Ya lo sacamos de susp_ready arriba: lo parkeo en pendientes_stdin_post_desusp
-        // (fuera de las colas normales) para que OK_STDIN_DATOS_ESCRITOS lo encuentre y
-        // lo pase a READY. Sin esto el PCB quedaba huérfano (proceso wedgeado + leak).
-        pthread_mutex_lock(&mutex_pendientes_stdin);
-        list_add(pendientes_stdin_post_desusp, pcb);
-        pthread_mutex_unlock(&mutex_pendientes_stdin);
-        return; // NO push a READY acá: lo hace el handler del OK
-    }
+	if (pcb->stdin_pendiente)
+	{
+		// Ya es residente: recién ahora la escritura va a ser válida en KM.
+		// El proceso se empuja a READY cuando llegue OK_STDIN_DATOS_ESCRITOS.
+		enviar_bytes_stdin(pid, pcb->stdin_dir_logica, pcb->stdin_tamanio, pcb->stdin_datos);
+		// Ya lo sacamos de susp_ready arriba: lo parkeo en pendientes_stdin_post_desusp
+		// (fuera de las colas normales) para que OK_STDIN_DATOS_ESCRITOS lo encuentre y
+		// lo pase a READY. Sin esto el PCB quedaba huérfano (proceso wedgeado + leak).
+		pthread_mutex_lock(&mutex_pendientes_stdin);
+		list_add(pendientes_stdin_post_desusp, pcb);
+		pthread_mutex_unlock(&mutex_pendientes_stdin);
+		return; // NO push a READY acá: lo hace el handler del OK
+	}
 
 	pcb->estado = READY;
 
@@ -123,23 +131,26 @@ void ks_pasar_a_ready_desde_susp_ready_pid(int pid, int prioridad) {
 
 	log_cambio_estado(pcb, SUSP_READY, READY);
 
-	sem_post(&sem_ready); // ?
+	sem_post(&sem_ready);
 }
 
 // Completa un STDIN diferido cuando llega OK_STDIN_DATOS_ESCRITOS de KM: saca el PCB
 // de pendientes_stdin_post_desusp (donde quedó parkeado tras des-suspender) y lo pasa
 // a READY. Devuelve true si era un diferido; false si el pid no estaba parkeado (STDIN
 // normal, sin suspensión: lo maneja el camino de buscar_pcb_por_pid del handler).
-bool ks_completar_stdin_post_desusp(int pid) {
-	bool _pcb_tiene_pid(void* ptr) {
-		return ((t_pcb*)ptr)->pid == pid;
+bool ks_completar_stdin_post_desusp(int pid)
+{
+	bool _pcb_tiene_pid(void *ptr)
+	{
+		return ((t_pcb *)ptr)->pid == pid;
 	}
 
 	pthread_mutex_lock(&mutex_pendientes_stdin);
-	t_pcb* pcb = list_remove_by_condition(pendientes_stdin_post_desusp, _pcb_tiene_pid);
+	t_pcb *pcb = list_remove_by_condition(pendientes_stdin_post_desusp, _pcb_tiene_pid);
 	pthread_mutex_unlock(&mutex_pendientes_stdin);
 
-	if (pcb == NULL) {
+	if (pcb == NULL)
+	{
 		return false;
 	}
 
@@ -159,8 +170,9 @@ bool ks_completar_stdin_post_desusp(int pid) {
 }
 
 // TIMER DE SUSPENSION
-void* ks_timer_suspension(void* arg) {
-	t_pcb* pcb = (t_pcb*)arg;
+void *ks_timer_suspension(void *arg)
+{
+	t_pcb *pcb = (t_pcb *)arg;
 	// Marca del block para el que se lanzó ESTE timer. ks_pasar_a_block setea
 	// tiempo_inicio_block en cada bloqueo, así que si el proceso se desbloqueó y volvió a
 	// bloquear, el valor cambia.
@@ -174,7 +186,8 @@ void* ks_timer_suspension(void* arg) {
 	// los procesos que bloquean seguido acumulan timers detached que nunca se cancelan, y
 	// al despertar 35s después encontraban al proceso en otro block y lo suspendían igual
 	// (105 suspensiones espurias con SUSPENSION_TIMEOUT=35000 y sleeps <=10s en PCP).
-	if (pcb->estado != BLOCK || pcb->tiempo_inicio_block != inicio_block) {
+	if (pcb->estado != BLOCK || pcb->tiempo_inicio_block != inicio_block)
+	{
 		pthread_mutex_unlock(&array_queues[ks_indice_cola(pcb->prioridad)].mutex_block);
 		return NULL;
 	}
@@ -189,21 +202,25 @@ void* ks_timer_suspension(void* arg) {
 // Orden de evaluación (spec): por prioridad (i=0 = mayor prioridad primero) y,
 // dentro de cada prioridad, primero el que lleve MÁS tiempo suspendido (menor
 // tiempo_inicio_suspendido = se suspendió antes).
-static bool _mas_tiempo_suspendido_primero(void* a, void* b) {
-	return ((t_pcb*)a)->tiempo_inicio_suspendido <= ((t_pcb*)b)->tiempo_inicio_suspendido;
+static bool _mas_tiempo_suspendido_primero(void *a, void *b)
+{
+	return ((t_pcb *)a)->tiempo_inicio_suspendido <= ((t_pcb *)b)->tiempo_inicio_suspendido;
 }
 
-void ks_empezar_a_intentar_desuspender(void) {
-	t_list* lista_a_desuspender = list_create();
+void ks_empezar_a_intentar_desuspender(void)
+{
+	t_list *lista_a_desuspender = list_create();
 
-	for (int i = 0; i < cantidad_algoritmos; i++) {
+	for (int i = 0; i < cantidad_algoritmos; i++)
+	{
 		pthread_mutex_lock(&array_queues[i].mutex_susp_ready);
 
 		// dentro de la prioridad, ordenar por mayor tiempo suspendido primero
 		list_sort(array_queues[i].list_susp_ready, _mas_tiempo_suspendido_primero);
 
-		for (int j = 0; j < list_size(array_queues[i].list_susp_ready); j++) {
-			t_pcb* pcb = list_get(array_queues[i].list_susp_ready, j);
+		for (int j = 0; j < list_size(array_queues[i].list_susp_ready); j++)
+		{
+			t_pcb *pcb = list_get(array_queues[i].list_susp_ready, j);
 			list_add(lista_a_desuspender, pcb);
 		}
 
@@ -220,7 +237,7 @@ void ks_empezar_a_intentar_desuspender(void) {
 // void ks_terminar_de_intentar_desuspender(t_pcb* pcb) {
 // 	t_pcb* pcb = queue_peek(array_queues[i].queue_susp_ready);
 
-// 	bool hay_memoria = true; // TODO: consultar a KM si hay memoria para desuspender este proceso
+// 	bool hay_memoria = true; // consultar a KM si hay memoria para desuspender este proceso
 
 // 	if (!hay_memoria) {
 // 		pthread_mutex_unlock(&array_queues[i].mutex_susp_ready);
@@ -234,10 +251,12 @@ void ks_empezar_a_intentar_desuspender(void) {
 // }
 
 // PLANIFICADOR
-void* ks_planificador_mediano_plazo(void* arg) {
+void *ks_planificador_mediano_plazo(void *arg)
+{
 	(void)arg;
 
-	while (1) {
+	while (1)
+	{
 		sem_wait(&sem_memoria_disponible);
 
 		ks_empezar_a_intentar_desuspender();
